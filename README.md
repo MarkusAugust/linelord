@@ -1,6 +1,12 @@
-# 👑 ⚔️ LineLord ⚔️ 👑
+<div align="center">
+
+<h1>
+👑<span style="margin: 0 0.5em;">⚔️</span>LineLord<span style="margin: 0 0.5em;">⚔️</span>👑
+</h1>
 
 ## The Barbarian's Guide to Git Repository Conquest
+
+</div>
 
 > _"What is best in code? To crush the bugs, see them driven from your repository, and to hear the lamentations of their stack traces!"_
 >
