@@ -1,4 +1,6 @@
-# 🪓 LineLord - The Barbarian's Guide to Git Repository Conquest 🪓
+# 👑 ⚔️ LineLord ⚔️ 👑
+
+## The Barbarian's Guide to Git Repository Conquest
 
 > _"What is best in code? To crush the bugs, see them driven from your repository, and to hear the lamentations of their stack traces!"_
 >
