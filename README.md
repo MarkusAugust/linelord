@@ -55,8 +55,11 @@ linelord ~/projects/my-epic-codebase
 # Use path flag (supports ~ expansion)
 linelord --path ~/code/barbarian-toolkit
 
-# Learn about LineLord's powers
-linelord --about
+# Show version information
+linelord --version
+
+# Display help and available options
+linelord --help
 ```
 
 ### Navigation Commands
@@ -66,6 +69,7 @@ Once in LineLord's realm:
 - **ESC or 'q'** - Return to previous screen or exit
 - **Arrow keys** - Navigate menus like a seasoned warrior
 - **Enter** - Select your conquest
+- **:q** or **:x** - Exit like a vim warrior (from main menu)
 
 ### Battle Reports Available
 
@@ -102,6 +106,8 @@ brew outdated
 
 ### The Worthy (Included)
 
+_"These are the true scrolls of power! Written by mortal hands with sweat and blood, each line a testament to the warrior's craft. LineLord honors these works, for they bear the mark of genuine battle against the forces of chaos and bugs!"_
+
 - ✅ All git-tracked text files
 - ✅ Source code in any language
 - ✅ Configuration files
@@ -110,20 +116,31 @@ brew outdated
 
 ### The Unworthy (Excluded)
 
+_"What barbarian has time for scrolls that weigh more than a war hammer? LineLord casts aside these digital beasts, for they are likely the work of sorcery and code generation, not true craftsmanship!"_
+
 - ❌ Binary files (auto-detected)
 - ❌ Generated files (package-lock.json, yarn.lock, etc.)
 - ❌ Build artifacts (dist/, build/, node_modules/)
 - ❌ IDE and OS files (.vscode/, .DS_Store)
-- ❌ Files ignored by .gitignore
+- ❌ Files usually ignored by .gitignore
+- ❌ **Bloated files (>50KB)**
 
 ## 📊 Understanding the Battle Reports
 
 ### Repository Statistics
 
 - **Developer count** - How many warriors have touched your codebase
-- **File metrics** - Total files vs analyzed files
+- **File metrics** - Total files vs analyzed files vs large files cast aside
 - **Line counts** - The true measure of a codebase's size
 - **Contribution percentages** - Who rules which territories
+
+### The Great Filtering
+
+LineLord's wisdom recognizes that not all files deserve the honor of analysis:
+
+- **Binary files** are banished like demons from the realm
+- **Generated files** are dismissed as the work of lesser sorcerers
+- **Oversized scrolls (>50KB)** are deemed unworthy of a warrior's attention - _"By Crom's beard, what mortal hand could craft such bloated code? These are the spawn of automated tools and dark magic!"_
 
 ### The Ranking System
 
@@ -165,38 +182,9 @@ LineLord automatically merges similar names:
 - **Medium repos (100-1000 files)**: Swift as Conan's blade 🗡️
 - **Large repos (1000+ files)**: Worthy of a barbarian's patience 🏰
 
-## 🐛 Troubleshooting - When Crom Frowns
-
-**"Not a valid git repository"**
-
-```bash
-# Ensure you're in a git repository
-git status
-# If not initialized:
-git init
-```
-
-**"No authors found"**
-
-```bash
-# Repository needs at least one commit
-git add .
-git commit -m "Initial barbarian conquest"
-```
-
-**LineLord command not found after installation**
-
-```bash
-# Restart your terminal or reload your shell
-source ~/.zshrc  # or ~/.bashrc
-
-# If still not found, check Homebrew installation
-brew doctor
-```
-
 ## 🗡️ Contributing to the Saga
 
-Want to forge improvements to LineLord? Contact the maintainers - but know that Crom has not yet deemed this worthy of open source release. The source code remains guarded like the treasures of Aquilonia until the gods approve.
+Want to forge improvements to LineLord? Contact the maintainer - but know that Crom has not yet deemed this worthy of open source release. The source code remains guarded like the treasures of Aquilonia until the gods approve.
 
 ## 📜 Conan's Wisdom
 
@@ -214,7 +202,7 @@ Want to forge improvements to LineLord? Contact the maintainers - but know that 
 
 LineLord's power remains closely guarded. The source and distribution are controlled until Crom deems it worthy of wider release.
 
-_Usage is granted to those who prove themselves worthy in the eyes of the maintainers._
+_Usage is granted to those who prove themselves worthy in the eyes of Crom, the grim god of steel and code. Let the weak tremble before LineLord's might, for only true warriors of the digital realm may wield its power!_
 
 ---
 
