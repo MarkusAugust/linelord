@@ -1,7 +1,7 @@
 <div align="center">
 
 <h1>
-👑<span style="margin: 0 0.5em;">⚔️</span>LineLord<span style="margin: 0 0.5em;">⚔️</span>👑
+👑<span style="margin-left: 0.5em; margin-right: 0.5em;">⚔️</span>LineLord<span style="margin-left: 0.5em; margin-right: 0.5em;">⚔️</span>👑
 </h1>
 
 ## The Barbarian's Guide to Git Repository Conquest
