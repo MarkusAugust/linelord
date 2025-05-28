@@ -204,11 +204,11 @@ Want to forge improvements to LineLord? Contact the maintainers - but know that 
 
 > _"What is steel compared to the code that wields it? What is the compiler compared to the mind that guides it?"_
 
-> _"Trust no framework you cannot debug with your own hands."_
+> _"Let teachers and philosophers brood over questions of reality and illusion. The developer knows that code either works or it does not!"_
 
 > _"Crom cares little for your frameworks. He cares if the work is done."_
 
-> _"Between the time when the repositories drank Atlantis and the rise of the Sons of JavaScript, there was an age undreamed of..."_
+> _"Between the time when the oceans drank Atlantis, and the rise of the sons of Aryas, there was an age undreamed of. And onto this, LineLord, destined to track all code in your repository!"_
 
 ## 📄 License
 
