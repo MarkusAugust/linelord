@@ -27,7 +27,7 @@ The easiest way to arm yourself with LineLord is through Homebrew, as trusted as
 
 ```bash
 # Add the LineLord tap (repository of formulas)
-brew tap yourusername/linelord
+brew tap markusaugust/linelord
 
 # Install LineLord
 brew install linelord
