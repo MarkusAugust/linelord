@@ -16,7 +16,7 @@ export const CLI_HELP = `
 ║ EXAMPLES:                                                    ║
 ║   $ linelord                          # Analyze current dir  ║
 ║   $ linelord ~/projects/barbarian     # Analyze specific     ║
-║   $ linelord --path=~/code/conan      # Using path flag      ║
+║   $ linelord --path=~/code/gorvek      # Using path flag     ║
 ║   $ linelord -t 100                   # Set 100KB threshold  ║
 ║   $ linelord --threshold=25 ~/repo    # 25KB threshold       ║
 ║                                                              ║

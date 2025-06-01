@@ -74,7 +74,7 @@ export function AuthorSelector({
           }`
         )
         setIsLoading(false)
-        setStepMessage('By Crom, the analysis has failed!')
+        setStepMessage('By Huge, the analysis has failed!')
       }
     }
 

@@ -298,9 +298,3 @@ LineLord stands on the shoulders of these mighty open source warriors:
 - **[TypeScript](https://www.typescriptlang.org/)** - Type safety
 
 _All dependencies use permissive licenses (MIT, ISC, Apache 2.0) and remain under their original terms._
-
----
-
-**By Gorvek's blade, may your code be strong and your commits be clean!** 🪓
-
-_LineLord - Forged in the volcanic fires of the Ashen Vale, tempered by the wisdom of git, and blessed by the spirit of Gorvek the Ironbane._

@@ -180,7 +180,7 @@ export default function SingleDevRepoStats({
           authorStats: null,
           currentStep: 'complete',
           progress: 100,
-          stepMessage: 'By Crom, the analysis has failed!',
+          stepMessage: 'By Huge, the analysis has failed!',
           error: `Error analyzing author stats: ${
             error instanceof Error ? error.message : String(error)
           }`

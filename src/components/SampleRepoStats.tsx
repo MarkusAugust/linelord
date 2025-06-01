@@ -69,7 +69,7 @@ export default function SimpleRepoStats({
           isLoading: false,
           error:
             'Analysis service not available. Please wait for initialization.',
-          stepMessage: 'By Crom, the service is not ready!'
+          stepMessage: 'By Huge, the service is not ready!'
         }))
         return
       }
@@ -125,7 +125,7 @@ export default function SimpleRepoStats({
           error: `Error analyzing repository: ${
             error instanceof Error ? error.message : String(error)
           }`,
-          stepMessage: 'By Crom, the analysis has failed!'
+          stepMessage: 'By Huge, the analysis has failed!'
         }))
       }
     }

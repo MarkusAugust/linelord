@@ -1,7 +1,7 @@
 import picocolors from 'picocolors'
 
 export const pieChartColors = [
-  picocolors.red, // #1 - Red for Conan's preference (warm, bright)
+  picocolors.red, // #1 - Red for barbaric preference (warm, bright)
   picocolors.cyan, // #2 - Opposite of red (cool, bright)
   picocolors.yellow, // #3 - Bright warm (contrasts with cyan)
   picocolors.blue, // #4 - Dark cool (opposite of yellow)
