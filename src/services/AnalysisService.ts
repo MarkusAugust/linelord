@@ -238,23 +238,19 @@ export class AnalysisService {
     name: string,
     email: string
   ): Promise<number | null> {
-    // First try to find by canonical author
+    // First try to find by canonical author using EMAIL ONLY
     const [canonical] = await this.db
       .select({ id: authors.id })
       .from(authors)
-      .where(
-        sql`(${authors.name} = ${name} OR ${authors.email} = ${email}) AND ${authors.isCanonical} = true`
-      )
+      .where(sql`${authors.email} = ${email} AND ${authors.isCanonical} = true`)
 
     if (canonical) return canonical.id
 
-    // Try to find by alias
+    // Try to find by alias email
     const [alias] = await this.db
       .select({ canonicalAuthorId: authorAliases.canonicalAuthorId })
       .from(authorAliases)
-      .where(
-        sql`${authorAliases.aliasName} = ${name} OR ${authorAliases.aliasEmail} = ${email}`
-      )
+      .where(sql`${authorAliases.aliasEmail} = ${email}`)
 
     return alias?.canonicalAuthorId || null
   }
