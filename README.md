@@ -240,7 +240,7 @@ linelord --path=~/project/core --threshold=100
 
 ## 🗡️ Contributing to the Saga
 
-Want to forge improvements to LineLord? Contact the maintainer - but know that Horn has not yet deemed this worthy of open source release. The source code remains guarded like the treasures of Wailer's Hold until the gods approve.
+Want to forge improvements to LineLord? Contact the maintainer!
 
 ## 📜 Gorvek's Wisdom
 
