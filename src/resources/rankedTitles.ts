@@ -1,7 +1,7 @@
 export const rankedTitles = [
   // HIGHBORN TITLES (0-11) - 12 titles
   'legend', // 0 - Mythical, greatest of all
-  'king', // 1 - Ultimate ruler
+  'line breaker', // 1 - Ultimate coder
   'conqueror', // 2 - Takes kingdoms by force
   'destroyer', // 3 - Brings ruin to enemies
   'warlord', // 4 - Commands great armies
@@ -26,20 +26,20 @@ export const rankedTitles = [
   'raider', // 21 - Attacks settlements
   'mercenary', // 22 - Fights for coin
   'fighter', // 23 - Basic combatant
-  'barbarian', // 24 - Uncivilized warrior - MIDDLE POINT
+  'barbarian', // 24 - Uncivilized warrior
   'savage', // 25 - Primitive fighter
   'code slayer', // 26 - Tech warrior
   'git warrior', // 27 - Version control fighter
   'commit crusher', // 28 - Code destroyer
   'line conqueror', // 29 - Code line master
-  'merchant', // 30 - Trades goods
-  'blacksmith', // 31 - Forges weapons/tools
-  'tavern keeper', // 32 - Runs drinking establishment
-  'peddler', // 33 - Traveling merchant
-  'scribe', // 34 - Writes/records
-  'fisherman', // 35 - Catches fish
-  'shepherd', // 36 - Tends flocks
-  'weaver', // 37 - Creates cloth
+  'blacksmith', // 30 - Forges weapons/tools
+  'merchant', // 31 - Trades goods
+  'scribe', // 32 - Writes/records
+  'weaver', // 33 - Creates cloth
+  'fisherman', // 34 - Catches fish
+  'shepherd', // 35 - Tends flocks
+  'tavern keeper', // 36 - Runs drinking establishment
+  'peddler', // 37 - Traveling merchant (moved down)
 
   // LOWBORN TITLES (38-49) - 12 titles
   'potter', // 38 - Makes pottery
@@ -101,6 +101,7 @@ const getRandomTitlesFromRange = (
 }
 
 // Function to get evenly distributed titles based on number of developers
+// Replace the getDistributedTitles function with this:
 export const getDistributedTitles = (numDevs: number): string[] => {
   if (numDevs <= 0) return []
 
@@ -109,69 +110,43 @@ export const getDistributedTitles = (numDevs: number): string[] => {
   const lowbornRange = { start: 38, end: 49 } // 12 titles
 
   if (numDevs === 1) {
-    // Single dev gets a random middle tier title
-    return getRandomTitlesFromRange(highbornRange.start, highbornRange.end, 1)
+    // Single dev gets the best title
+    return [getTitleByRank(0)]
   }
 
   if (numDevs === 2) {
-    // 1 highborn, 1 lowborn
-    const highborn = getRandomTitlesFromRange(
-      highbornRange.start,
-      highbornRange.end,
-      1
-    )
-    const lowborn = getRandomTitlesFromRange(
-      lowbornRange.start,
-      lowbornRange.end,
-      1
-    )
-    return [...highborn, ...lowborn]
+    // Best and worst
+    return [getTitleByRank(0), getTitleByRank(49)]
   }
 
   if (numDevs === 3) {
-    // 1 from each category
-    const highborn = getRandomTitlesFromRange(
-      highbornRange.start,
-      highbornRange.end,
-      1
-    )
-    const middle = getRandomTitlesFromRange(
-      middleRange.start,
-      middleRange.end,
-      1
-    )
-    const lowborn = getRandomTitlesFromRange(
-      lowbornRange.start,
-      lowbornRange.end,
-      1
-    )
-    return [...highborn, ...middle, ...lowborn]
+    // Best from each tier
+    return [getTitleByRank(0), getTitleByRank(12), getTitleByRank(38)]
   }
 
-  // For 4+ devs, distribute proportionally across all three categories
-  // Maintain hierarchy by assigning fewer to higher ranks
-  const highbornCount = Math.max(1, Math.floor(numDevs * 0.2)) // ~20% highborn
-  const lowbornCount = Math.max(1, Math.floor(numDevs * 0.2)) // ~20% lowborn
-  const middleCount = numDevs - highbornCount - lowbornCount // Rest are middle
+  // For 4+ devs, distribute titles in strict rank order
+  const highbornCount = Math.max(1, Math.floor(numDevs * 0.2))
+  const lowbornCount = Math.max(1, Math.floor(numDevs * 0.2))
+  const middleCount = numDevs - highbornCount - lowbornCount
 
-  const highborn = getRandomTitlesFromRange(
-    highbornRange.start,
-    highbornRange.end,
-    highbornCount
-  )
-  const middle = getRandomTitlesFromRange(
-    middleRange.start,
-    middleRange.end,
-    middleCount
-  )
-  const lowborn = getRandomTitlesFromRange(
-    lowbornRange.start,
-    lowbornRange.end,
-    lowbornCount
-  )
+  const titles: string[] = []
 
-  // Return in hierarchical order (high to low)
-  return [...highborn, ...middle, ...lowborn]
+  // Assign best titles first (in rank order)
+  for (let i = 0; i < highbornCount; i++) {
+    titles.push(getTitleByRank(highbornRange.start + i))
+  }
+
+  // Then middle tier titles
+  for (let i = 0; i < middleCount; i++) {
+    titles.push(getTitleByRank(middleRange.start + i))
+  }
+
+  // Finally lowborn titles
+  for (let i = 0; i < lowbornCount; i++) {
+    titles.push(getTitleByRank(lowbornRange.start + i))
+  }
+
+  return titles
 }
 
 // Function to get distributed titles with names/assignments
