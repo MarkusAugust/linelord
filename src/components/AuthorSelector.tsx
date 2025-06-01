@@ -215,9 +215,11 @@ export function AuthorSelector({
               </Box>
 
               {hasAlternatives && (
-                <Box marginLeft={6}>
+                <Box marginLeft={5} width={60}>
                   <Text dimColor>
-                    Also known as: {author.alternativeNames?.join(', ')}
+                    {`Also known as: ${new Set(
+                      author.alternativeNames?.join(', ')
+                    )}`}
                   </Text>
                 </Box>
               )}
@@ -237,3 +239,10 @@ export function AuthorSelector({
     </Box>
   )
 }
+
+/* 
+
+   Jørgen Høivik Bye <jorgenhoivik.bye@skatteetaten.no>
+      Also known as: SsO4cmdlbiBIw7hpdmlr Bye, Jørgen Høivik Bye, Jørgen Høivik
+       Bye
+*/
