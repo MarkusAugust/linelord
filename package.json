@@ -1,0 +1,44 @@
+{
+  "name": "linelord",
+  "version": "0.5.1",
+  "module": "cli.ts",
+  "type": "module",
+  "description": "Analyze git blame data with developer contribution statistics",
+  "dependencies": {
+    "drizzle-orm": "^0.44.1",
+    "fastest-levenshtein": "^1.0.16",
+    "ink": "^5.2.1",
+    "ink-spinner": "^5.0.0",
+    "meow": "^13.2.0",
+    "picocolors": "^1.1.1",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "latest",
+    "@types/ink-spinner": "^3.0.4",
+    "@types/react": "^18.2.0",
+    "react-devtools-core": "^6.1.2",
+    "typescript": "^5.8.3"
+  },
+  "scripts": {
+    "dev": "bun run --hot src/cli.ts",
+    "lint": "biome check --write",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "build": "bun build src/cli.ts --outdir dist --target bun",
+    "compile:macos": "npm run compile:macos-intel && npm run compile:macos-arm",
+    "compile:linux": "bun build src/cli.ts --compile --target bun-linux-x64 --outfile dist/linelord-linux-x64",
+    "compile:linux-arm": "bun build src/cli.ts --compile --target bun-linux-arm64 --outfile dist/linelord-linux-arm64",
+    "compile:macos-intel": "bun build src/cli.ts --compile --target bun-darwin-x64 --outfile dist/linelord-macos-intel",
+    "compile:macos-arm": "bun build src/cli.ts --compile --target bun-darwin-arm64 --outfile dist/linelord-macos-arm64",
+    "release": "npm run clean && npm run compile:macos && npm run compile:linux && npm run compile:linux-arm && npm run package-release",
+    "package-release": "mkdir -p release && cp dist/* release/ && cd release && for file in linelord-*; do tar -czf \"$file.tar.gz\" \"$file\" && rm \"$file\"; done",
+    "clean": "rm -rf dist release",
+    "version": "npm run release",
+    "tag-release": "git push origin master && git push origin --tags",
+    "publish:patch": "npm version patch && bun run tag-release",
+    "publish:minor": "npm version minor && bun run tag-release",
+    "publish:major": "npm version major && bun run tag-release"
+  }
+}

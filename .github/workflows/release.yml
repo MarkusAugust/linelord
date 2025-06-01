@@ -1,0 +1,45 @@
+name: Release
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build binaries
+        run: bun run release
+
+      - name: Create checksums
+        run: |
+          cd release
+          shasum -a 256 *.tar.gz > checksums.txt
+
+      - name: Create GitHub Release in Public Repo
+        uses: softprops/action-gh-release@v1
+        with:
+          repository: MarkusAugust/linelord
+          files: |
+            release/*.tar.gz
+            release/checksums.txt
+          generate_release_notes: true
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
