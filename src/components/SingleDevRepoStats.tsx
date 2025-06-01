@@ -363,7 +363,9 @@ export default function SingleDevRepoStats({
                     const lineCountDisplay = `[${file.authorLines}/${file.totalLines}]`
 
                     return (
-                      <Box key={file.filename}>
+                      <Box
+                        key={`file-${fileIndex}-${file.path}-${file.authorLines}-${file.totalLines}`}
+                      >
                         <Text>
                           {pc.dim(
                             `${(fileIndex + 1).toString().padStart(2, ' ')}. `

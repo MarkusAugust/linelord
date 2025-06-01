@@ -101,7 +101,11 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({
         }
 
         return (
-          <Box key={author.id} flexDirection="column" marginLeft={1}>
+          <Box
+            key={`author-${author.id}-${index}`}
+            flexDirection="column"
+            marginLeft={1}
+          >
             <Box flexDirection="row">
               <Box width={3}>
                 <Text>{getPositionIcon(index)}</Text>
