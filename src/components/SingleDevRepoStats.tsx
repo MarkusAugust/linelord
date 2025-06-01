@@ -6,7 +6,7 @@ import { EnhancedProgressBar } from './ProgressBar'
 import { renderSimplePercentageBar } from '../utility/simplePercentageBar'
 import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
 import type { AnalysisStep } from '../types/analysisTypes'
-import { getRandomConanTitleCapitalized } from '../resources/titles'
+import { getRandomTitleCapitalized } from '../resources/titles'
 import type { AnalysisService } from '../services/AnalysisService'
 import { AuthorSelector } from './AuthorSelector'
 
@@ -208,7 +208,7 @@ export default function SingleDevRepoStats({
           displayName: author.name,
           aliases: author.alternativeNames || []
         })
-        setRandomTitle(getRandomConanTitleCapitalized())
+        setRandomTitle(getRandomTitleCapitalized())
         setMode('stats')
       }
     } catch (error) {

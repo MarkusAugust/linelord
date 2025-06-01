@@ -102,7 +102,7 @@ const capitalizeTitle = (title: string): string => {
   return title.charAt(0).toUpperCase() + title.slice(1)
 }
 
-// Function to get a random Conan title
+// Function to get a random title
 export const getRandomTitle = (): string => {
   return titles[Math.floor(Math.random() * titles.length)] ?? ''
 }
@@ -114,8 +114,8 @@ export const getRandomCommonTitle = (): string => {
   )
 }
 
-// Function to get a capitalized Conan title
-export const getRandomConanTitleCapitalized = (): string => {
+// Function to get a capitalized title
+export const getRandomTitleCapitalized = (): string => {
   return capitalizeTitle(getRandomTitle())
 }
 
