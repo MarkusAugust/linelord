@@ -1,6 +1,6 @@
 {
   "name": "linelord",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "module": "cli.ts",
   "type": "module",
   "description": "Analyze git blame data with developer contribution statistics",
