@@ -1,4 +1,4 @@
-import { exec } from 'node:child_process'
+import { exec, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
 import { stat } from 'node:fs/promises'
 import path from 'node:path'
@@ -185,16 +185,41 @@ export class GitService {
       .onConflictDoNothing()
   }
 
+  private async execGitBlame(filePath: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const child = spawn('git', ['blame', '--line-porcelain', filePath], {
+        cwd: this.repoPath,
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
+
+      let stdout = ''
+      let stderr = ''
+
+      child.stdout.on('data', (data) => {
+        stdout += data.toString()
+      })
+
+      child.stderr.on('data', (data) => {
+        stderr += data.toString()
+      })
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve(stdout)
+        } else {
+          reject(new Error(`git blame failed with code ${code}: ${stderr}`))
+        }
+      })
+
+      child.on('error', (error) => {
+        reject(error)
+      })
+    })
+  }
+
   private async processFileBlame(filePath: string) {
     try {
-      const { stdout } = await execAsync(
-        `git blame --line-porcelain "${filePath}"`,
-        {
-          cwd: this.repoPath,
-          maxBuffer: 10 * 1024 * 1024
-        }
-      )
-
+      const stdout = await this.execGitBlame(filePath)
       const lines = stdout.trim().split('\n')
       let currentAuthor = ''
       let currentEmail = ''
@@ -313,7 +338,18 @@ export class GitService {
   }
 
   private normalizeDisplayName(name: string): string {
-    // Simple normalization - you can enhance this
-    return name.trim()
+    let normalizedDisplayName = name.trim()
+
+    if (normalizedDisplayName.includes(',')) {
+      // "LastName, FirstName" -> "FirstName LastName"
+      const parts = normalizedDisplayName.split(',').map((p) => p.trim())
+      if (parts.length === 2) {
+        normalizedDisplayName = `${parts[1]} ${parts[0]}`
+      }
+    }
+    // Remove extra whitespace
+    normalizedDisplayName = normalizedDisplayName.replace(/\s+/g, ' ').trim()
+
+    return normalizedDisplayName
   }
 }
