@@ -30,7 +30,7 @@ export const barbarianInitializingMessages = [
   'The jewels of the ancients reveal their secrets...',
   'Forgotten magic courses through the files...',
   'The phoenix rises from ashes of old code...',
-  'The old gods grant strength for the coming battle...'
+  'The old gods grant strength for the coming battle...',
 ]
 
 export const barbarianScanningMessages = [
@@ -63,7 +63,7 @@ export const barbarianScanningMessages = [
   "The frost giant's daughter whispers file paths...",
   "The warrior's mighty thews strain against complexity...",
   'The black colossus of technical debt falls...',
-  "By the storm god's grace, the patterns emerge clear..."
+  "By the storm god's grace, the patterns emerge clear...",
 ]
 
 export const barbarianAnalyzingMessages = [
@@ -96,7 +96,7 @@ export const barbarianAnalyzingMessages = [
   'The ivory tower of statistics stands tall...',
   'The barbarian accountant tallies the conquest...',
   'Ruby gems of repository data sparkle...',
-  'The final horn of the great hall sounds the totals...'
+  'The final horn of the great hall sounds the totals...',
 ]
 
 export const barbarianCompleteMessages = [
@@ -119,7 +119,7 @@ export const barbarianCompleteMessages = [
   'By the hammer of ages, the task is finished!',
   'The jewels of the ancients shine with completion!',
   'The phoenix of analysis rises triumphant!',
-  'Ancient powers acknowledge our success!'
+  'Ancient powers acknowledge our success!',
 ]
 
 // Function to get random message for each state

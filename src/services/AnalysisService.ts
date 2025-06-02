@@ -1,6 +1,6 @@
-import { eq, sql, desc, inArray } from 'drizzle-orm'
+import { desc, eq, inArray, sql } from 'drizzle-orm'
 import type { LineLordDatabase } from '../db/database'
-import { authors, files, blameLines, authorAliases } from '../db/schema'
+import { authorAliases, authors, blameLines, files } from '../db/schema'
 
 export interface FileContribution {
   filename: string
@@ -18,6 +18,8 @@ export interface AuthorContribution {
   totalLines: number
   totalFiles: number
   percentage: number
+  title: string | null
+  rank: number | null
   aliases?: Array<{ name: string; email: string }>
 }
 
@@ -43,7 +45,7 @@ export class AnalysisService {
       .select({ count: sql<number>`count(*)` })
       .from(files)
       .where(
-        sql`${files.isBinary} = false AND ${files.isIgnored} = false AND ${files.isLargerThanThreshold} = false`
+        sql`${files.isBinary} = false AND ${files.isIgnored} = false AND ${files.isLargerThanThreshold} = false`,
       )
 
     const [binaryFilesResult] = await this.db
@@ -60,14 +62,14 @@ export class AnalysisService {
       .select({ count: sql<number>`count(*)` })
       .from(files)
       .where(
-        sql`${files.isLargerThanThreshold} = true AND ${files.isBinary} = false AND ${files.isIgnored} = false`
+        sql`${files.isLargerThanThreshold} = true AND ${files.isBinary} = false AND ${files.isIgnored} = false`,
       )
 
     const [totalLinesResult] = await this.db
       .select({ total: sql<number>`sum(total_lines)` })
       .from(files)
       .where(
-        sql`${files.isBinary} = false AND ${files.isIgnored} = false AND ${files.isLargerThanThreshold} = false`
+        sql`${files.isBinary} = false AND ${files.isIgnored} = false AND ${files.isLargerThanThreshold} = false`,
       )
 
     const [totalAuthorsResult] = await this.db
@@ -81,7 +83,7 @@ export class AnalysisService {
       totalIgnoredFiles: ignoredFilesResult?.count || 0,
       totalLargeFiles: largeFilesResult?.count || 0,
       totalLines: totalLinesResult?.total || 0,
-      totalAuthors: totalAuthorsResult?.count || 0
+      totalAuthors: totalAuthorsResult?.count || 0,
     }
   }
 
@@ -92,7 +94,9 @@ export class AnalysisService {
         id: authors.id,
         name: authors.name,
         email: authors.email,
-        displayName: authors.displayName
+        displayName: authors.displayName,
+        title: authors.title,
+        rank: authors.rank,
       })
       .from(authors)
       .where(eq(authors.isCanonical, true))
@@ -127,7 +131,7 @@ export class AnalysisService {
       const aliases = await this.db
         .select({
           name: authorAliases.aliasName,
-          email: authorAliases.aliasEmail
+          email: authorAliases.aliasEmail,
         })
         .from(authorAliases)
         .where(eq(authorAliases.canonicalAuthorId, author.id))
@@ -146,7 +150,9 @@ export class AnalysisService {
           totalProjectLines > 0
             ? Math.round((totalLines / totalProjectLines) * 100)
             : 0,
-        aliases: aliases.map((a) => ({ name: a.name, email: a.email }))
+        title: author.title,
+        rank: author.rank,
+        aliases: aliases.map((a) => ({ name: a.name, email: a.email })),
       })
     }
 
@@ -156,7 +162,7 @@ export class AnalysisService {
   }
 
   async getAuthorFileContributions(
-    canonicalAuthorId: number
+    canonicalAuthorId: number,
   ): Promise<FileContribution[]> {
     // Get all author IDs that belong to this canonical author
     const allAuthorIds = await this.db
@@ -171,7 +177,7 @@ export class AnalysisService {
       .select({
         path: files.path,
         authorLines: sql<number>`count(${blameLines.id})`,
-        totalLines: files.totalLines
+        totalLines: files.totalLines,
       })
       .from(files)
       .innerJoin(blameLines, eq(files.id, blameLines.fileId))
@@ -191,7 +197,7 @@ export class AnalysisService {
         percentage:
           (result.totalLines ?? 0) > 0
             ? Math.round((result.authorLines / (result.totalLines ?? 0)) * 100)
-            : 0
+            : 0,
       }
     })
   }
@@ -210,7 +216,7 @@ export class AnalysisService {
         id: authors.id,
         name: authors.name,
         email: authors.email,
-        displayName: authors.displayName
+        displayName: authors.displayName,
       })
       .from(authors)
       .where(eq(authors.isCanonical, true))
@@ -226,7 +232,7 @@ export class AnalysisService {
 
       result.push({
         ...author,
-        aliases: aliases.map((a) => a.name)
+        aliases: aliases.map((a) => a.name),
       })
     }
 
@@ -236,7 +242,7 @@ export class AnalysisService {
   // Helper method to find author by any name/email combination
   async findAuthorByNameOrEmail(
     name: string,
-    email: string
+    email: string,
   ): Promise<number | null> {
     // First try to find by canonical author using EMAIL ONLY
     const [canonical] = await this.db

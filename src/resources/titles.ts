@@ -36,7 +36,7 @@ export const titles = [
   'code slayer',
   'git warrior',
   'commit crusher',
-  'line conqueror'
+  'line conqueror',
 ]
 
 export const commonTitles = [
@@ -94,7 +94,7 @@ export const commonTitles = [
   'commit serf',
   'bug squasher',
   'documentation scribe',
-  'test minion'
+  'test minion',
 ]
 
 // Shared function to capitalize the first letter of a title

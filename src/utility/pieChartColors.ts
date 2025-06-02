@@ -10,5 +10,5 @@ export const pieChartColors = [
   picocolors.green, // #7 - Medium brightness (opposite of magenta)
   picocolors.yellowBright, // #8 - Very bright warm (contrasts with green)
   picocolors.blueBright, // #9 - Very bright cool (opposite of yellow)
-  picocolors.redBright // #10 - Very bright warm (contrasts with blue)
+  picocolors.redBright, // #10 - Very bright warm (contrasts with blue)
 ]

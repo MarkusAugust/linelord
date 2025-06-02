@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { GitService } from '../GitService'
-import { createDatabase, clearDatabase } from '../../db/database'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { exec } from 'node:child_process'
-import { promisify } from 'node:util'
-import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises'
-import { join } from 'node:path'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { files, blameLines, authors } from '../../db/schema'
+import { join } from 'node:path'
+import { promisify } from 'node:util'
+import { clearDatabase, createDatabase } from '../../db/database'
+import { authors, blameLines, files } from '../../db/schema'
+import { GitService } from '../GitService'
 
 const execAsync = promisify(exec)
 
@@ -23,7 +23,7 @@ describe('GitService - Files with $ character', () => {
     await execAsync('git init', { cwd: tempRepoPath })
     await execAsync('git config user.name "Test User"', { cwd: tempRepoPath })
     await execAsync('git config user.email "test@example.com"', {
-      cwd: tempRepoPath
+      cwd: tempRepoPath,
     })
 
     // Create test files with $ characters in names
@@ -31,7 +31,7 @@ describe('GitService - Files with $ character', () => {
       'product.$id.tsx',
       'category.$slug.js',
       'routes/user.$userId.ts',
-      'components/layout.$theme.css'
+      'components/layout.$theme.css',
     ]
 
     for (const fileName of filesWithDollar) {
@@ -46,14 +46,14 @@ describe('GitService - Files with $ character', () => {
       // Create file with some content
       await writeFile(
         filePath,
-        `// File: ${fileName}\nfunction test() {\n  return "Hello from ${fileName}";\n}\n`
+        `// File: ${fileName}\nfunction test() {\n  return "Hello from ${fileName}";\n}\n`,
       )
     }
 
     // Add and commit files
     await execAsync('git add .', { cwd: tempRepoPath })
     await execAsync('git commit -m "Add test files with $ characters"', {
-      cwd: tempRepoPath
+      cwd: tempRepoPath,
     })
 
     // Create database and service
@@ -112,7 +112,9 @@ describe('GitService - Files with $ character', () => {
     const blameLineRecords = await db.select().from(blameLines)
     expect(
       authorRecords[0] &&
-        blameLineRecords.every((line) => line.authorId === authorRecords[0]!.id)
+        blameLineRecords.every(
+          (line) => line.authorId === authorRecords[0]?.id,
+        ),
     ).toBe(true)
   })
 
@@ -120,7 +122,7 @@ describe('GitService - Files with $ character', () => {
     const complexFiles = [
       'api/users/$id/profile.$format.json',
       'routes/blog/$year-$month-$day.tsx',
-      'assets/$locale/messages.$format.json'
+      'assets/$locale/messages.$format.json',
     ]
 
     for (const fileName of complexFiles) {
@@ -135,13 +137,13 @@ describe('GitService - Files with $ character', () => {
 
       await writeFile(
         filePath,
-        `// Complex file: ${fileName}\nexport default {};`
+        `// Complex file: ${fileName}\nexport default {};`,
       )
     }
 
     await execAsync('git add .', { cwd: tempRepoPath })
     await execAsync('git commit -m "Add complex $ files"', {
-      cwd: tempRepoPath
+      cwd: tempRepoPath,
     })
 
     // Reinitialize service with new files
@@ -150,7 +152,7 @@ describe('GitService - Files with $ character', () => {
 
     const stats = await db.select().from(files)
     const complexDollarFiles = stats.filter((file) =>
-      complexFiles.some((cf) => file.path.includes(cf))
+      complexFiles.some((cf) => file.path.includes(cf)),
     )
 
     expect(complexDollarFiles).toHaveLength(3)
@@ -170,14 +172,14 @@ describe('GitService - Files with $ character', () => {
       const filePath = join(tempRepoPath, fileName)
       await writeFile(
         filePath,
-        `// File starting with $: ${fileName}\nconst value = "${fileName}";\nexport default value;`
+        `// File starting with $: ${fileName}\nconst value = "${fileName}";\nexport default value;`,
       )
     }
 
     // Add and commit the new files
     await execAsync('git add .', { cwd: tempRepoPath })
     await execAsync('git commit -m "Add files starting with $"', {
-      cwd: tempRepoPath
+      cwd: tempRepoPath,
     })
 
     // Reinitialize service with new files
@@ -188,11 +190,11 @@ describe('GitService - Files with $ character', () => {
     const stats = await db.select().from(files)
     console.log(
       'All files in database:',
-      stats.map((f) => f.path)
+      stats.map((f) => f.path),
     )
 
     const dollarStartFilesInDb = stats.filter((file) =>
-      dollarStartFiles.includes(file.path)
+      dollarStartFiles.includes(file.path),
     )
 
     expect(dollarStartFilesInDb).toHaveLength(3)
@@ -207,7 +209,7 @@ describe('GitService - Files with $ character', () => {
     const blameData = await db.select().from(blameLines)
     const dollarFileIds = dollarStartFilesInDb.map((f) => f.id)
     const blameForDollarFiles = blameData.filter((line) =>
-      dollarFileIds.includes(line.fileId)
+      dollarFileIds.includes(line.fileId),
     )
 
     expect(blameForDollarFiles.length).toBeGreaterThan(0)

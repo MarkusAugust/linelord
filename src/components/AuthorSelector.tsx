@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
 import { Box, Text, useInput } from 'ink'
+import { useEffect, useState } from 'react'
+import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
 import type { AnalysisService } from '../services/AnalysisService'
 import { EnhancedProgressBar } from './ProgressBar'
-import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
 
 interface Author {
   name: string
@@ -217,9 +217,7 @@ export function AuthorSelector({
               {hasAlternatives && (
                 <Box marginLeft={5} width={60}>
                   <Text dimColor>
-                    {`Also known as: ${new Set(
-                      author.alternativeNames?.join(', ')
-                    )}`}
+                    Also known as: {author.alternativeNames?.join(', ')}
                   </Text>
                 </Box>
               )}
@@ -239,10 +237,3 @@ export function AuthorSelector({
     </Box>
   )
 }
-
-/* 
-
-   Jørgen Høivik Bye <jorgenhoivik.bye@skatteetaten.no>
-      Also known as: SsO4cmdlbiBIw7hpdmlr Bye, Jørgen Høivik Bye, Jørgen Høivik
-       Bye
-*/

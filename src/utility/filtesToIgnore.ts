@@ -132,7 +132,7 @@ export const ignoredFilePatterns = [
   'celerybeat.pid',
 
   // Sphinx documentation
-  'docs/_build/'
+  'docs/_build/',
 ]
 
 export const ignoredFileExtensions = new Set([
@@ -148,5 +148,5 @@ export const ignoredFileExtensions = new Set([
   '.exe',
   '.dll',
   '.so',
-  '.dylib'
+  '.dylib',
 ])

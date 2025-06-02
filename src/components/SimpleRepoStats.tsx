@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react'
 import { Box, Text, useInput } from 'ink'
+import { useEffect, useState } from 'react'
 import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
 import type { AnalysisStep } from '../types/analysisTypes'
 
-import { RepositoryOverview } from './RepositoryOverview'
+import pc from 'picocolors'
 import type {
   AnalysisService,
-  AuthorContribution
+  AuthorContribution,
 } from '../services/AnalysisService'
-import pc from 'picocolors'
-import { ContributorRankingBox } from './ContributorRankingBox'
 import { renderSimplePercentageBar } from '../utility/simplePercentageBar'
+import { ContributorRankingBox } from './ContributorRankingBox'
 import { PieChartSection } from './PieChartSection'
+import { RepositoryOverview } from './RepositoryOverview'
 
 type SimpleRepoStatsProps = {
   repoPath: string
@@ -39,7 +39,7 @@ export default function SimpleRepoStats({
   repoPath,
   onBack,
   largeFileThresholdKB,
-  analysisService
+  analysisService,
 }: SimpleRepoStatsProps) {
   const [state, setState] = useState<AnalysisState>({
     isLoading: true,
@@ -52,7 +52,7 @@ export default function SimpleRepoStats({
     totalLines: 0,
     largeFiles: 0,
     error: null,
-    stepMessage: getRandomBarbarianMessage('initializing')
+    stepMessage: getRandomBarbarianMessage('initializing'),
   })
 
   useInput((input, key) => {
@@ -69,7 +69,7 @@ export default function SimpleRepoStats({
           isLoading: false,
           error:
             'Analysis service not available. Please wait for initialization.',
-          stepMessage: 'By Huge, the service is not ready!'
+          stepMessage: 'By Huge, the service is not ready!',
         }))
         return
       }
@@ -80,7 +80,7 @@ export default function SimpleRepoStats({
           isLoading: true,
           step: 'analyzing',
           progress: 10,
-          stepMessage: getRandomBarbarianMessage('analyzing')
+          stepMessage: getRandomBarbarianMessage('analyzing'),
         }))
 
         // Get repository stats
@@ -93,7 +93,7 @@ export default function SimpleRepoStats({
           totalLines: repoStats.totalLines,
           binaryFiles: repoStats.totalBinaryFiles,
           ignoredFiles: repoStats.totalIgnoredFiles,
-          largeFiles: repoStats.totalLargeFiles
+          largeFiles: repoStats.totalLargeFiles,
         }))
 
         const authorContributions =
@@ -102,7 +102,7 @@ export default function SimpleRepoStats({
         setState((prev) => ({
           ...prev,
           progress: 80,
-          stepMessage: getRandomBarbarianMessage('scanning')
+          stepMessage: getRandomBarbarianMessage('scanning'),
         }))
 
         setState({
@@ -116,7 +116,7 @@ export default function SimpleRepoStats({
           ignoredFiles: repoStats.totalIgnoredFiles,
           largeFiles: repoStats.totalLargeFiles,
           error: null,
-          stepMessage: getRandomBarbarianMessage('complete')
+          stepMessage: getRandomBarbarianMessage('complete'),
         })
       } catch (error) {
         setState((prev) => ({
@@ -125,7 +125,7 @@ export default function SimpleRepoStats({
           error: `Error analyzing repository: ${
             error instanceof Error ? error.message : String(error)
           }`,
-          stepMessage: 'By Huge, the analysis has failed!'
+          stepMessage: 'By Huge, the analysis has failed!',
         }))
       }
     }

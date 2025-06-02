@@ -20,7 +20,7 @@ export function RepositoryOverview({
   ignoredFilesSkipped,
   largeFilesSkipped,
   largeFilesThresholdKB,
-  linesOfCode
+  linesOfCode,
 }: RepositoryOverviewProps) {
   return (
     <Box flexDirection="column" borderStyle={'round'} padding={1} width={40}>

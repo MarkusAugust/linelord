@@ -1,6 +1,6 @@
-import type React from 'react'
 import { Box, Text } from 'ink'
 import pc from 'picocolors'
+import type React from 'react'
 
 interface EnhancedProgressBarProps {
   value: number
@@ -24,7 +24,7 @@ export const EnhancedProgressBar: React.FC<EnhancedProgressBarProps> = ({
   showDetails = true,
   completeChar = '█',
   incompleteChar = '░',
-  color = 'blue'
+  color = 'blue',
 }) => {
   // Calculate percentage and bar segments
   const percent = Math.min(100, Math.round((value / total) * 100))
@@ -38,7 +38,7 @@ export const EnhancedProgressBar: React.FC<EnhancedProgressBarProps> = ({
     yellow: pc.yellow,
     red: pc.red,
     magenta: pc.magenta,
-    cyan: pc.cyan
+    cyan: pc.cyan,
   }[color]
 
   // Render the progress bar with colored segments

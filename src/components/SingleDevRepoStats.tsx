@@ -1,14 +1,12 @@
-import { useState, useEffect } from 'react'
 import { Box, Text, useInput } from 'ink'
 import pc from 'picocolors'
-
-import { EnhancedProgressBar } from './ProgressBar'
-import { renderSimplePercentageBar } from '../utility/simplePercentageBar'
+import { useEffect, useState } from 'react'
 import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
-import type { AnalysisStep } from '../types/analysisTypes'
-import { getRandomTitleCapitalized } from '../resources/titles'
 import type { AnalysisService } from '../services/AnalysisService'
+import type { AnalysisStep } from '../types/analysisTypes'
+import { renderSimplePercentageBar } from '../utility/simplePercentageBar'
 import { AuthorSelector } from './AuthorSelector'
+import { EnhancedProgressBar } from './ProgressBar'
 
 // Simple Author interface to match AuthorSelector
 interface Author {
@@ -20,8 +18,6 @@ interface Author {
 type SingleDevRepoStatsProps = {
   repoPath: string
   onBack: () => void
-  largeFileThresholdBytes: number
-  largeFileThresholdKB: number
   analysisService?: AnalysisService | null
 }
 
@@ -30,6 +26,8 @@ interface AuthorInfo {
   name: string
   email: string
   displayName: string
+  title: string | null
+  rank: number | null
   aliases: string[]
 }
 
@@ -45,6 +43,8 @@ interface AuthorStats {
   totalLines: number
   totalFiles: number
   percentage: number
+  title: string | null
+  rank: number | null
   fileContributions: FileContribution[]
 }
 
@@ -60,11 +60,9 @@ type StatsState = {
 export default function SingleDevRepoStats({
   repoPath,
   onBack,
-
-  analysisService
+  analysisService,
 }: SingleDevRepoStatsProps) {
   const [mode, setMode] = useState<'selector' | 'stats'>('selector')
-  const [randomTitle, setRandomTitle] = useState('')
   const [selectedAuthor, setSelectedAuthor] = useState<AuthorInfo | null>(null)
   const [stats, setStats] = useState<StatsState>({
     isLoading: false,
@@ -72,14 +70,13 @@ export default function SingleDevRepoStats({
     currentStep: 'initializing',
     progress: 0,
     stepMessage: getRandomBarbarianMessage('initializing'),
-    error: null
+    error: null,
   })
 
   useInput((input, key) => {
     if (mode === 'stats' && (key.escape || input === 'q')) {
       setMode('selector')
       setSelectedAuthor(null)
-      setRandomTitle('')
     }
   })
 
@@ -87,7 +84,7 @@ export default function SingleDevRepoStats({
     if (stats.isLoading) {
       setStats((prev) => ({
         ...prev,
-        stepMessage: getRandomBarbarianMessage(prev.currentStep)
+        stepMessage: getRandomBarbarianMessage(prev.currentStep),
       }))
     }
   }, [stats.isLoading])
@@ -104,7 +101,7 @@ export default function SingleDevRepoStats({
         currentStep: 'analyzing',
         progress: 10,
         stepMessage: getRandomBarbarianMessage('analyzing'),
-        error: null
+        error: null,
       })
 
       try {
@@ -113,14 +110,14 @@ export default function SingleDevRepoStats({
 
         setStats((prev) => ({
           ...prev,
-          progress: 30
+          progress: 30,
         }))
 
         // Get author contributions to find our author
         const authorContributions =
           await analysisService.getAuthorContributions()
         const authorContrib = authorContributions.find(
-          (a) => a.id === selectedAuthor.id
+          (a) => a.id === selectedAuthor.id,
         )
 
         if (!authorContrib) {
@@ -130,7 +127,8 @@ export default function SingleDevRepoStats({
             currentStep: 'complete',
             progress: 100,
             stepMessage: 'Author not found in repository',
-            error: 'This author has no contributions in the current repository.'
+            error:
+              'This author has no contributions in the current repository.',
           })
           return
         }
@@ -138,7 +136,7 @@ export default function SingleDevRepoStats({
         setStats((prev) => ({
           ...prev,
           progress: 60,
-          currentStep: 'scanning'
+          currentStep: 'scanning',
         }))
 
         // Get detailed file contributions
@@ -147,20 +145,22 @@ export default function SingleDevRepoStats({
 
         setStats((prev) => ({
           ...prev,
-          progress: 90
+          progress: 90,
         }))
 
         const authorStats: AuthorStats = {
           totalLines: authorContrib.totalLines,
           totalFiles: authorContrib.totalFiles,
           percentage: authorContrib.percentage,
+          title: authorContrib.title,
+          rank: authorContrib.rank,
           fileContributions: fileContributions.map((file) => ({
             filename: file.filename,
             path: file.path,
             authorLines: file.authorLines,
             totalLines: file.totalLines,
-            percentage: file.percentage
-          }))
+            percentage: file.percentage,
+          })),
         }
 
         setTimeout(() => {
@@ -170,7 +170,7 @@ export default function SingleDevRepoStats({
             currentStep: 'complete',
             progress: 100,
             stepMessage: getRandomBarbarianMessage('complete'),
-            error: null
+            error: null,
           })
         }, 300)
       } catch (error) {
@@ -183,7 +183,7 @@ export default function SingleDevRepoStats({
           stepMessage: 'By Huge, the analysis has failed!',
           error: `Error analyzing author stats: ${
             error instanceof Error ? error.message : String(error)
-          }`
+          }`,
         })
       }
     }
@@ -198,17 +198,24 @@ export default function SingleDevRepoStats({
     try {
       const authorId = await analysisService.findAuthorByNameOrEmail(
         author.name,
-        author.email
+        author.email,
       )
       if (authorId) {
+        // Get the full author contribution data to get title and rank
+        const authorContributions =
+          await analysisService.getAuthorContributions()
+        const authorContrib = authorContributions.find((a) => a.id === authorId)
+
         setSelectedAuthor({
           id: authorId,
           name: author.name,
           email: author.email,
           displayName: author.name,
-          aliases: author.alternativeNames || []
+          title: authorContrib?.title || null,
+          rank: authorContrib?.rank || null,
+          aliases: author.alternativeNames || [],
         })
-        setRandomTitle(getRandomTitleCapitalized())
+
         setMode('stats')
       }
     } catch (error) {
@@ -245,12 +252,12 @@ export default function SingleDevRepoStats({
       if (dotIndex === -1) {
         return {
           baseName: filename,
-          extension: ''
+          extension: '',
         }
       }
       return {
         baseName: filename.slice(0, dotIndex + 1),
-        extension: remainingName.slice(dotIndex + 1)
+        extension: remainingName.slice(dotIndex + 1),
       }
     }
 
@@ -258,12 +265,12 @@ export default function SingleDevRepoStats({
     if (lastDotIndex === -1 || lastDotIndex === 0) {
       return {
         baseName: filename,
-        extension: ''
+        extension: '',
       }
     }
     return {
       baseName: filename.slice(0, lastDotIndex),
-      extension: filename.slice(lastDotIndex + 1)
+      extension: filename.slice(lastDotIndex + 1),
     }
   }
 
@@ -277,7 +284,7 @@ export default function SingleDevRepoStats({
 
       <Box flexDirection="column" marginY={1}>
         <Text>
-          Statistics for {randomTitle}{' '}
+          Statistics for {selectedAuthor?.title && `${selectedAuthor.title} `}
           {pc.bold(pc.green(`${selectedAuthor?.displayName}`))}
         </Text>
 
@@ -285,8 +292,8 @@ export default function SingleDevRepoStats({
           <Text>
             {pc.dim(
               `Including lines committed under aliases: ${selectedAuthor.aliases.join(
-                ', '
-              )}`
+                ', ',
+              )}`,
             )}
           </Text>
         )}
@@ -358,7 +365,7 @@ export default function SingleDevRepoStats({
 
                     const percentDisplay = `${file.percentage}%`.padStart(
                       4,
-                      ' '
+                      ' ',
                     )
                     const lineCountDisplay = `[${file.authorLines}/${file.totalLines}]`
 
@@ -368,7 +375,7 @@ export default function SingleDevRepoStats({
                       >
                         <Text>
                           {pc.dim(
-                            `${(fileIndex + 1).toString().padStart(2, ' ')}. `
+                            `${(fileIndex + 1).toString().padStart(2, ' ')}. `,
                           )}
                           {baseNameDisplay}
                           {extension ? ' .' : '  '}
@@ -395,7 +402,7 @@ export default function SingleDevRepoStats({
             </Text>
             <Text>
               {pc.dim(
-                'This developer may not have any lines in the current repository.'
+                'This developer may not have any lines in the current repository.',
               )}
             </Text>
           </Box>

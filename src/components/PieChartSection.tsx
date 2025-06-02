@@ -1,7 +1,7 @@
 import { Box, Text } from 'ink'
 import pc from 'picocolors'
-import { pieChartColors } from '../utility/pieChartColors'
 import type { AuthorContribution } from '../services/AnalysisService'
+import { pieChartColors } from '../utility/pieChartColors'
 
 type PieChartSectionProps = {
   contributions: AuthorContribution[]
@@ -20,7 +20,7 @@ export function PieChartSection({ contributions }: PieChartSectionProps) {
           const totalWidth = 60 // Fixed width for the entire bar
           const width = Math.max(
             1,
-            Math.round((dev.percentage / 100) * totalWidth)
+            Math.round((dev.percentage / 100) * totalWidth),
           )
 
           return (
@@ -57,7 +57,7 @@ export function PieChartSection({ contributions }: PieChartSectionProps) {
           <Box marginTop={1}>
             <Text>
               {pc.dim(
-                `... and ${contributions.length - 10} other contributors`
+                `... and ${contributions.length - 10} other contributors`,
               )}
             </Text>
           </Box>

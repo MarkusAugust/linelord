@@ -36,7 +36,7 @@ export const binaryExtensions = new Set([
   '.jar',
   '.pyc',
   '.o',
-  '.obj'
+  '.obj',
 ])
 
 // Text extensions
@@ -82,5 +82,5 @@ export const textExtensions = new Set([
   '.sql',
   '.r',
   '.m',
-  '.pl'
+  '.pl',
 ])

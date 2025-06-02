@@ -1,5 +1,5 @@
-import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { Database } from 'bun:sqlite'
+import { drizzle } from 'drizzle-orm/bun-sqlite'
 import * as schema from './schema'
 
 export function createDatabase() {
@@ -18,6 +18,8 @@ export function createDatabase() {
       display_name TEXT NOT NULL,
       canonical_id INTEGER,
       is_canonical INTEGER DEFAULT 0,
+      title TEXT,
+      rank INTEGER,
       FOREIGN KEY (canonical_id) REFERENCES authors(id)
     );
     

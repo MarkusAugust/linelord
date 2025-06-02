@@ -53,7 +53,7 @@ export const rankedTitles = [
   'field hand', // 46 - Farm laborer
   'stable boy', // 47 - Tends horses
   'kitchen wench', // 48 - Kitchen servant
-  'peasant' // 49 - Lowest common folk
+  'peasant', // 49 - Lowest common folk
 ]
 
 // Function to get title by rank (0 = highest, 49 = lowest)
@@ -78,7 +78,7 @@ export const getTitleRange = (startRank: number, endRank: number): string[] => {
 const getRandomTitlesFromRange = (
   startIndex: number,
   endIndex: number,
-  count: number
+  count: number,
 ): string[] => {
   const rangeSize = endIndex - startIndex + 1
   const availableTitles = rankedTitles.slice(startIndex, endIndex + 1)
@@ -89,7 +89,7 @@ const getRandomTitlesFromRange = (
     const remaining = count - rangeSize
     for (let i = 0; i < remaining; i++) {
       allTitles.push(
-        availableTitles[Math.floor(Math.random() * rangeSize)] ?? 'unknown'
+        availableTitles[Math.floor(Math.random() * rangeSize)] ?? 'unknown',
       )
     }
     return allTitles
@@ -151,13 +151,13 @@ export const getDistributedTitles = (numDevs: number): string[] => {
 
 // Function to get distributed titles with names/assignments
 export const getDistributedTitlesWithAssignment = (
-  devNames: string[]
+  devNames: string[],
 ): Array<{ name: string; title: string; rank: number }> => {
   const titles = getDistributedTitles(devNames.length)
 
   return devNames.map((name, index) => ({
     name,
     title: titles[index] || 'peasant',
-    rank: getRankByTitle(titles[index] || 'peasant')
+    rank: getRankByTitle(titles[index] || 'peasant'),
   }))
 }

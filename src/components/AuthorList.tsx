@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react'
 import { Box, Text } from 'ink'
+import { useEffect, useState } from 'react'
 import type { AnalysisService } from '../services/AnalysisService'
-import { getDistributedTitlesWithAssignment } from '../resources/rankedTitles'
 import { capitalizeString } from '../utility/capitalizeString'
 
 interface AuthorsListProps {
@@ -17,11 +16,13 @@ interface AuthorSummary {
   displayName: string
   totalLines: number
   percentage: number
+  title: string | null
+  rank: number | null
 }
 
 export const AuthorsList: React.FC<AuthorsListProps> = ({
   repoPath,
-  analysisService
+  analysisService,
 }) => {
   const [authors, setAuthors] = useState<AuthorSummary[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -40,8 +41,10 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({
             email: contrib.email,
             displayName: contrib.displayName,
             totalLines: contrib.totalLines,
-            percentage: contrib.percentage
-          })
+            percentage: contrib.percentage,
+            title: contrib.title,
+            rank: contrib.rank,
+          }),
         )
 
         setAuthors(authorSummaries)
@@ -50,7 +53,7 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({
         setError(
           `Failed to load authors: ${
             err instanceof Error ? err.message : String(err)
-          }`
+          }`,
         )
       } finally {
         setIsLoading(false)
@@ -76,24 +79,19 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({
     )
   }
 
-  // Get titles distributed by contribution ranking
-  const authorNames = authors.map((author) => author.displayName)
-  const titledAuthors = getDistributedTitlesWithAssignment(authorNames)
-
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Text>All contributors ({authors.length}):</Text>
       {authors.map((author, index) => {
-        const authorTitle = titledAuthors[index]
-
-        // Get icon for top 3 contributors
-        const getPositionIcon = (position: number) => {
-          switch (position) {
-            case 0:
-              return '👑' // Crown for 1st place
+        // Get icon for top 3 contributors based on rank
+        const getPositionIcon = (rank: number | null) => {
+          if (!rank) return '  '
+          switch (rank) {
             case 1:
-              return '🥈' // Silver medal for 2nd place
+              return '👑' // Crown for 1st place
             case 2:
+              return '🥈' // Silver medal for 2nd place
+            case 3:
               return '🥉' // Bronze medal for 3rd place
             default:
               return '  ' // Two spaces to align with icons
@@ -108,14 +106,13 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({
           >
             <Box flexDirection="row">
               <Box width={3}>
-                <Text>{getPositionIcon(index)}</Text>
+                <Text>{getPositionIcon(author.rank)}</Text>
               </Box>
               <Box flexDirection="row" gap={1}>
                 <Box flexDirection="row" gap={1}>
                   <Text color="yellow">
-                    {capitalizeString(authorTitle?.title || '')}
+                    {capitalizeString(author.title || '')}
                   </Text>
-
                   <Text>{author.displayName}</Text>
                 </Box>
                 <Text color={'green'}>{author.percentage}%</Text>

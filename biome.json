@@ -11,7 +11,8 @@
   },
   "formatter": {
     "enabled": true,
-    "indentStyle": "tab"
+    "indentStyle": "space",
+    "indentWidth": 2
   },
   "organizeImports": {
     "enabled": true
@@ -24,16 +25,8 @@
   },
   "javascript": {
     "formatter": {
-      "quoteStyle": "double"
+      "quoteStyle": "single",
+      "semicolons": "asNeeded"
     }
-  },
-  "overrides": [
-    {
-      "include": ["src/resources/ignoreFiles.ts"],
-      "formatter": {
-        "lineWidth": 200,
-        "attributePosition": "multiline"
-      }
-    }
-  ]
+  }
 }

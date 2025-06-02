@@ -1,15 +1,16 @@
 import { exec, spawn } from 'node:child_process'
-import { promisify } from 'node:util'
 import { stat } from 'node:fs/promises'
 import path from 'node:path'
+import { promisify } from 'node:util'
+import { desc, eq, sum } from 'drizzle-orm'
 import type { LineLordDatabase } from '../db/database'
-import { authors, files, blameLines } from '../db/schema'
-import { eq } from 'drizzle-orm'
+import { authors, blameLines, files } from '../db/schema'
 import {
+  binaryExts,
   ignoredFileExtensions,
   ignoredFilePatterns,
-  binaryExts
 } from '../resources/ignoreFiles'
+import { getDistributedTitlesWithAssignment } from '../resources/rankedTitles'
 
 const execAsync = promisify(exec)
 
@@ -19,18 +20,18 @@ export class GitService {
   constructor(
     private repoPath: string,
     private db: LineLordDatabase,
-    private largeFileThresholdBytes: number = 50 * 1024
+    private largeFileThresholdBytes: number = 50 * 1024,
   ) {}
 
   async initialize(
-    onProgress?: (current: number, total: number, message: string) => void
+    onProgress?: (current: number, total: number, message: string) => void,
   ) {
     onProgress?.(0, 100, 'Getting repository files...')
 
     // Get all tracked files
     const { stdout } = await execAsync('git ls-files', {
       cwd: this.repoPath,
-      maxBuffer: 50 * 1024 * 1024
+      maxBuffer: 50 * 1024 * 1024,
     })
 
     const allFiles = stdout.trim().split('\n').filter(Boolean)
@@ -61,7 +62,7 @@ export class GitService {
         onProgress?.(
           10 + (i / allFiles.length) * 20,
           100,
-          `Processing files: ${i}/${allFiles.length}`
+          `Processing files: ${i}/${allFiles.length}`,
         )
       }
     }
@@ -69,7 +70,7 @@ export class GitService {
     onProgress?.(
       30,
       100,
-      `Processing blame data for ${filesToAnalyze.length} files...`
+      `Processing blame data for ${filesToAnalyze.length} files...`,
     )
 
     // Process blame data in batches
@@ -85,11 +86,58 @@ export class GitService {
         100,
         `Analyzed ${Math.min(i + batchSize, filesToAnalyze.length)}/${
           filesToAnalyze.length
-        } files`
+        } files`,
       )
     }
 
+    onProgress?.(90, 100, 'Assigning titles and ranks...')
+    await this.assignTitlesAndRanks()
+
     onProgress?.(100, 100, 'Analysis complete!')
+  }
+
+  private async assignTitlesAndRanks() {
+    // Get author contributions ordered by total lines (descending)
+    const authorContributions = await this.db
+      .select({
+        id: authors.id,
+        displayName: authors.displayName,
+        totalLines: sum(blameLines.lineNumber).mapWith(Number),
+      })
+      .from(authors)
+      .leftJoin(blameLines, eq(authors.id, blameLines.authorId))
+      .where(eq(authors.isCanonical, true))
+      .groupBy(authors.id)
+      .orderBy(desc(sum(blameLines.lineNumber)))
+
+    // Filter out authors with no contributions
+    const contributingAuthors = authorContributions.filter(
+      (author) => author.totalLines > 0,
+    )
+
+    if (contributingAuthors.length === 0) {
+      return
+    }
+
+    // Get display names for title assignment
+    const authorNames = contributingAuthors.map((author) => author.displayName)
+    const titledAuthors = getDistributedTitlesWithAssignment(authorNames)
+
+    // Update each author with their title and rank
+    for (let i = 0; i < contributingAuthors.length; i++) {
+      const author = contributingAuthors[i]
+      const titleData = titledAuthors[i]
+
+      if (author && titleData) {
+        await this.db
+          .update(authors)
+          .set({
+            title: titleData.title,
+            rank: i + 1, // Rank starts from 1 (best) to lowest
+          })
+          .where(eq(authors.id, author.id))
+      }
+    }
   }
 
   private async getFileInfo(filePath: string): Promise<{
@@ -118,7 +166,7 @@ export class GitService {
         isBinary: true,
         isIgnored: true,
         isLargerThanThreshold: false,
-        size: 0
+        size: 0,
       }
     }
 
@@ -167,7 +215,7 @@ export class GitService {
       isIgnored: boolean
       isLargerThanThreshold: boolean
       size: number
-    }
+    },
   ) {
     const ext = path.extname(filePath).toLowerCase()
 
@@ -180,7 +228,7 @@ export class GitService {
         isBinary: fileInfo.isBinary,
         isLargerThanThreshold: fileInfo.isLargerThanThreshold,
         isIgnored: fileInfo.isIgnored,
-        totalLines: 0
+        totalLines: 0,
       })
       .onConflictDoNothing()
   }
@@ -189,7 +237,7 @@ export class GitService {
     return new Promise((resolve, reject) => {
       const child = spawn('git', ['blame', '--line-porcelain', filePath], {
         cwd: this.repoPath,
-        stdio: ['pipe', 'pipe', 'pipe']
+        stdio: ['pipe', 'pipe', 'pipe'],
       })
 
       let stdout = ''
@@ -260,7 +308,7 @@ export class GitService {
           // Get or create author
           const authorId = await this.getOrCreateAuthor(
             currentAuthor,
-            currentEmail
+            currentEmail,
           )
 
           blameData.push({
@@ -269,7 +317,7 @@ export class GitService {
             lineNumber,
             content: line.substring(1), // Remove tab
             commitHash: currentCommitHash || null,
-            commitDate: currentCommitDate || null
+            commitDate: currentCommitDate || null,
           })
         }
       }
@@ -291,7 +339,7 @@ export class GitService {
 
   private async getOrCreateAuthor(
     name: string,
-    email: string
+    email: string,
   ): Promise<number> {
     // Check cache first
     if (this.authorCache.has(email)) {
@@ -320,7 +368,7 @@ export class GitService {
         name,
         email,
         displayName: this.normalizeDisplayName(name),
-        isCanonical: true
+        isCanonical: true,
       })
       .returning()
 

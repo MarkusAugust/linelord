@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { Box, Text, useInput } from 'ink'
+import { useState } from 'react'
 
 type TextInputProps = {
   value: string
@@ -16,7 +16,7 @@ export const TextInput = ({
   placeholder = '',
   mask,
   focus = true,
-  onSubmit
+  onSubmit,
 }: TextInputProps) => {
   const [cursorOffset, setCursorOffset] = useState(initialValue.length)
   const [value, setValue] = useState(initialValue)
@@ -72,7 +72,7 @@ export const TextInput = ({
         setCursorOffset((prev) => prev + input.length)
       }
     },
-    { isActive: focus }
+    { isActive: focus },
   )
 
   const displayValue = mask ? mask.repeat(value.length) : value

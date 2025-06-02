@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
+import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 export const authors = sqliteTable('authors', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -6,7 +6,9 @@ export const authors = sqliteTable('authors', {
   email: text('email').notNull().unique(),
   displayName: text('display_name').notNull(),
   canonicalId: integer('canonical_id'),
-  isCanonical: integer('is_canonical', { mode: 'boolean' }).default(false)
+  isCanonical: integer('is_canonical', { mode: 'boolean' }).default(false),
+  title: text('title'),
+  rank: integer('rank'),
 })
 
 export const authorAliases = sqliteTable('author_aliases', {
@@ -16,7 +18,7 @@ export const authorAliases = sqliteTable('author_aliases', {
     .references(() => authors.id),
   aliasName: text('alias_name').notNull(),
   aliasEmail: text('alias_email').notNull(),
-  similarity: integer('similarity').default(100)
+  similarity: integer('similarity').default(100),
 })
 
 export const files = sqliteTable('files', {
@@ -25,11 +27,11 @@ export const files = sqliteTable('files', {
   extension: text('extension'),
   size: integer('size'),
   isLargerThanThreshold: integer('is_larger_than_threshold', {
-    mode: 'boolean'
+    mode: 'boolean',
   }).default(false),
   isBinary: integer('is_binary', { mode: 'boolean' }).default(false),
   isIgnored: integer('is_ignored', { mode: 'boolean' }).default(false),
-  totalLines: integer('total_lines').default(0)
+  totalLines: integer('total_lines').default(0),
 })
 
 export const blameLines = sqliteTable('blame_lines', {
@@ -43,7 +45,7 @@ export const blameLines = sqliteTable('blame_lines', {
   lineNumber: integer('line_number').notNull(),
   content: text('content'),
   commitHash: text('commit_hash'),
-  commitDate: text('commit_date')
+  commitDate: text('commit_date'),
 })
 
 export type Author = typeof authors.$inferSelect

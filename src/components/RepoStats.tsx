@@ -1,18 +1,18 @@
-import { useState, useEffect } from 'react'
 import { Box, Text, useInput } from 'ink'
 import pc from 'picocolors'
+import { useEffect, useState } from 'react'
 
-import { EnhancedProgressBar } from './ProgressBar'
-import { renderSimplePercentageBar } from '../utility/simplePercentageBar'
 import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
-import type { AnalysisStep } from '../types/analysisTypes'
-import { PieChartSection } from './PieChartSection'
-import { ContributorRankingBox } from './ContributorRankingBox'
-import { RepositoryOverview } from './RepositoryOverview'
 import type {
   AnalysisService,
-  AuthorContribution
+  AuthorContribution,
 } from '../services/AnalysisService'
+import type { AnalysisStep } from '../types/analysisTypes'
+import { renderSimplePercentageBar } from '../utility/simplePercentageBar'
+import { ContributorRankingBox } from './ContributorRankingBox'
+import { PieChartSection } from './PieChartSection'
+import { EnhancedProgressBar } from './ProgressBar'
+import { RepositoryOverview } from './RepositoryOverview'
 
 type RepoStatsProps = {
   repoPath: string
@@ -29,6 +29,7 @@ interface ExtendedAuthorContribution extends AuthorContribution {
     totalLines: number
     percentage: number
   }>
+
   aliases?: Array<{ name: string; email: string }>
 }
 
@@ -51,7 +52,7 @@ export default function RepoStats({
   repoPath,
   onBack,
   largeFileThresholdKB,
-  analysisService
+  analysisService,
 }: RepoStatsProps) {
   const [state, setState] = useState<AnalysisState>({
     isLoading: true,
@@ -64,7 +65,7 @@ export default function RepoStats({
     largeFiles: 0,
     totalLines: 0,
     error: null,
-    stepMessage: getRandomBarbarianMessage('initializing')
+    stepMessage: getRandomBarbarianMessage('initializing'),
   })
 
   useInput((input, key) => {
@@ -78,7 +79,7 @@ export default function RepoStats({
       const newMessage = getRandomBarbarianMessage(state.step)
       setState((prev) => ({
         ...prev,
-        stepMessage: newMessage
+        stepMessage: newMessage,
       }))
     }
   }, [state.step, state.isLoading])
@@ -91,12 +92,12 @@ export default function RepoStats({
       if (dotIndex === -1) {
         return {
           baseName: filename,
-          extension: ''
+          extension: '',
         }
       }
       return {
         baseName: filename.slice(0, dotIndex + 1),
-        extension: remainingName.slice(dotIndex + 1)
+        extension: remainingName.slice(dotIndex + 1),
       }
     }
 
@@ -104,12 +105,12 @@ export default function RepoStats({
     if (lastDotIndex === -1 || lastDotIndex === 0) {
       return {
         baseName: filename,
-        extension: ''
+        extension: '',
       }
     }
     return {
       baseName: filename.slice(0, lastDotIndex),
-      extension: filename.slice(lastDotIndex + 1)
+      extension: filename.slice(lastDotIndex + 1),
     }
   }
 
@@ -121,7 +122,7 @@ export default function RepoStats({
           isLoading: false,
           error:
             'Analysis service not available. Please wait for initialization.',
-          stepMessage: 'By Huge, the service is not ready!'
+          stepMessage: 'By Huge, the service is not ready!',
         }))
         return
       }
@@ -132,7 +133,7 @@ export default function RepoStats({
           isLoading: true,
           step: 'analyzing',
           progress: 10,
-          stepMessage: getRandomBarbarianMessage('analyzing')
+          stepMessage: getRandomBarbarianMessage('analyzing'),
         }))
 
         // Get repository stats
@@ -145,7 +146,7 @@ export default function RepoStats({
           totalLines: repoStats.totalLines,
           binaryFiles: repoStats.totalBinaryFiles,
           ignoredFiles: repoStats.totalIgnoredFiles,
-          largeFiles: repoStats.totalLargeFiles
+          largeFiles: repoStats.totalLargeFiles,
         }))
 
         // Get author contributions with detailed info
@@ -155,7 +156,7 @@ export default function RepoStats({
         setState((prev) => ({
           ...prev,
           progress: 60,
-          stepMessage: getRandomBarbarianMessage('scanning')
+          stepMessage: getRandomBarbarianMessage('scanning'),
         }))
 
         // Get detailed file contributions for each author
@@ -166,7 +167,7 @@ export default function RepoStats({
             ...prev,
             progress:
               60 +
-              (extendedContributions.length / authorContributions.length) * 20
+              (extendedContributions.length / authorContributions.length) * 20,
           }))
 
           const fileContributions =
@@ -180,14 +181,16 @@ export default function RepoStats({
             totalLines: author.totalLines,
             totalFiles: author.totalFiles,
             percentage: author.percentage,
+            title: author.title,
+            rank: author.rank,
             topFiles: fileContributions.slice(0, 5).map((file) => ({
               filename: file.filename,
               path: file.path,
               authorLines: file.authorLines,
               totalLines: file.totalLines,
-              percentage: file.percentage
+              percentage: file.percentage,
             })),
-            aliases: author.aliases
+            aliases: author.aliases,
           })
         }
 
@@ -202,7 +205,7 @@ export default function RepoStats({
           ignoredFiles: repoStats.totalIgnoredFiles,
           largeFiles: repoStats.totalLargeFiles,
           error: null,
-          stepMessage: getRandomBarbarianMessage('complete')
+          stepMessage: getRandomBarbarianMessage('complete'),
         })
       } catch (error) {
         setState((prev) => ({
@@ -211,7 +214,7 @@ export default function RepoStats({
           error: `Error analyzing repository: ${
             error instanceof Error ? error.message : String(error)
           }`,
-          stepMessage: 'By Huge, the analysis has failed!'
+          stepMessage: 'By Huge, the analysis has failed!',
         }))
       }
     }
@@ -315,7 +318,7 @@ export default function RepoStats({
                     <Text>{pc.dim('Top files:')}</Text>
                     {dev.topFiles.map((file, fileIndex) => {
                       const { baseName, extension } = parseFileName(
-                        file.filename
+                        file.filename,
                       )
 
                       const baseNameDisplay =
@@ -329,7 +332,7 @@ export default function RepoStats({
 
                       const percentDisplay = `${file.percentage}%`.padStart(
                         4,
-                        ' '
+                        ' ',
                       )
                       const lineCountDisplay = `[${file.authorLines}/${file.totalLines}]`
 
@@ -337,7 +340,7 @@ export default function RepoStats({
                         <Box key={`${index}-${fileIndex}-${file.filename}`}>
                           <Text>
                             {pc.dim(
-                              `${(fileIndex + 1).toString().padStart(2, ' ')}. `
+                              `${(fileIndex + 1).toString().padStart(2, ' ')}. `,
                             )}
                             {baseNameDisplay}
                             {extension ? ' .' : '  '}
@@ -347,7 +350,7 @@ export default function RepoStats({
                               {renderSimplePercentageBar(
                                 file.percentage,
                                 10,
-                                'green'
+                                'green',
                               )}
                             </Text>
                             {'  '}
