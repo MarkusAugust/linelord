@@ -1,133 +1,68 @@
 import { Box, Text } from 'ink'
-import { useEffect, useState } from 'react'
 import About from './components/About'
 import { AuthorsList } from './components/AuthorList'
+import ErrorScreen from './components/ErrorScreen'
 import ExitScreen from './components/ExitScreen'
 import Layout from './components/Layout'
+import LoadingScreen from './components/LoadingScreen'
 import Menu, { type MenuOption } from './components/Menu'
 import RepoPathInput from './components/RepoPathInput'
 import RepoStats from './components/RepoStats'
-import SingleDevRepoStats from './components/SingleDevRepoStats'
-import { barbarianQuotes } from './resources/barbarianQuotes'
-import { clearTerminal } from './utility/terminal'
-
 import SimpleRepoStats from './components/SimpleRepoStats'
-import { getRandomBarbarianMessage } from './resources/barbarianAnalysisMessages'
-import { LineLordService } from './services/LineLordService'
+import SingleDevRepoStats from './components/SingleDevRepoStats'
+
+import { menuOptions } from './utility/menuOptions'
+import { clearTerminal } from './utility/terminal'
 import { convertThresholdKBToBytes } from './utility/thresholdConverter'
+import { type AppState, useAppState } from './utility/useAppState'
+import { useErrorHandler } from './utility/useErrorHandler'
+import { useLineLordService } from './utility/useLineLordService'
 
 type AppProps = {
   repoPath?: string
   thresholdKB?: number
 }
 
-type AppState =
-  | 'input-path'
-  | 'menu'
-  | 'repostats'
-  | 'extendedrepostats'
-  | 'singledevrepostats'
-  | 'about'
-  | 'exit'
-
 export default function App({
   repoPath: initialRepoPath,
   thresholdKB,
 }: AppProps) {
-  const [lineLordService, setLineLordService] =
-    useState<LineLordService | null>(null)
-  const [isInitialized, setIsInitialized] = useState(false)
-  const [initializingMessage, setInitializingMessage] = useState('')
-  const [initProgress, setInitProgress] = useState({
-    current: 0,
-    total: 100,
-    message: '',
-  })
+  const { state, setState, repoPath, setRepoPath, farewell } =
+    useAppState(initialRepoPath)
 
   const {
     thresholdKB: largeFileThresholdKB,
     thresholdBytes: largeFileThresholdBytes,
   } = convertThresholdKBToBytes(thresholdKB, 50)
 
-  const [state, setState] = useState<AppState>(
-    initialRepoPath ? 'menu' : 'input-path',
-  )
-  const [repoPath, setRepoPath] = useState<string>(initialRepoPath || '')
-  const [farewell, setFarewell] = useState('')
+  const {
+    lineLordService,
+    isInitialized,
+    initializingMessage,
+    initError,
+    initProgress,
+  } = useLineLordService(repoPath, largeFileThresholdBytes)
 
-  useEffect(() => {
-    if (repoPath) {
-      if (
-        lineLordService &&
-        lineLordService.getCurrentRepoPath() !== repoPath
-      ) {
-        // Repository path changed, reinitialize with new repo
-        setIsInitialized(false)
-        setInitializingMessage(getRandomBarbarianMessage('initializing'))
-        setInitProgress({
-          current: 0,
-          total: 100,
-          message: 'Switching repositories...',
-        })
+  const handleClearError = () => {
+    setRepoPath('')
+    setState('input-path')
+  }
 
-        lineLordService
-          .changeRepository(
-            repoPath,
-            (current, total, message) => {
-              setInitProgress({ current, total, message })
-            },
-            largeFileThresholdBytes,
-          )
-          .then(() => {
-            setIsInitialized(true)
-          })
-          .catch(console.error)
-      } else if (!lineLordService) {
-        // Create new service for the first time
-        setInitializingMessage(getRandomBarbarianMessage('initializing'))
-        const service = new LineLordService(repoPath, largeFileThresholdBytes)
-        setLineLordService(service)
-
-        service
-          .initialize((current, total, message) => {
-            setInitProgress({ current, total, message })
-          })
-          .then(() => {
-            setIsInitialized(true)
-          })
-          .catch(console.error)
-      }
-    }
-  }, [repoPath, lineLordService, largeFileThresholdBytes])
+  useErrorHandler(repoPath, initError, handleClearError)
 
   const analysisService = lineLordService?.isInitialized()
     ? lineLordService.getAnalysisService()
     : undefined
 
-  useEffect(() => {
-    if (state === 'exit') {
-      // Choose a random farewell quote when entering exit state
-      const randomQuote =
-        barbarianQuotes[Math.floor(Math.random() * barbarianQuotes.length)] ??
-        'Farewell!'
-      setFarewell(randomQuote)
-
-      // Exit after giving time to read (optional)
-      setTimeout(() => {
-        process.exit(0)
-      }, 100)
-    }
-  }, [state])
-
   const handleMenuSelect = (option: MenuOption) => {
     if (option.value === 'exit') {
-      clearTerminal() // Clear before switching
+      clearTerminal()
       setState('exit')
     } else if (option.value === 'change-repo') {
-      clearTerminal() // Clear before switching
+      clearTerminal()
       setState('input-path')
     } else {
-      clearTerminal() // Clear before entering features
+      clearTerminal()
       setState(option.value as AppState)
     }
   }
@@ -144,25 +79,16 @@ export default function App({
 
   const handlePathCancel = () => {
     if (repoPath) {
-      // If we already have a repo path, return to menu
       setState('menu')
     } else {
-      // If no repo path set, exit the app
       setState('exit')
     }
   }
 
-  const menuOptions: MenuOption[] = [
-    { label: 'Repository Statistics', value: 'repostats' },
-    { label: 'Extended Repository Statistics', value: 'extendedrepostats' },
-    {
-      label: 'Single Developer Repository Statistics',
-      value: 'singledevrepostats',
-    },
-    { label: 'Change Repository', value: 'change-repo' },
-    { label: 'About', value: 'about' },
-    { label: 'Exit', value: 'exit' },
-  ]
+  // Show error screen if initialization failed
+  if (repoPath && initError) {
+    return <ErrorScreen error={initError} />
+  }
 
   // If in exit state, render the farewell screen without Layout
   if (state === 'exit') {
@@ -170,23 +96,14 @@ export default function App({
   }
 
   // Show loading screen during initialization
-  if (repoPath && lineLordService && !isInitialized) {
+  if (repoPath && lineLordService && !isInitialized && !initError) {
+    const isChangingRepo = lineLordService.getCurrentRepoPath() !== repoPath
     return (
-      <Layout>
-        <Box flexDirection="column" paddingBottom={1}>
-          <Text bold>
-            {lineLordService.getCurrentRepoPath() === repoPath
-              ? initializingMessage
-              : 'Switching repositories...'}
-          </Text>
-          <Box paddingTop={1}>
-            <Text>Progress: {initProgress.current.toFixed(0)}%</Text>
-          </Box>
-          <Box paddingTop={1}>
-            <Text>{initProgress.message}</Text>
-          </Box>
-        </Box>
-      </Layout>
+      <LoadingScreen
+        message={initializingMessage}
+        progress={initProgress}
+        isChangingRepo={isChangingRepo}
+      />
     )
   }
 
