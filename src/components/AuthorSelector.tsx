@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
 import { Box, Text, useInput } from 'ink'
+import { useEffect, useState } from 'react'
+import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
 import type { AnalysisService } from '../services/AnalysisService'
 import { EnhancedProgressBar } from './ProgressBar'
-import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
 
 interface Author {
   name: string
@@ -23,7 +23,7 @@ export function AuthorSelector({
   onSelect,
   onCancel,
   mergePolicy = 'loose',
-  analysisService
+  analysisService,
 }: AuthorSelectorProps) {
   const [authors, setAuthors] = useState<Author[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +37,7 @@ export function AuthorSelector({
     const loadAuthors = async () => {
       if (!analysisService) {
         setError(
-          'Analysis service not available. Please wait for initialization.'
+          'Analysis service not available. Please wait for initialization.',
         )
         setIsLoading(false)
         return
@@ -60,7 +60,7 @@ export function AuthorSelector({
           name: author.displayName,
           email: author.email,
           alternativeNames:
-            author.aliases.length > 0 ? author.aliases : undefined
+            author.aliases.length > 0 ? author.aliases : undefined,
         }))
 
         setAuthors(authorList)
@@ -71,7 +71,7 @@ export function AuthorSelector({
         setError(
           `Failed to get authors: ${
             err instanceof Error ? err.message : String(err)
-          }`
+          }`,
         )
         setIsLoading(false)
         setStepMessage('By Huge, the analysis has failed!')
@@ -218,7 +218,7 @@ export function AuthorSelector({
                 <Box marginLeft={5} width={60}>
                   <Text dimColor>
                     {`Also known as: ${new Set(
-                      author.alternativeNames?.join(', ')
+                      author.alternativeNames?.join(', '),
                     )}`}
                   </Text>
                 </Box>

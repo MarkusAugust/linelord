@@ -1,10 +1,10 @@
 #!/usr/bin/env node
+import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { resolve } from 'node:path'
 import { render } from 'ink'
 import meow from 'meow'
 import React from 'react'
-import { resolve } from 'node:path'
-import { existsSync } from 'node:fs'
-import { homedir } from 'node:os'
 import App from './App'
 import { CLI_HELP } from './resources/cliHelp'
 
@@ -13,19 +13,19 @@ const cli = meow(CLI_HELP, {
   autoVersion: false,
   flags: {
     path: {
-      type: 'string'
+      type: 'string',
     },
 
     version: {
       type: 'boolean',
-      shortFlag: 'v'
+      shortFlag: 'v',
     },
     threshold: {
       type: 'number',
       default: 50,
-      shortFlag: 't'
-    }
-  }
+      shortFlag: 't',
+    },
+  },
 })
 
 // Handle --version flag immediately without starting the app
@@ -76,7 +76,7 @@ const thresholdKB = cli.flags.threshold
 // Pass repoPath to your existing App component
 const element = React.createElement(App, {
   repoPath: repoPath,
-  thresholdKB: thresholdKB
+  thresholdKB: thresholdKB,
 })
 
 const app = render(element)

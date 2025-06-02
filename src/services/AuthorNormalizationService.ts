@@ -1,13 +1,13 @@
 import { eq } from 'drizzle-orm'
 import { distance } from 'fastest-levenshtein'
 import type { LineLordDatabase } from '../db/database'
-import { authors, authorAliases, blameLines, type Author } from '../db/schema'
+import { type Author, authorAliases, authors, blameLines } from '../db/schema'
 
 export class AuthorNormalizationService {
   constructor(private db: LineLordDatabase) {}
 
   async normalizeAllAuthors(
-    policy: 'strict' | 'loose' = 'loose'
+    policy: 'strict' | 'loose' = 'loose',
   ): Promise<void> {
     const allAuthors = await this.db.select().from(authors)
 
@@ -84,7 +84,7 @@ export class AuthorNormalizationService {
       [name1, name2],
       [name1, displayName2],
       [displayName1, name2],
-      [displayName1, displayName2]
+      [displayName1, displayName2],
     ]
 
     for (const [n1, n2] of namePairs) {
@@ -114,7 +114,7 @@ export class AuthorNormalizationService {
   private areStringsSimilar(
     str1: string,
     str2: string,
-    isEmail: boolean
+    isEmail: boolean,
   ): boolean {
     if (!str1 || !str2) return false
     if (str1 === str2) return true
@@ -168,7 +168,7 @@ export class AuthorNormalizationService {
       .set({
         isCanonical: true,
         canonicalId: canonical.id,
-        displayName: canonical.displayName
+        displayName: canonical.displayName,
       })
       .where(eq(authors.id, canonical.id))
 
@@ -178,7 +178,7 @@ export class AuthorNormalizationService {
           .update(authors)
           .set({
             isCanonical: false,
-            canonicalId: canonical.id
+            canonicalId: canonical.id,
           })
           .where(eq(authors.id, author.id))
 
@@ -186,7 +186,7 @@ export class AuthorNormalizationService {
           canonicalAuthorId: canonical.id,
           aliasName: author.name,
           aliasEmail: author.email,
-          similarity: 100
+          similarity: 100,
         })
 
         await this.db
@@ -205,12 +205,12 @@ export class AuthorNormalizationService {
     const readableAuthors = authors.filter(
       (a) =>
         !this.hasEncodingArtifacts(a.name) &&
-        !this.hasEncodingArtifacts(a.displayName)
+        !this.hasEncodingArtifacts(a.displayName),
     )
 
     if (readableAuthors.length > 0) {
       return readableAuthors.reduce((best, current) =>
-        current.displayName.length > best.displayName.length ? current : best
+        current.displayName.length > best.displayName.length ? current : best,
       )
     }
 
@@ -234,7 +234,7 @@ export class AuthorNormalizationService {
       .update(authors)
       .set({
         isCanonical: true,
-        canonicalId: author.id
+        canonicalId: author.id,
       })
       .where(eq(authors.id, author.id))
   }

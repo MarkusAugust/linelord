@@ -3,13 +3,14 @@ import pc from 'picocolors'
 import { getDistributedTitles } from '../resources/rankedTitles'
 
 import type { AuthorContribution } from '../services/AnalysisService'
+import { capitalizeString } from '../utility/capitalizeString'
 
 type ContributorRankingBoxProps = {
   contributions: AuthorContribution[]
 }
 
 export function ContributorRankingBox({
-  contributions
+  contributions,
 }: ContributorRankingBoxProps) {
   const topContributor = contributions[0]
   const bottomContributor =
@@ -36,7 +37,11 @@ export function ContributorRankingBox({
     >
       <Box flexDirection="column" alignItems="center">
         <Text>Glorious</Text>
-        <Text>{distributedTitles[0] || 'unknown'}</Text>
+        <Text>
+          {topContributor?.title
+            ? capitalizeString(topContributor.title)
+            : 'Barbarian'}
+        </Text>
         {topContributor ? (
           <Box alignItems="center" flexDirection="column">
             <Text wrap="wrap">
@@ -52,9 +57,7 @@ export function ContributorRankingBox({
       {bottomContributor && (
         <Box flexDirection="column" alignItems="center">
           <Text>Lowly</Text>
-          <Text>
-            {distributedTitles[distributedTitles.length - 1] || 'peasant'}
-          </Text>
+          <Text>{bottomContributor?.title ?? 'kitchen wench'}</Text>
           <Box alignItems="center" flexDirection="column">
             <Text wrap="wrap">
               {pc.dim(formatName(bottomContributor.name))}

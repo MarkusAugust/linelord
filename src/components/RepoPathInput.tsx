@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
-import { Box, Text, useInput } from 'ink'
 import { existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
 import { homedir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { Box, Text, useInput } from 'ink'
+import { useEffect, useState } from 'react'
 
 type RepoPathInputProps = {
   onSubmit: (path: string) => void
@@ -11,7 +11,7 @@ type RepoPathInputProps = {
 
 export default function RepoPathInput({
   onSubmit,
-  onCancel
+  onCancel,
 }: RepoPathInputProps) {
   const [inputValue, setInputValue] = useState('')
   const [error, setError] = useState<string | null>(null)

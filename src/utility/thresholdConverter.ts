@@ -6,13 +6,13 @@
  */
 export function convertThresholdKBToBytes(
   thresholdKB: number | null | undefined,
-  defaultKB = 50
+  defaultKB = 50,
 ) {
   const finalThresholdKB = thresholdKB ?? defaultKB
   const thresholdBytes = finalThresholdKB * 1024
 
   return {
     thresholdKB: finalThresholdKB,
-    thresholdBytes
+    thresholdBytes,
   }
 }

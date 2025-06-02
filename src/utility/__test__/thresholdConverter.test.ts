@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, expect, it } from 'bun:test'
 import { convertThresholdKBToBytes } from '../thresholdConverter'
 
 describe('convertThresholdKBToBytes', () => {
@@ -50,7 +50,7 @@ describe('convertThresholdKBToBytes', () => {
       { kb: 2, expectedBytes: 2048 },
       { kb: 10, expectedBytes: 10240 },
       { kb: 100, expectedBytes: 102400 },
-      { kb: 1000, expectedBytes: 1024000 }
+      { kb: 1000, expectedBytes: 1024000 },
     ]
 
     for (const { kb, expectedBytes } of testCases) {

@@ -127,5 +127,5 @@ export const barbarianQuotes = [
   "Gorvek's flame-scarred hands have forged this code in the fires of determination!",
   "The Galdane way is the warrior's way - face the bugs with honor!",
   'By the ashes of Aslene, this refactoring is complete!',
-  "Gorvek's vengeance against technical debt knows no bounds!"
+  "Gorvek's vengeance against technical debt knows no bounds!",
 ]

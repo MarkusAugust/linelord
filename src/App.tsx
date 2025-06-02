@@ -1,20 +1,20 @@
-import { useState, useEffect } from 'react'
 import { Box, Text } from 'ink'
+import { useEffect, useState } from 'react'
+import About from './components/About'
+import { AuthorsList } from './components/AuthorList'
+import ExitScreen from './components/ExitScreen'
+import Layout from './components/Layout'
 import Menu, { type MenuOption } from './components/Menu'
+import RepoPathInput from './components/RepoPathInput'
 import RepoStats from './components/RepoStats'
 import SingleDevRepoStats from './components/SingleDevRepoStats'
-import Layout from './components/Layout'
-import RepoPathInput from './components/RepoPathInput'
 import { barbarianQuotes } from './resources/barbarianQuotes'
-import { AuthorsList } from './components/AuthorList'
 import { clearTerminal } from './utility/terminal'
-import About from './components/About'
-import ExitScreen from './components/ExitScreen'
 
+import SimpleRepoStats from './components/SimpleRepoStats'
+import { getRandomBarbarianMessage } from './resources/barbarianAnalysisMessages'
 import { LineLordService } from './services/LineLordService'
 import { convertThresholdKBToBytes } from './utility/thresholdConverter'
-import SimpleRepoStats from './components/SampleRepoStats'
-import { getRandomBarbarianMessage } from './resources/barbarianAnalysisMessages'
 
 type AppProps = {
   repoPath?: string
@@ -32,7 +32,7 @@ type AppState =
 
 export default function App({
   repoPath: initialRepoPath,
-  thresholdKB
+  thresholdKB,
 }: AppProps) {
   const [lineLordService, setLineLordService] =
     useState<LineLordService | null>(null)
@@ -41,16 +41,16 @@ export default function App({
   const [initProgress, setInitProgress] = useState({
     current: 0,
     total: 100,
-    message: ''
+    message: '',
   })
 
   const {
     thresholdKB: largeFileThresholdKB,
-    thresholdBytes: largeFileThresholdBytes
+    thresholdBytes: largeFileThresholdBytes,
   } = convertThresholdKBToBytes(thresholdKB, 50)
 
   const [state, setState] = useState<AppState>(
-    initialRepoPath ? 'menu' : 'input-path'
+    initialRepoPath ? 'menu' : 'input-path',
   )
   const [repoPath, setRepoPath] = useState<string>(initialRepoPath || '')
   const [farewell, setFarewell] = useState('')
@@ -67,7 +67,7 @@ export default function App({
         setInitProgress({
           current: 0,
           total: 100,
-          message: 'Switching repositories...'
+          message: 'Switching repositories...',
         })
 
         lineLordService
@@ -76,7 +76,7 @@ export default function App({
             (current, total, message) => {
               setInitProgress({ current, total, message })
             },
-            largeFileThresholdBytes
+            largeFileThresholdBytes,
           )
           .then(() => {
             setIsInitialized(true)
@@ -157,11 +157,11 @@ export default function App({
     { label: 'Extended Repository Statistics', value: 'extendedrepostats' },
     {
       label: 'Single Developer Repository Statistics',
-      value: 'singledevrepostats'
+      value: 'singledevrepostats',
     },
     { label: 'Change Repository', value: 'change-repo' },
     { label: 'About', value: 'about' },
-    { label: 'Exit', value: 'exit' }
+    { label: 'Exit', value: 'exit' },
   ]
 
   // If in exit state, render the farewell screen without Layout
@@ -248,8 +248,6 @@ export default function App({
         <SingleDevRepoStats
           repoPath={repoPath}
           onBack={returnToMenu}
-          largeFileThresholdBytes={largeFileThresholdBytes}
-          largeFileThresholdKB={largeFileThresholdKB}
           analysisService={analysisService}
         />
       )}

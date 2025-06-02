@@ -64,7 +64,7 @@ export const binaryExts = new Set([
   '.db',
   '.sqlite',
   '.sqlite3',
-  '.mdb'
+  '.mdb',
 ])
 
 export const ignoredFileExtensions = new Set([
@@ -137,7 +137,7 @@ export const ignoredFileExtensions = new Set([
   '.pem',
   '.crt',
   '.p12',
-  '.pfx'
+  '.pfx',
 ])
 
 export const ignoredFilePatterns = [
@@ -462,5 +462,5 @@ export const ignoredFilePatterns = [
   '*.migrate.*',
   '*_migrate.*',
   '*.schema.*',
-  '*_schema.*'
+  '*_schema.*',
 ]

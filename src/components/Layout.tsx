@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
 import { Box, type BoxProps } from 'ink'
+import type { ReactNode } from 'react'
 import Footer from './Footer'
 import Header from './Header'
 

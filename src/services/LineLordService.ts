@@ -1,11 +1,11 @@
-import { GitService } from './GitService'
-import { AuthorNormalizationService } from './AuthorNormalizationService'
-import { AnalysisService } from './AnalysisService'
 import {
-  createDatabase,
+  type LineLordDatabase,
   clearDatabase,
-  type LineLordDatabase
+  createDatabase,
 } from '../db/database'
+import { AnalysisService } from './AnalysisService'
+import { AuthorNormalizationService } from './AuthorNormalizationService'
+import { GitService } from './GitService'
 
 export class LineLordService {
   private db: LineLordDatabase
@@ -17,21 +17,21 @@ export class LineLordService {
 
   constructor(
     repoPath: string,
-    private largeFileThresholdBytes: number = 50 * 1024
+    private largeFileThresholdBytes: number = 50 * 1024,
   ) {
     this.currentRepoPath = repoPath
     this.db = createDatabase()
     this.gitService = new GitService(
       repoPath,
       this.db,
-      this.largeFileThresholdBytes
+      this.largeFileThresholdBytes,
     )
     this.normalizationService = new AuthorNormalizationService(this.db)
     this.analysisService = new AnalysisService(this.db)
   }
 
   async initialize(
-    onProgress?: (current: number, total: number, message: string) => void
+    onProgress?: (current: number, total: number, message: string) => void,
   ): Promise<void> {
     try {
       onProgress?.(0, 100, 'Initializing Git service...')
@@ -59,7 +59,7 @@ export class LineLordService {
   async changeRepository(
     newRepoPath: string,
     onProgress?: (current: number, total: number, message: string) => void,
-    newThresholdBytes?: number
+    newThresholdBytes?: number,
   ): Promise<void> {
     onProgress?.(0, 100, 'Clearing old repository data...')
 
@@ -76,7 +76,7 @@ export class LineLordService {
     this.gitService = new GitService(
       newRepoPath,
       this.db,
-      this.largeFileThresholdBytes
+      this.largeFileThresholdBytes,
     )
     this.normalizationService = new AuthorNormalizationService(this.db)
     this.analysisService = new AnalysisService(this.db)
@@ -105,7 +105,7 @@ export class LineLordService {
   getAnalysisService(): AnalysisService {
     if (!this.initialized) {
       throw new Error(
-        'LineLordService must be initialized before getting analysis service'
+        'LineLordService must be initialized before getting analysis service',
       )
     }
     return this.analysisService

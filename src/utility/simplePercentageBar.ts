@@ -6,7 +6,7 @@ type ColorOptions = 'green' | 'cyan' | 'blue'
 export const renderSimplePercentageBar = (
   percent: number,
   width = 15,
-  color: ColorOptions = 'green'
+  color: ColorOptions = 'green',
 ) => {
   // Validate inputs to prevent errors
   const safePercent =
@@ -34,8 +34,8 @@ export const renderSimplePercentageBar = (
     (color === 'cyan'
       ? picocolors.cyan('█'.repeat(safeeFilled))
       : color === 'blue'
-      ? picocolors.blue('█'.repeat(safeeFilled))
-      : picocolors.green('█'.repeat(safeeFilled))) +
+        ? picocolors.blue('█'.repeat(safeeFilled))
+        : picocolors.green('█'.repeat(safeeFilled))) +
     picocolors.gray('░'.repeat(safeEmpty))
   )
 }
