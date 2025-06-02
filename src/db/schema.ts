@@ -6,7 +6,9 @@ export const authors = sqliteTable('authors', {
   email: text('email').notNull().unique(),
   displayName: text('display_name').notNull(),
   canonicalId: integer('canonical_id'),
-  isCanonical: integer('is_canonical', { mode: 'boolean' }).default(false)
+  isCanonical: integer('is_canonical', { mode: 'boolean' }).default(false),
+  title: text('title'),
+  rank: integer('rank')
 })
 
 export const authorAliases = sqliteTable('author_aliases', {

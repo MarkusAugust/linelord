@@ -18,6 +18,8 @@ export function createDatabase() {
       display_name TEXT NOT NULL,
       canonical_id INTEGER,
       is_canonical INTEGER DEFAULT 0,
+      title TEXT,
+      rank INTEGER,
       FOREIGN KEY (canonical_id) REFERENCES authors(id)
     );
     
