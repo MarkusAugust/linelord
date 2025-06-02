@@ -239,10 +239,3 @@ export function AuthorSelector({
     </Box>
   )
 }
-
-/* 
-
-   Jørgen Høivik Bye <jorgenhoivik.bye@skatteetaten.no>
-      Also known as: SsO4cmdlbiBIw7hpdmlr Bye, Jørgen Høivik Bye, Jørgen Høivik
-       Bye
-*/
