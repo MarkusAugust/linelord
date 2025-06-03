@@ -304,8 +304,11 @@ export default function RepoStats({
                     </Text>
                   </Box>
                 </Box>
-                <Box flexDirection="column" paddingLeft={3}>
-                  <Text dimColor>{`${dev.email}`}</Text>
+                <Box flexDirection="column" paddingLeft={2}>
+                  <Box flexDirection="row" gap={1}>
+                    {dev.title && <Text> {pc.yellow(`[${dev.title}]`)}</Text>}
+                    <Text dimColor>{`${dev.email}`}</Text>
+                  </Box>
                   {dev.aliases && dev.aliases.length > 0 && (
                     <Text dimColor>
                       Aliases: {dev.aliases.map((a) => a.name).join(', ')}
