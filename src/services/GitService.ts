@@ -2,7 +2,7 @@ import { exec, spawn } from 'node:child_process'
 import { stat } from 'node:fs/promises'
 import path from 'node:path'
 import { promisify } from 'node:util'
-import { desc, eq, sum } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import type { LineLordDatabase } from '../db/database'
 import { authors, blameLines, files } from '../db/schema'
 import {
@@ -10,7 +10,6 @@ import {
   ignoredFileExtensions,
   ignoredFilePatterns,
 } from '../resources/ignoreFiles'
-import { getDistributedTitlesWithAssignment } from '../resources/rankedTitles'
 
 const execAsync = promisify(exec)
 
@@ -60,7 +59,7 @@ export class GitService {
 
       if (i % 100 === 0) {
         onProgress?.(
-          10 + (i / allFiles.length) * 20,
+          10 + (i / allFiles.length) * 60, // Changed from 20 to 60 since we removed the final step
           100,
           `Processing files: ${i}/${allFiles.length}`,
         )
@@ -68,7 +67,7 @@ export class GitService {
     }
 
     onProgress?.(
-      30,
+      70,
       100,
       `Processing blame data for ${filesToAnalyze.length} files...`,
     )
@@ -80,7 +79,7 @@ export class GitService {
 
       await Promise.all(batch.map((file) => this.processFileBlame(file)))
 
-      const progress = 30 + ((i + batchSize) / filesToAnalyze.length) * 70
+      const progress = 70 + ((i + batchSize) / filesToAnalyze.length) * 30
       onProgress?.(
         Math.min(progress, 100),
         100,
@@ -90,54 +89,7 @@ export class GitService {
       )
     }
 
-    onProgress?.(90, 100, 'Assigning titles and ranks...')
-    await this.assignTitlesAndRanks()
-
-    onProgress?.(100, 100, 'Analysis complete!')
-  }
-
-  private async assignTitlesAndRanks() {
-    // Get author contributions ordered by total lines (descending)
-    const authorContributions = await this.db
-      .select({
-        id: authors.id,
-        displayName: authors.displayName,
-        totalLines: sum(blameLines.lineNumber).mapWith(Number),
-      })
-      .from(authors)
-      .leftJoin(blameLines, eq(authors.id, blameLines.authorId))
-      .where(eq(authors.isCanonical, true))
-      .groupBy(authors.id)
-      .orderBy(desc(sum(blameLines.lineNumber)))
-
-    // Filter out authors with no contributions
-    const contributingAuthors = authorContributions.filter(
-      (author) => author.totalLines > 0,
-    )
-
-    if (contributingAuthors.length === 0) {
-      return
-    }
-
-    // Get display names for title assignment
-    const authorNames = contributingAuthors.map((author) => author.displayName)
-    const titledAuthors = getDistributedTitlesWithAssignment(authorNames)
-
-    // Update each author with their title and rank
-    for (let i = 0; i < contributingAuthors.length; i++) {
-      const author = contributingAuthors[i]
-      const titleData = titledAuthors[i]
-
-      if (author && titleData) {
-        await this.db
-          .update(authors)
-          .set({
-            title: titleData.title,
-            rank: i + 1, // Rank starts from 1 (best) to lowest
-          })
-          .where(eq(authors.id, author.id))
-      }
-    }
+    onProgress?.(100, 100, 'Git analysis complete!')
   }
 
   private async getFileInfo(filePath: string): Promise<{

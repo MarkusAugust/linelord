@@ -5,12 +5,14 @@ import {
 } from '../db/database'
 import { AnalysisService } from './AnalysisService'
 import { AuthorNormalizationService } from './AuthorNormalizationService'
+import { AuthorRankingService } from './AuthorRankingService'
 import { GitService } from './GitService'
 
 export class LineLordService {
   private db: LineLordDatabase
   private gitService: GitService
   private normalizationService: AuthorNormalizationService
+  private rankingService: AuthorRankingService
   private analysisService: AnalysisService
   private initialized = false
   private currentRepoPath: string
@@ -27,6 +29,7 @@ export class LineLordService {
       this.largeFileThresholdBytes,
     )
     this.normalizationService = new AuthorNormalizationService(this.db)
+    this.rankingService = new AuthorRankingService(this.db)
     this.analysisService = new AnalysisService(this.db)
   }
 
@@ -36,17 +39,23 @@ export class LineLordService {
     try {
       onProgress?.(0, 100, 'Initializing Git service...')
 
-      // Initialize git service (this populates the database)
+      // Step 1: Initialize git service (this populates the database with raw data)
       await this.gitService.initialize((current, total, message) => {
-        // Map git service progress to 0-70% of total progress
-        const adjustedCurrent = (current / total) * 70
+        // Map git service progress to 0-60% of total progress
+        const adjustedCurrent = (current / total) * 60
         onProgress?.(adjustedCurrent, 100, message)
       })
 
-      onProgress?.(70, 100, 'Normalizing authors...')
+      onProgress?.(60, 100, 'Normalizing authors...')
 
-      // Normalize authors
+      // Step 2: Normalize authors (merge duplicates, clean up data)
       await this.normalizationService.normalizeAllAuthors()
+
+      onProgress?.(80, 100, 'Calculating ranks and percentages...')
+
+      // Step 3: Calculate and assign ranks, percentages, and titles
+      // This MUST happen AFTER normalization since it works with canonical authors
+      await this.rankingService.calculateAndAssignRanksAndPercentages()
 
       onProgress?.(100, 100, 'Initialization complete!')
       this.initialized = true
@@ -79,6 +88,7 @@ export class LineLordService {
       this.largeFileThresholdBytes,
     )
     this.normalizationService = new AuthorNormalizationService(this.db)
+    this.rankingService = new AuthorRankingService(this.db)
     this.analysisService = new AnalysisService(this.db)
 
     // Mark as uninitialized
@@ -109,6 +119,15 @@ export class LineLordService {
       )
     }
     return this.analysisService
+  }
+
+  getRankingService(): AuthorRankingService {
+    if (!this.initialized) {
+      throw new Error(
+        'LineLordService must be initialized before getting ranking service',
+      )
+    }
+    return this.rankingService
   }
 
   getDatabase(): LineLordDatabase {

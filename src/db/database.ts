@@ -20,6 +20,7 @@ export function createDatabase() {
       is_canonical INTEGER DEFAULT 0,
       title TEXT,
       rank INTEGER,
+      percentage REAL DEFAULT 0,
       FOREIGN KEY (canonical_id) REFERENCES authors(id)
     );
     

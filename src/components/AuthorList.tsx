@@ -114,6 +114,7 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({
                     {capitalizeString(author.title || '')}
                   </Text>
                   <Text>{author.displayName}</Text>
+                  <Text>{`(rank: ${author.rank})`}</Text>
                 </Box>
                 <Text color={'green'}>{author.percentage}%</Text>
               </Box>

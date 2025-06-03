@@ -87,9 +87,12 @@ export class AnalysisService {
     }
   }
 
+  /**
+   * Get author contributions - now simply reads from the database
+   * since rank and percentage are already calculated and stored
+   */
   async getAuthorContributions(): Promise<AuthorContribution[]> {
-    // Get canonical authors with their contribution data
-    const canonicalAuthors = await this.db
+    const authorContributions = await this.db
       .select({
         id: authors.id,
         name: authors.name,
@@ -97,68 +100,34 @@ export class AnalysisService {
         displayName: authors.displayName,
         title: authors.title,
         rank: authors.rank,
+        percentage: authors.percentage,
+        totalLines: sql<number>`count(${blameLines.id})`.mapWith(Number),
+        totalFiles: sql<number>`count(DISTINCT ${blameLines.fileId})`.mapWith(
+          Number,
+        ),
       })
       .from(authors)
+      .leftJoin(blameLines, eq(authors.id, blameLines.authorId))
       .where(eq(authors.isCanonical, true))
+      .groupBy(authors.id)
+      .orderBy(
+        sql`CASE WHEN ${authors.rank} IS NULL THEN 999999 ELSE ${authors.rank} END ASC`,
+      )
 
-    const stats = await this.getRepositoryStats()
-    const totalProjectLines = stats.totalLines
-
-    const results: AuthorContribution[] = []
-
-    for (const author of canonicalAuthors) {
-      // Get all author IDs that belong to this canonical author
-      const allAuthorIds = await this.db
-        .select({ id: authors.id })
-        .from(authors)
-        .where(eq(authors.canonicalId, author.id))
-
-      const authorIdsList = allAuthorIds.map((a) => a.id)
-
-      // Get total lines for this canonical author
-      const [linesResult] = await this.db
-        .select({ count: sql<number>`count(*)` })
-        .from(blameLines)
-        .where(inArray(blameLines.authorId, authorIdsList))
-
-      // Get total files for this canonical author
-      const [filesResult] = await this.db
-        .select({ count: sql<number>`count(distinct ${blameLines.fileId})` })
-        .from(blameLines)
-        .where(inArray(blameLines.authorId, authorIdsList))
-
-      // Get aliases
-      const aliases = await this.db
-        .select({
-          name: authorAliases.aliasName,
-          email: authorAliases.aliasEmail,
-        })
-        .from(authorAliases)
-        .where(eq(authorAliases.canonicalAuthorId, author.id))
-
-      const totalLines = linesResult?.count || 0
-      const totalFiles = filesResult?.count || 0
-
-      results.push({
+    // Filter to only authors with contributions and return results
+    return authorContributions
+      .filter((author) => author.totalLines > 0)
+      .map((author) => ({
         id: author.id,
         name: author.name,
         email: author.email,
         displayName: author.displayName,
-        totalLines,
-        totalFiles,
-        percentage:
-          totalProjectLines > 0
-            ? Math.round((totalLines / totalProjectLines) * 100)
-            : 0,
+        totalLines: author.totalLines,
+        totalFiles: author.totalFiles,
+        percentage: author.percentage || 0, // Use stored percentage
         title: author.title,
         rank: author.rank,
-        aliases: aliases.map((a) => ({ name: a.name, email: a.email })),
-      })
-    }
-
-    return results
-      .filter((r) => r.totalLines > 0)
-      .sort((a, b) => (a.rank || 999) - (b.rank || 999))
+      }))
   }
 
   async getAuthorFileContributions(
@@ -172,7 +141,7 @@ export class AnalysisService {
 
     const authorIdsList = allAuthorIds.map((a) => a.id)
 
-    // Simplified query - extract filename in JavaScript
+    // Get file contributions for this author
     const results = await this.db
       .select({
         path: files.path,
@@ -186,7 +155,7 @@ export class AnalysisService {
       .orderBy(desc(sql`count(${blameLines.id})`))
 
     return results.map((result) => {
-      // Extract filename from path in JavaScript
+      // Extract filename from path
       const filename = result.path.split('/').pop() || result.path
 
       return {

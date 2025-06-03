@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 export const authors = sqliteTable('authors', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -9,6 +9,7 @@ export const authors = sqliteTable('authors', {
   isCanonical: integer('is_canonical', { mode: 'boolean' }).default(false),
   title: text('title'),
   rank: integer('rank'),
+  percentage: real('percentage').default(0),
 })
 
 export const authorAliases = sqliteTable('author_aliases', {
