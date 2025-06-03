@@ -158,7 +158,7 @@ export class AnalysisService {
 
     return results
       .filter((r) => r.totalLines > 0)
-      .sort((a, b) => b.totalLines - a.totalLines)
+      .sort((a, b) => (a.rank || 999) - (b.rank || 999))
   }
 
   async getAuthorFileContributions(
