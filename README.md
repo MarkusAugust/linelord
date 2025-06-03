@@ -19,7 +19,7 @@ LineLord is a mighty CLI tool forged in the fires of the Ashen Vale, wielding th
 ### 🏰 Features Fit for a Galdane Warrior
 
 - **🗡️ Native Git Power**: Uses git commands with intelligent SQLite caching — works anywhere git draws breath
-- **🧠 Intelligent Author Merging**: Automatically unites "zygofer.whisperer@alderstone.realm" with "Zygofer the Defiler" using the wisdom of ancient rune-matching
+- **🧠 Intelligent Author Merging**: Automatically unites "zygofer.whisperer@alderstone.realm" with "Zygofer the Defiler" using the wisdom of ancient fuzzy matching
 - **📊 Comprehensive Battle Reports**: File-level ownership, project statistics, and developer rankings
 - **⚡ Lightning-Fast Analysis**: Parallel processing with smart caching that would make Horn's volcanic forge proud
 - **🎯 Smart Filtering**: Respects .gitignore, excludes binaries and generated files like a seasoned Rust Brother
@@ -123,7 +123,7 @@ brew outdated
 
 _"These are the true scrolls of power! Written by mortal hands with sweat and blood, each line a testament to the warrior's craft. LineLord honors these works, for they bear the mark of genuine battle against the demonic corruption of bugs!"_
 
-- ✅ All git-tracked text files
+- ✅ All git-tracked text files under size threshold
 - ✅ Source code in any language
 - ✅ Configuration files
 - ✅ Documentation
@@ -136,9 +136,9 @@ _"What Galdane warrior has time for scrolls that weigh more than a war hammer? L
 - ❌ Binary files (auto-detected)
 - ❌ Generated files (package-lock.json, yarn.lock, etc.)
 - ❌ Build artifacts (dist/, build/, node_modules/)
-- ❌ IDE and OS files (.vscode/, .DS_Store)
 - ❌ Files usually ignored by .gitignore
 - ❌ **Bloated files (configurable threshold, default: 50KB)**
+- ❌ **Blank lines (banished from the realm)**
 
 ## 📊 Understanding the Battle Reports
 
@@ -161,53 +161,17 @@ LineLord's wisdom recognizes that not all files deserve the honor of analysis:
 
 ### The Ranking System
 
-LineLord uses **current ownership** (via `git blame`), not historical commits:
+LineLord uses **current line ownership** (via `git blame`), not historical commits:
 
 - 👑 **Crown** - The supreme ruler of your codebase
+- 🥈 **Silver Honor** - The second most dominating code warrior
+- 🥉 **Bronze Glory** - The third most dominating code warrior
 - **Glorious/Lowly** - The mightiest and humblest contributors
 
 ### Pie Chart Visualization
 
 - 🔴 **Red** - For the mightiest contributor
 - **Top 10 limit** - Only the worthiest warriors are displayed
-
-## 🏗️ Technical Architecture - The Forge of LineLord
-
-### The Engine of Conquest
-
-LineLord combines the raw power of git with sophisticated intelligence:
-
-- **Git Analysis**: Uses `git blame --line-porcelain` for precise line ownership
-- **Smart Caching**: SQLite database accelerates re-analysis of the same repository
-- **Author Intelligence**: Fuzzy matching algorithm merges similar author identities
-- **Parallel Processing**: Batch processing handles large repositories with warrior efficiency
-- **Intelligent Filtering**: Multi-layered approach excludes unworthy files
-
-### Performance Architecture
-
-LineLord processes repositories through multiple services:
-
-- **GitService**: Handles all git command interactions
-- **AuthorNormalizationService**: Merges similar author names intelligently
-- **AnalysisService**: Generates battle reports and statistics
-- **LineLordService**: Orchestrates the entire conquest
-
-## 🎯 Pro Tips for Digital Galdanes
-
-### Getting the Best Results
-
-```bash
-# Run from repository root for full conquest
-cd /path/to/your/repo
-linelord
-
-# For large repos, be patient - true analysis takes time
-# LineLord processes files in parallel like a Galdane war-band!
-
-# Tune the threshold for your needs
-linelord --threshold=25    # More aggressive filtering
-linelord --threshold=200   # Allow larger files
-```
 
 ### Understanding Merged Authors
 
@@ -224,19 +188,6 @@ LineLord automatically merges similar names:
 - **Medium repos (100-1000 files)**: Swift as Gorvek's blade 🗡️
 - **Large repos (1000+ files)**: Worthy of a Galdane warrior's patience 🏰
 - **Re-analysis**: Cached results make subsequent runs swift as wind
-
-### Optimizing Large Repository Analysis
-
-```bash
-# For massive codebases, increase the threshold to skip more files
-linelord --threshold=500 ~/enterprise-monorepo
-
-# Focus on specific directories
-cd ~/project/src && linelord
-
-# Use path flag to avoid navigating
-linelord --path=~/project/core --threshold=100
-```
 
 ## 🗡️ Contributing to the Saga
 
@@ -258,25 +209,7 @@ Want to forge improvements to LineLord? Contact the maintainer!
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-_Usage is granted to those who prove themselves worthy in the eyes of Horn, the grim god of fire and forge. Let the weak tremble before LineLord's might, for only true warriors of the digital realm may wield its power!_
-
 LineLord is open source software released under the **GNU General Public License v3.0 (GPL-3)**.
-
-This means you are free to:
-
-- Use LineLord for any purpose
-- Study and modify the source code
-- Distribute copies of LineLord
-- Distribute your modified versions
-
-**However, GPL-3 requires that:**
-
-- Any distributed copies or modifications must also be licensed under GPL-3
-- You must provide source code when distributing binaries
-- You must preserve copyright notices and license information
-- Modified versions must be clearly marked as changed
-
-**GPL-3 ensures that LineLord and any derivative works remain free and open source for all warriors of the digital realm!**
 
 ---
 
@@ -297,4 +230,4 @@ LineLord stands on the shoulders of these mighty open source warriors:
 - **[Biome](https://biomejs.dev/)** - Code formatting and linting
 - **[TypeScript](https://www.typescriptlang.org/)** - Type safety
 
-_All dependencies use permissive licenses (MIT, ISC, Apache 2.0) and remain under their original terms._
+_All dependencies use permissive licenses and remain under their original terms._
