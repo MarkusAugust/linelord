@@ -19,7 +19,7 @@ export default function About({ onBack }: AboutProps) {
       <Box flexDirection="column" marginY={1}>
         <Text>{pc.bold('⚔️ What is LineLord?')}</Text>
         <Text>
-          A powerful git repository analysis tool that reveals code ownership
+          A mighty git repository analysis tool that reveals code ownership
           using
         </Text>
         <Text>
@@ -32,23 +32,22 @@ export default function About({ onBack }: AboutProps) {
         <Text>{pc.bold('🏰 Key Features:')}</Text>
         <Box flexDirection="column" marginLeft={2}>
           <Text>
-            • {pc.cyan('Native Git Power')} - Uses only git commands, works
-            anywhere
+            • {pc.cyan('Native Git Power')} - Wields git blame for line
+            ownership
           </Text>
           <Text>
-            • {pc.cyan('Smart Author Merging')} - Combines similar names
+            • {pc.cyan('Smart Author Merging')} - Unites similar warriors
             automatically
           </Text>
           <Text>
-            • {pc.cyan('Intelligent Filtering')} - Skips binaries, generated
-            files, and large files
+            • {pc.cyan('Intelligent Filtering')} - Skips binaries and oversized
+            files
           </Text>
           <Text>
-            • {pc.cyan('Current Ownership')} - Shows who owns code now via git
-            blame
+            • {pc.cyan('Current Dominion')} - Shows who owns each line now
           </Text>
           <Text>
-            • {pc.cyan('Parallel Processing')} - Fast analysis of large
+            • {pc.cyan('Parallel Processing')} - Swift conquest of large
             repositories
           </Text>
         </Box>
@@ -57,25 +56,24 @@ export default function About({ onBack }: AboutProps) {
       <Box flexDirection="column" marginY={1}>
         <Text>{pc.bold('📊 What Gets Analyzed:')}</Text>
         <Box flexDirection="column" marginLeft={2}>
-          <Text>✅ All git-tracked text files</Text>
-          <Text>✅ Source code, configs, documentation</Text>
+          <Text>✅ Git-tracked text files under size threshold</Text>
+          <Text>✅ Source code, configs, sacred documentation</Text>
           <Text>❌ Binary files (images, executables, etc.)</Text>
-          <Text>❌ Ignored files (lock files, build artifacts, etc.)</Text>
-          <Text>❌ Large files (configurable threshold, default 50KB)</Text>
+          <Text>❌ Files matching ignore patterns</Text>
+          <Text>❌ Large files (default 50KB threshold)</Text>
         </Box>
       </Box>
 
       <Box flexDirection="column" marginY={1}>
-        <Text>{pc.bold('⚡ Important Notes:')}</Text>
+        <Text>{pc.bold('⚡ Battle-tested Wisdom:')}</Text>
         <Box flexDirection="column" marginLeft={2}>
           <Text>
-            • Shows {pc.yellow('current ownership')}, not historical commits
+            • Shows {pc.yellow('current line dominance')}, not ancient commit
+            history
           </Text>
-          <Text>
-            • Author names are intelligently merged using fuzzy matching
-          </Text>
-          <Text>• Large refactors may shift ownership significantly</Text>
-          <Text>• Works entirely offline with no external dependencies</Text>
+          <Text>• Warriors are united based on email and name similarity</Text>
+          <Text>• Great refactors may shift territorial control</Text>
+          <Text>• Blank lines are banished from the realm</Text>
         </Box>
       </Box>
 
