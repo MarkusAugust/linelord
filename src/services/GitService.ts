@@ -187,10 +187,14 @@ export class GitService {
 
   private async execGitBlame(filePath: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const child = spawn('git', ['blame', '--line-porcelain', filePath], {
-        cwd: this.repoPath,
-        stdio: ['pipe', 'pipe', 'pipe'],
-      })
+      const child = spawn(
+        'git',
+        ['blame', '-w', '--line-porcelain', filePath],
+        {
+          cwd: this.repoPath,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        },
+      )
 
       let stdout = ''
       let stderr = ''
@@ -254,6 +258,13 @@ export class GitService {
           const timestamp = Number.parseInt(line.substring(12).trim())
           currentCommitDate = new Date(timestamp * 1000).toISOString()
         } else if (line.startsWith('\t')) {
+          const content = line.substring(1) // Remove tab
+
+          // Skip blank lines (lines with only whitespace)
+          if (content.trim() === '') {
+            continue
+          }
+
           // This is a code line
           lineNumber++
 
