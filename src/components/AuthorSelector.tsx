@@ -212,16 +212,22 @@ export function AuthorSelector({
 
           return (
             <Box key={`${author.email}-${author.name}`} flexDirection="column">
-              <Box>
-                <Text color={isSelected ? 'green' : 'gray'}>{number}</Text>
-                <Text color={isSelected ? 'green' : undefined}>
-                  {isSelected ? ' › ' : '   '}
-                  <Text bold={isSelected}>{author.name}</Text>{' '}
-                  <Text dimColor>{`<${author.email}>`}</Text>{' '}
+              <Box flexDirection="row">
+                <Box flexDirection="row">
+                  <Box width={5} gap={0}>
+                    <Text color={isSelected ? 'green' : 'gray'}>{number}</Text>
+                    <Text color={isSelected ? 'green' : undefined}>
+                      {isSelected ? ' ›' : '  '}
+                    </Text>
+                  </Box>
+                </Box>
+                <Box flexDirection="row" flexWrap="wrap">
+                  <Text bold={isSelected}>{author.name}</Text>
+                  <Text dimColor>{`<${author.email}>`}</Text>
                   <Text color="green">
                     {author.percentage != null ? `${author.percentage}%` : ''}
                   </Text>
-                </Text>
+                </Box>
               </Box>
 
               {hasAlternatives && (
