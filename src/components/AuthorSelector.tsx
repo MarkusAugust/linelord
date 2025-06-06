@@ -7,7 +7,10 @@ import { EnhancedProgressBar } from './ProgressBar'
 interface Author {
   name: string
   email: string
+  displayName: string
+  rank: number | null
   alternativeNames?: string[]
+  percentage?: number
 }
 
 interface AuthorSelectorProps {
@@ -51,16 +54,20 @@ export function AuthorSelector({
         setProgress(50)
         setStepMessage(getRandomBarbarianMessage('scanning'))
 
-        const allAuthors = await analysisService.getAllAuthors()
+        // Use getAuthorContributions to get ranked authors
+        const contributions = await analysisService.getAuthorContributions()
 
         setProgress(90)
         setStepMessage('Processing authors...')
 
-        const authorList: Author[] = allAuthors.map((author) => ({
-          name: author.displayName,
-          email: author.email,
-          alternativeNames:
-            author.aliases.length > 0 ? author.aliases : undefined,
+        // Map to Author[]
+        const authorList: Author[] = contributions.map((contrib) => ({
+          name: contrib.displayName,
+          email: contrib.email,
+          displayName: contrib.displayName,
+          rank: contrib.rank ?? null,
+          alternativeNames: contrib.aliases?.map((a) => a.name) ?? undefined,
+          percentage: contrib.percentage,
         }))
 
         setAuthors(authorList)
@@ -210,7 +217,10 @@ export function AuthorSelector({
                 <Text color={isSelected ? 'green' : undefined}>
                   {isSelected ? ' › ' : '   '}
                   <Text bold={isSelected}>{author.name}</Text>{' '}
-                  <Text dimColor>{`<${author.email}>`}</Text>
+                  <Text dimColor>{`<${author.email}>`}</Text>{' '}
+                  <Text color="green">
+                    {author.percentage != null ? `${author.percentage}%` : ''}
+                  </Text>
                 </Text>
               </Box>
 
