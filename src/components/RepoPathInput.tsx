@@ -109,7 +109,7 @@ export default function RepoPathInput({
   // Calculate display values
   const displayValue = inputValue || ''
   const previewPath = inputValue ? normalizePath(inputValue) : defaultPath
-  const showPreview =
+  const _showPreview =
     inputValue.includes('~') || (!inputValue && previewPath !== displayValue)
 
   return (

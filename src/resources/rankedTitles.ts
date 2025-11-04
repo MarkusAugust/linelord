@@ -75,7 +75,7 @@ export const getTitleRange = (startRank: number, endRank: number): string[] => {
 }
 
 // Helper function to get random titles from a range
-const getRandomTitlesFromRange = (
+const _getRandomTitlesFromRange = (
   startIndex: number,
   endIndex: number,
   count: number,

@@ -17,7 +17,7 @@ export function ContributorRankingBox({
     contributions.length > 1 ? contributions[contributions.length - 1] : null
 
   // Get distributed titles for all contributors
-  const distributedTitles = getDistributedTitles(contributions.length)
+  const _distributedTitles = getDistributedTitles(contributions.length)
 
   // Helper function for very long names
   const formatName = (name: string): string => {

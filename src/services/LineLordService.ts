@@ -1,7 +1,7 @@
 import {
-  type LineLordDatabase,
   clearDatabase,
   createDatabase,
+  type LineLordDatabase,
 } from '../db/database'
 import { AnalysisService } from './AnalysisService'
 import { AuthorNormalizationService } from './AuthorNormalizationService'

@@ -4,7 +4,6 @@ import type { AnalysisService } from '../services/AnalysisService'
 import { capitalizeString } from '../utility/capitalizeString'
 
 interface AuthorsListProps {
-  repoPath: string
   analysisService: AnalysisService
   mergePolicy?: 'strict' | 'loose'
 }
@@ -21,7 +20,6 @@ interface AuthorSummary {
 }
 
 export const AuthorsList: React.FC<AuthorsListProps> = ({
-  repoPath,
   analysisService,
 }) => {
   const [authors, setAuthors] = useState<AuthorSummary[]>([])

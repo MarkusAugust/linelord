@@ -14,7 +14,7 @@
     "react": "^18.2.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "2.2.3",
     "@types/bun": "latest",
     "@types/ink-spinner": "^3.0.4",
     "@types/react": "^18.2.0",

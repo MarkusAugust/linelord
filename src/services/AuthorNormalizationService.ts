@@ -32,7 +32,7 @@ export class AuthorNormalizationService {
       }
     }
 
-    for (const [email, authorsWithSameEmail] of emailGroups) {
+    for (const [_email, authorsWithSameEmail] of emailGroups) {
       if (authorsWithSameEmail.length > 1) {
         await this.mergeAuthors(authorsWithSameEmail)
       } else if (authorsWithSameEmail.length === 1) {

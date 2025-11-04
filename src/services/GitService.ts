@@ -256,7 +256,7 @@ export class GitService {
         } else if (line.match(/^[a-f0-9]{40}/)) {
           currentCommitHash = line.split(' ')[0] || ''
         } else if (line.startsWith('author-time ')) {
-          const timestamp = Number.parseInt(line.substring(12).trim())
+          const timestamp = Number.parseInt(line.substring(12).trim(), 10)
           currentCommitDate = new Date(timestamp * 1000).toISOString()
         } else if (line.startsWith('\t')) {
           const content = line.substring(1)

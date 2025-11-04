@@ -1,13 +1,12 @@
 import { Box, Text, useInput } from 'ink'
+import pc from 'picocolors'
 import { useEffect, useState } from 'react'
 import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
-import type { AnalysisStep } from '../types/analysisTypes'
-
-import pc from 'picocolors'
 import type {
   AnalysisService,
   AuthorContribution,
 } from '../services/AnalysisService'
+import type { AnalysisStep } from '../types/analysisTypes'
 import { renderSimplePercentageBar } from '../utility/simplePercentageBar'
 import { ContributorRankingBox } from './ContributorRankingBox'
 import { PieChartSection } from './PieChartSection'

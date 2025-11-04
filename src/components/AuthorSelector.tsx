@@ -14,7 +14,6 @@ interface Author {
 }
 
 interface AuthorSelectorProps {
-  repoPath: string
   onSelect: (author: Author) => void
   onCancel: () => void
   mergePolicy?: 'strict' | 'loose'
@@ -22,7 +21,6 @@ interface AuthorSelectorProps {
 }
 
 export function AuthorSelector({
-  repoPath,
   onSelect,
   onCancel,
   mergePolicy = 'loose',
@@ -100,7 +98,7 @@ export function AuthorSelector({
     if (key.return) {
       // If user has typed a number, use that
       if (numberInput) {
-        const num = Number.parseInt(numberInput)
+        const num = Number.parseInt(numberInput, 10)
         if (num >= 1 && num <= authors.length) {
           const author = authors[num - 1]
           if (author) {
@@ -121,7 +119,7 @@ export function AuthorSelector({
     // Handle number input (multi-digit)
     if (input >= '0' && input <= '9') {
       const newInput = numberInput + input
-      const num = Number.parseInt(newInput)
+      const num = Number.parseInt(newInput, 10)
 
       if (
         newInput.length === 1 &&
