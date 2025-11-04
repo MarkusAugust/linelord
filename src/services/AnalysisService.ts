@@ -209,10 +209,7 @@ export class AnalysisService {
   }
 
   // Helper method to find author by any name/email combination
-  async findAuthorByNameOrEmail(
-    name: string,
-    email: string,
-  ): Promise<number | null> {
+  async findCanonicalAuthorByEmail(email: string): Promise<number | null> {
     // First try to find by canonical author using EMAIL ONLY
     const [canonical] = await this.db
       .select({ id: authors.id })

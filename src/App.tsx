@@ -128,12 +128,7 @@ export default function App({
             </Text>
           </Box>
 
-          {analysisService && (
-            <AuthorsList
-              repoPath={repoPath}
-              analysisService={analysisService}
-            />
-          )}
+          {analysisService && <AuthorsList analysisService={analysisService} />}
 
           <Menu
             title="Select a feature:"

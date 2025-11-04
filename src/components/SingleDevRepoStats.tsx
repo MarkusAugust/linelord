@@ -105,9 +105,6 @@ export default function SingleDevRepoStats({
       })
 
       try {
-        // Get repository stats for total project lines
-        const repoStats = await analysisService.getRepositoryStats()
-
         setStats((prev) => ({
           ...prev,
           progress: 30,
@@ -196,8 +193,7 @@ export default function SingleDevRepoStats({
     if (!analysisService) return
 
     try {
-      const authorId = await analysisService.findAuthorByNameOrEmail(
-        author.name,
+      const authorId = await analysisService.findCanonicalAuthorByEmail(
         author.email,
       )
       if (authorId) {
@@ -230,7 +226,6 @@ export default function SingleDevRepoStats({
   if (mode === 'selector') {
     return (
       <AuthorSelector
-        repoPath={repoPath}
         onSelect={handleSelectAuthor}
         onCancel={handleAuthorSelectorCancel}
         analysisService={analysisService}
