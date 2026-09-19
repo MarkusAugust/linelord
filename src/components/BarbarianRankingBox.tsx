@@ -36,7 +36,7 @@ export const BarbarianRankingBox: React.FC<BarbarianRankingBoxProps> = ({
     const loadBarbarianRankings = async () => {
       if (!lineLordService?.isInitialized()) {
         if (cancelled) return
-        setError('LineLord service not available or initialized')
+        setError('LineLord service is unavailable or not initialized')
         setIsLoading(false)
         return
       }

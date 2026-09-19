@@ -6,7 +6,7 @@ import {
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
 import { createDatabase } from '../../db/database'
-import { authors, blameLines } from '../../db/schema'
+import { authors, blameLines, files } from '../../db/schema'
 import { GitService } from '../GitService'
 
 const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
@@ -129,5 +129,93 @@ describe('GitService - blames HEAD rather than the working copy', () => {
 
     expect(result.authors.map((a) => a.name)).toEqual([GORVEK.name])
     expect(result.linesByEmail.get(GORVEK.email)).toBe(1)
+  })
+})
+
+describe('GitService - the file list comes from HEAD, not the index', () => {
+  let repo: TestRepo | undefined
+
+  afterEach(async () => {
+    await repo?.cleanup()
+    repo = undefined
+  })
+
+  async function analysedPaths(repoPath: string, thresholdBytes?: number) {
+    const db = createDatabase()
+    await new GitService(repoPath, db, thresholdBytes).initialize()
+    const rows = await db
+      .select({ path: files.path, size: files.size })
+      .from(files)
+    return new Map(rows.map((row) => [row.path, row.size]))
+  }
+
+  it('still analyses a file that is staged for deletion', async () => {
+    // The file has left the index but is very much part of HEAD. Listing the
+    // index dropped it silently while the UI claimed to describe HEAD.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'two files',
+      author: GORVEK,
+      write: { 'a.ts': 'const a = 1\n', 'doomed.ts': 'const d = 1\n' },
+    })
+    await repo.git(['rm', '--quiet', 'doomed.ts'])
+
+    const paths = await analysedPaths(repo.path)
+
+    expect([...paths.keys()].sort()).toEqual(['a.ts', 'doomed.ts'])
+  })
+
+  it('does not analyse a file that exists only in the index', async () => {
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'one file',
+      author: GORVEK,
+      write: { 'committed.ts': 'const c = 1\n' },
+    })
+    await repo.writeFiles({ 'staged.ts': 'const s = 1\n' })
+    await repo.git(['add', 'staged.ts'])
+
+    const paths = await analysedPaths(repo.path)
+
+    expect([...paths.keys()]).toEqual(['committed.ts'])
+  })
+
+  it('measures a file by its size in HEAD, not in the working copy', async () => {
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'a small file',
+      author: GORVEK,
+      write: { 'small.ts': 'const a = 1\n' },
+    })
+    // Balloon the working copy well past the threshold without committing it.
+    await repo.writeFiles({
+      'small.ts': `${'const filler = "aaaaaaaaaaaaaaaa"\n'.repeat(200)}`,
+    })
+
+    const paths = await analysedPaths(repo.path, 1024)
+
+    // 12 bytes in HEAD, so it stays under a 1 KB threshold and is analysed.
+    expect(paths.get('small.ts')).toBe(12)
+  })
+
+  it('carries paths with spaces, non-ASCII characters and newlines through intact', async () => {
+    // `git ls-tree -z` is what makes this work: the default output would quote
+    // the non-ASCII path and split the one containing newlines into two.
+    repo = await createTestRepo()
+    const awkward = [
+      'src/filnavn med mellomrom.ts',
+      'src/åpen fil.ts',
+      'src/navn\nmed\nnewline.ts',
+      'routes/user.$userId.ts',
+    ]
+    const write: Record<string, string> = {}
+    for (const file of awkward) {
+      write[file] = 'const line = 1\n'
+    }
+    await repo.commit({ message: 'awkward paths', author: GORVEK, write })
+
+    const paths = await analysedPaths(repo.path)
+
+    expect([...paths.keys()].sort()).toEqual([...awkward].sort())
   })
 })
