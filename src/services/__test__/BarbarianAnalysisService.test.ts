@@ -9,8 +9,10 @@ import { BarbarianAnalysisService } from '../BarbarianAnalysisService'
 import { LineLordService } from '../LineLordService'
 
 const NOW = new Date('2025-09-01T00:00:00Z')
-const ANCIENT = '2020-01-15T10:00:00.000Z'
-const RECENT = '2025-06-01T10:00:00.000Z'
+/** Author time in whole seconds, as blame reports it and the schema stores it. */
+const seconds = (iso: string) => Math.floor(new Date(iso).getTime() / 1000)
+const ANCIENT = seconds('2020-01-15T10:00:00.000Z')
+const RECENT = seconds('2025-06-01T10:00:00.000Z')
 
 const GORVEK = 1
 const NIGHTSHROUD = 2
@@ -62,16 +64,21 @@ async function seed(db: ReturnType<typeof createDatabase>) {
     fileId: number
     authorId: number
     lineNumber: number
-    commitDate: string
+    commitTimestamp: number
   }> = []
   const add = (
     fileId: number,
     authorId: number,
     count: number,
-    commitDate: string,
+    commitTimestamp: number,
   ) => {
     for (let i = 0; i < count; i++) {
-      lines.push({ fileId, authorId, lineNumber: lines.length + 1, commitDate })
+      lines.push({
+        fileId,
+        authorId,
+        lineNumber: lines.length + 1,
+        commitTimestamp,
+      })
     }
   }
 

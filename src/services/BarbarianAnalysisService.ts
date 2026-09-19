@@ -151,7 +151,8 @@ export class BarbarianAnalysisService {
   private collectMetrics(): Map<number, BarbarianWarriorMetrics> {
     const oneYearAgo = new Date(this.now)
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
-    const ancientCutoff = oneYearAgo.toISOString()
+    // Whole seconds, to compare against the stored author time as a number.
+    const ancientCutoff = Math.floor(oneYearAgo.getTime() / 1000)
 
     const lineAggregates = this.db.all<LineAggregateRow>(sql`
       SELECT
@@ -160,7 +161,8 @@ export class BarbarianAnalysisService {
         SUM(CASE WHEN ${LEGACY_FILE_CONDITION} THEN 1 ELSE 0 END) AS battleScars,
         COUNT(DISTINCT f.extension) AS weaponMastery,
         SUM(
-          CASE WHEN bl.commit_date IS NOT NULL AND bl.commit_date < ${ancientCutoff}
+          CASE WHEN bl.commit_timestamp IS NOT NULL
+               AND bl.commit_timestamp < ${ancientCutoff}
           THEN 1 ELSE 0 END
         ) AS ancientCodeSurvival
       FROM blame_lines bl
@@ -192,10 +194,13 @@ export class BarbarianAnalysisService {
 
     const campaigns = this.db.all<CampaignRow>(sql`
       WITH per_day AS (
-        SELECT author_id, DATE(commit_date) AS day, COUNT(*) AS day_lines
+        SELECT
+          author_id,
+          DATE(commit_timestamp, 'unixepoch') AS day,
+          COUNT(*) AS day_lines
         FROM blame_lines
-        WHERE commit_date IS NOT NULL
-        GROUP BY author_id, DATE(commit_date)
+        WHERE commit_timestamp IS NOT NULL
+        GROUP BY author_id, DATE(commit_timestamp, 'unixepoch')
       )
       SELECT
         author_id AS authorId,

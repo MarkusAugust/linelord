@@ -8,6 +8,7 @@ import {
   ignoredFileExtensions,
   isIgnoredByPattern,
 } from '../resources/ignoreFiles'
+import { parseBlamePorcelain } from './blamePorcelain'
 
 const execAsync = promisify(exec)
 
@@ -52,7 +53,7 @@ type BlameLineInsert = {
   authorId: number
   lineNumber: number
   commitHash: string | null
-  commitDate: string | null
+  commitTimestamp: number | null
 }
 
 /**
@@ -426,52 +427,35 @@ export class GitService {
   private async processFileBlame(filePath: string) {
     try {
       const stdout = await this.execGitBlame(filePath)
-      const lines = stdout.trim().split('\n')
 
       const fileId = this.fileIdCache.get(filePath)
       if (!fileId) return
 
       const blameData: BlameLineInsert[] = []
 
-      let currentAuthor = ''
-      let currentEmail = ''
-      let currentCommitHash = ''
-      let currentCommitDate = ''
-      let lineNumber = 0
+      for (const entry of parseBlamePorcelain(stdout)) {
+        // Blank and whitespace-only lines belong to nobody. They are still
+        // lines of the file, which is why the number comes from git and not
+        // from counting the ones kept.
+        if (entry.content.trim() === '') continue
 
-      for (const line of lines) {
-        if (line.startsWith('author ')) {
-          currentAuthor = line.substring(7).trim()
-        } else if (line.startsWith('author-mail ')) {
-          currentEmail = line.substring(12).trim().replace(/[<>]/g, '')
-        } else if (line.match(/^[a-f0-9]{40}/)) {
-          currentCommitHash = line.split(' ')[0] || ''
-        } else if (line.startsWith('author-time ')) {
-          const timestamp = Number.parseInt(line.substring(12).trim(), 10)
-          currentCommitDate = new Date(timestamp * 1000).toISOString()
-        } else if (line.startsWith('\t')) {
-          const content = line.substring(1)
-          if (content.trim() === '') continue
+        // Defensive: blaming HEAD should never produce uncommitted lines, but
+        // a null sha must never be allowed to create a "Not Committed Yet"
+        // author row if one ever slips through.
+        if (UNCOMMITTED_SHA.test(entry.sha)) continue
 
-          // Defensive: blaming HEAD should never produce uncommitted lines, but
-          // a null sha must never be allowed to create a "Not Committed Yet"
-          // author row if one ever slips through.
-          if (UNCOMMITTED_SHA.test(currentCommitHash)) continue
+        const authorId = await this.getOrCreateAuthor(
+          entry.author,
+          entry.authorEmail,
+        )
 
-          lineNumber++
-          const authorId = await this.getOrCreateAuthor(
-            currentAuthor,
-            currentEmail,
-          )
-
-          blameData.push({
-            fileId,
-            authorId,
-            lineNumber,
-            commitHash: currentCommitHash || null,
-            commitDate: currentCommitDate || null,
-          })
-        }
+        blameData.push({
+          fileId,
+          authorId,
+          lineNumber: entry.lineNumber,
+          commitHash: entry.sha || null,
+          commitTimestamp: entry.authorTime || null,
+        })
       }
 
       if (blameData.length > 0) {

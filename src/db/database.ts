@@ -14,7 +14,7 @@ export const IN_MEMORY = ':memory:'
  * need not mean the analysis would produce different answers, and an analysis
  * change need not touch the tables.
  */
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 export interface CreateDatabaseOptions {
   /**
@@ -22,6 +22,45 @@ export interface CreateDatabaseOptions {
    * the analysis exists only for the life of the process.
    */
   path?: string
+}
+
+/**
+ * Throw away a cache file whose tables were laid out by a different version.
+ *
+ * The fingerprint already refuses to *reuse* such a cache, but refusing to
+ * reuse it is not the same as being able to write it: `CREATE TABLE IF NOT
+ * EXISTS` leaves a table that exists alone, missing columns and all, so the
+ * run that rebuilds the analysis inserts into the old layout and every file
+ * fails. Nothing of value is lost by dropping it -- a cache from another
+ * version was never going to be read again.
+ */
+function discardIfWrittenByAnotherVersion(sqlite: Database): void {
+  let stored: string | null = null
+  try {
+    const row = sqlite
+      .query<{ value: string }, []>(
+        "SELECT value FROM meta WHERE key = 'schema_version'",
+      )
+      .get()
+    stored = row?.value ?? null
+  } catch {
+    // No meta table at all. Either the file is empty, in which case there is
+    // nothing to drop, or it predates the fingerprint entirely -- and both
+    // want the same thing.
+  }
+
+  if (stored === String(SCHEMA_VERSION)) return
+
+  // A file that was never written to has no tables either, so this is a
+  // no-op on a first run rather than a special case.
+  sqlite.exec(`
+    PRAGMA foreign_keys = OFF;
+    DROP TABLE IF EXISTS blame_lines;
+    DROP TABLE IF EXISTS author_aliases;
+    DROP TABLE IF EXISTS authors;
+    DROP TABLE IF EXISTS files;
+    DROP TABLE IF EXISTS meta;
+  `)
 }
 
 export function createDatabase(options: CreateDatabaseOptions = {}) {
@@ -48,6 +87,8 @@ export function createDatabase(options: CreateDatabaseOptions = {}) {
       PRAGMA busy_timeout = 5000;
     `)
   }
+
+  if (onDisk) discardIfWrittenByAnotherVersion(sqlite)
 
   // Create tables with foreign key handling
   sqlite.exec(`
@@ -92,7 +133,7 @@ export function createDatabase(options: CreateDatabaseOptions = {}) {
       author_id INTEGER NOT NULL REFERENCES authors(id),
       line_number INTEGER NOT NULL,
       commit_hash TEXT,
-      commit_date TEXT
+      commit_timestamp INTEGER
     );
     
     -- Everything the cache needs to decide whether it may be reused: the

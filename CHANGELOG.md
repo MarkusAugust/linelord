@@ -12,6 +12,27 @@ because the earlier answer was wrong.
 
 ### Fixed — the numbers
 
+- **A line's number is the number it has in the file.** Blank lines belong to
+  nobody and are not stored, but they are still lines: the stored number was a
+  count of the lines that were kept, so everything below the first blank line
+  was recorded at the wrong position. Nothing displays it yet, which is why it
+  went unnoticed — but the longevity work reports *where* the oldest surviving
+  line is, and a line number that is wrong is worse than none at all. It now
+  comes from git rather than from counting.
+
+- **Commit times are stored as times, not as text.** Each line kept an ISO
+  string rebuilt from the seconds `git blame` had already reported, and every
+  question asked of it — is this line older than a year, which day was it
+  written — was answered by comparing or re-parsing strings. That happened to
+  work, for exactly as long as every value kept the same format and the same
+  timezone. They are now whole seconds, compared as numbers.
+
+- **Reading blame is now a function that can be tested.** It was a chain of
+  `startsWith` checks over the output, with no way to verify it against
+  anything; it is now `parseBlamePorcelain`, which takes a string and returns
+  entries, and has tests for blank lines, tab-indented source, boundary
+  commits, sha-256 hashes and content that looks like a header.
+
 - **Different people are no longer merged into one.** Identities were matched
   by guessing from names and from addresses that merely resembled each other,
   and the threshold for an address was one character in a prefix of six or
@@ -75,6 +96,15 @@ because the earlier answer was wrong.
   team instead.
 
 ### Fixed — using it
+
+- **A cache from an older LineLord is rebuilt instead of written into.** The
+  fingerprint refused to *reuse* such a cache, which is not the same as being
+  able to write one: the tables are created only if they are absent, so a
+  column added in a later version was simply missing, and the run that
+  rebuilt the analysis failed on every single file. The analysis was not
+  wrong, it was absent — and it stayed absent, because the cache it failed to
+  write was the same cache it failed to write next time. A file whose layout
+  was stamped by another version is now dropped and built again.
 
 - **`-p` now points at the repository it names.** The short form of `--path`
   has been in the help text and the README since the first release, but it was
