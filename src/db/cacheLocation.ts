@@ -15,10 +15,9 @@ export function resolveCacheDirectory(
   env: NodeJS.ProcessEnv = process.env,
 ): string {
   const configured = env.XDG_CACHE_HOME
-  const base =
-    configured && configured.startsWith('/')
-      ? configured
-      : join(homedir(), '.cache')
+  const base = configured?.startsWith('/')
+    ? configured
+    : join(homedir(), '.cache')
 
   return join(base, 'linelord')
 }

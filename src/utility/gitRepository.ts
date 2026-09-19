@@ -78,3 +78,96 @@ export async function findRepositoryRoot(
 
   return { found: false, reason: 'not-a-repository' }
 }
+
+/**
+ * Whether `ancestor` is reachable from `descendant`.
+ *
+ * This is the question that separates an incremental update from a full
+ * re-analysis. If the revision a cache was built from is an ancestor of the
+ * current one, history only grew: everything the cache knows about files
+ * nobody touched is still exactly right, because blame on an untouched file
+ * gives the same answer at both. If it is not -- a rebase, a force-push, a
+ * branch switch, a reset -- history changed shape instead, and nothing can be
+ * concluded about what survived.
+ */
+export async function isAncestor(
+  cwd: string,
+  ancestor: string,
+  descendant: string,
+): Promise<boolean | null> {
+  const result = await runGit(
+    ['merge-base', '--is-ancestor', ancestor, descendant],
+    cwd,
+  )
+  if (!result.spawned) return null
+  // Exit 0 means yes and 1 means no. Anything else -- an unknown revision,
+  // most likely -- is not an answer at all, and null says so rather than
+  // letting "no" stand in for "cannot tell". The caller falls back to a full
+  // run either way, but only one of them is a rebase.
+  if (result.code === 0) return true
+  if (result.code === 1) return false
+  return null
+}
+
+/**
+ * Every path touched by any commit in `from..to`.
+ *
+ * Deliberately not `git diff from to`, which answers a different question:
+ * what is *different* between the endpoints. A file changed in one commit and
+ * restored in a later one is identical at both ends and absent from the diff --
+ * but blame now attributes those lines to the commit that restored them, so
+ * the cached answer is wrong while the file content says nothing happened.
+ * Asking which files any commit touched cannot miss that.
+ *
+ * The union with the diff is belt and braces: it catches paths that left the
+ * tree entirely, which the log of touched files reports under their old name.
+ *
+ * --diff-merges=first-parent so that a file changed only while resolving a
+ * merge conflict is still reported.
+ */
+export async function pathsTouchedBetween(
+  cwd: string,
+  from: string,
+  to: string,
+): Promise<string[]> {
+  const [log, diff] = await Promise.all([
+    runGit(
+      [
+        'log',
+        '--format=',
+        '--name-only',
+        '--diff-merges=first-parent',
+        '-z',
+        `${from}..${to}`,
+      ],
+      cwd,
+    ),
+    runGit(['diff', '--name-only', '-z', from, to], cwd),
+  ])
+
+  if (!log.spawned || log.code !== 0 || !diff.spawned || diff.code !== 0) {
+    throw new Error(
+      `Could not list the paths touched between ${from} and ${to}`,
+    )
+  }
+
+  const paths = new Set<string>()
+  for (const output of [log.stdout, diff.stdout]) {
+    for (const path of output.split('\0')) {
+      if (path) paths.add(path)
+    }
+  }
+  return [...paths]
+}
+
+/**
+ * The commit HEAD currently points at, or null in a repository with no commits.
+ *
+ * Needed before the analysis starts, because whether the analysis runs at all
+ * depends on comparing this against what a cache was built from.
+ */
+export async function resolveHead(cwd: string): Promise<string | null> {
+  const result = await runGit(['rev-parse', 'HEAD'], cwd)
+  if (!result.spawned || result.code !== 0) return null
+  return result.stdout.trim() || null
+}

@@ -62,7 +62,11 @@ export function useLineLordService(repoPath: string, thresholdBytes: number) {
     } else if (!lineLordService) {
       // Create new service for the first time
       setInitializingMessage(getRandomBarbarianMessage('initializing'))
-      const service = new LineLordService(repoPath, thresholdBytes)
+      // The one place that turns the cache on. Everywhere else -- tests
+      // included -- gets an analysis that leaves nothing behind.
+      const service = new LineLordService(repoPath, thresholdBytes, {
+        useCache: true,
+      })
       setLineLordService(service)
 
       service.initialize(handleProgress).then(handleSuccess).catch(handleError)

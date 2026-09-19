@@ -9,6 +9,13 @@ export class AuthorNormalizationService {
   async normalizeAllAuthors(
     policy: 'strict' | 'loose' = 'loose',
   ): Promise<void> {
+    // Aliases are derived entirely from the merges this run is about to make,
+    // so they are rebuilt rather than added to. Without this a second run over
+    // the same authors -- which an incremental cache update does every time --
+    // records every alias again, and the contributor list ends up reading
+    // "also committed as gorvek, gorvek, gorvek".
+    await this.db.delete(authorAliases)
+
     const allAuthors = await this.db.select().from(authors)
 
     if (policy === 'strict') {

@@ -63,6 +63,10 @@ export default function App({
     ? lineLordService.getFailures()
     : []
 
+  const cache = lineLordService?.isInitialized()
+    ? lineLordService.getCacheStatus()
+    : undefined
+
   const handleMenuSelect = (option: MenuOption) => {
     if (option.value === 'exit') {
       clearTerminal()
@@ -143,6 +147,23 @@ export default function App({
                   ` · ${analysisContext.uncommittedFileCount} file${
                     analysisContext.uncommittedFileCount === 1 ? '' : 's'
                   } have uncommitted changes that are not counted`}
+              </Text>
+            )}
+
+            {/*
+              Where these numbers came from. Someone looking at an analysis
+              that appeared instantly should be able to see that it was
+              stored rather than wonder whether it is current.
+            */}
+            {cache && cache.mode !== 'disabled' && (
+              <Text color="gray">
+                {cache.mode === 'reused'
+                  ? `Reused the stored analysis of ${cache.filesReused} file${cache.filesReused === 1 ? '' : 's'}`
+                  : cache.mode === 'incremental'
+                    ? `Re-read ${cache.filesBlamed} changed file${cache.filesBlamed === 1 ? '' : 's'}, reused the stored analysis of ${cache.filesReused}`
+                    : cache.reason
+                      ? `Analysed everything again: ${cache.reason}`
+                      : `Analysed ${cache.filesBlamed} file${cache.filesBlamed === 1 ? '' : 's'}`}
               </Text>
             )}
 
