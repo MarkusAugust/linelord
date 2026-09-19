@@ -28,7 +28,7 @@ interface HeadFile {
 }
 
 /**
- * Rows per insert statement. Six columns each, so 500 rows binds 3,000
+ * Rows per insert statement. Five columns each, so 500 rows binds 2,500
  * parameters -- comfortably inside what SQLite accepts, with room for the
  * schema to gain a column without anyone having to remember this number.
  */
@@ -38,7 +38,6 @@ type BlameLineInsert = {
   fileId: number
   authorId: number
   lineNumber: number
-  content: string | null
   commitHash: string | null
   commitDate: string | null
 }
@@ -188,13 +187,19 @@ export class GitService {
       this.authorCache.set(author.email, author.id)
     }
 
-    // Get file IDs for files we'll analyze
+    // Get file IDs for files we'll analyze.
+    //
+    // The membership test used to be `filesToAnalyze.includes(...)` inside a
+    // loop over every file row, which is a linear scan per row: quadratic in
+    // the number of files, and invisible until a repository is large enough
+    // for it to matter.
+    const wanted = new Set(filesToAnalyze)
     const fileRecords = await this.db
       .select({ id: files.id, path: files.path })
       .from(files)
 
     for (const record of fileRecords) {
-      if (filesToAnalyze.includes(record.path)) {
+      if (wanted.has(record.path)) {
         this.fileIdCache.set(record.path, record.id)
       }
     }
@@ -282,14 +287,7 @@ export class GitService {
       const fileId = this.fileIdCache.get(filePath)
       if (!fileId) return
 
-      const blameData: Array<{
-        fileId: number
-        authorId: number
-        lineNumber: number
-        content: string | null
-        commitHash: string | null
-        commitDate: string | null
-      }> = []
+      const blameData: BlameLineInsert[] = []
 
       let currentAuthor = ''
       let currentEmail = ''
@@ -326,7 +324,6 @@ export class GitService {
             fileId,
             authorId,
             lineNumber,
-            content,
             commitHash: currentCommitHash || null,
             commitDate: currentCommitDate || null,
           })
@@ -364,7 +361,7 @@ export class GitService {
   /**
    * Store one file's blame lines, in chunks, inside a transaction.
    *
-   * Each row binds six values, and an insert is a single statement with one
+   * Each row binds five values, and an insert is a single statement with one
    * placeholder per value, so one `values()` call for a long file asks SQLite
    * to bind more parameters than it will accept. The insert then threw, the
    * catch above swallowed it, and the file's entire blame was lost -- not a

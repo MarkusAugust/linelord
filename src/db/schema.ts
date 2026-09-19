@@ -48,7 +48,6 @@ export const blameLines = sqliteTable('blame_lines', {
     .notNull()
     .references(() => authors.id),
   lineNumber: integer('line_number').notNull(),
-  content: text('content'),
   commitHash: text('commit_hash'),
   commitDate: text('commit_date'),
 })
