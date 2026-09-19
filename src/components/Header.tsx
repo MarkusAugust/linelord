@@ -1,5 +1,5 @@
 import { Box, Text } from 'ink'
-import { bannerAsciiLarge } from '../resources/asciiAart'
+import { bannerAsciiLarge } from '../resources/asciiArt'
 
 export default function Header() {
   return (

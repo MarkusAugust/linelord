@@ -7,7 +7,7 @@ import { authors, blameLines, files } from '../db/schema'
 import {
   binaryExts,
   ignoredFileExtensions,
-  ignoredFilePatterns,
+  isIgnoredByPattern,
 } from '../resources/ignoreFiles'
 
 const execAsync = promisify(exec)
@@ -544,27 +544,6 @@ export class GitService {
   }
 
   private isFileIgnored(filePath: string, ext: string): boolean {
-    if (ignoredFileExtensions.has(ext)) return true
-
-    for (const pattern of ignoredFilePatterns) {
-      if (this.matchesPattern(filePath, pattern)) return true
-    }
-    return false
-  }
-
-  private matchesPattern(filePath: string, pattern: string): boolean {
-    const regexPattern = pattern
-      .replace(/\./g, '\\.')
-      .replace(/\*\*/g, '.*')
-      .replace(/\*/g, '[^/]*')
-      .replace(/\?/g, '[^/]')
-
-    const regex = new RegExp(`^${regexPattern}$`)
-    const filename = path.basename(filePath)
-    return (
-      regex.test(filePath) ||
-      regex.test(filename) ||
-      filePath.includes(pattern.replace(/\*/g, ''))
-    )
+    return ignoredFileExtensions.has(ext) || isIgnoredByPattern(filePath)
   }
 }

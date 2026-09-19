@@ -1,5 +1,5 @@
 import { Box, Text } from 'ink'
-import { bannerAsciiSmall } from '../resources/asciiAart'
+import { bannerAsciiSmall } from '../resources/asciiArt'
 
 type ExitProps = { quote: string }
 
