@@ -415,8 +415,12 @@ export class GitService {
    * Run git and return its stdout, streamed rather than buffered through a
    * shell. `ls-tree` on a large repository can exceed exec's buffer, and a
    * shell would mangle awkward paths on the way back regardless.
+   *
+   * `successCodes` exists because not every non-zero exit is a failure: git
+   * grep reports "nothing matched" as exit 1, which for this caller is an
+   * answer rather than an error.
    */
-  private runGit(args: string[]): Promise<string> {
+  private runGit(args: string[], successCodes = [0]): Promise<string> {
     return new Promise((resolve, reject) => {
       const child = spawn('git', args, {
         cwd: this.repoPath,
@@ -432,7 +436,7 @@ export class GitService {
       })
       child.on('error', reject)
       child.on('close', (code) => {
-        if (code === 0) {
+        if (code !== null && successCodes.includes(code)) {
           resolve(Buffer.concat(chunks).toString())
         } else {
           reject(
@@ -479,16 +483,14 @@ export class GitService {
     const revision = this.analysedRevision()
     // -I drops what git calls binary, -e '' matches every line of what
     // remains, and -z keeps awkward paths intact on the way back.
-    const stdout = await this.runGit([
-      'grep',
-      '-I',
-      '-z',
-      '--name-only',
-      '--full-name',
-      '-e',
-      '',
-      revision,
-    ])
+    const stdout = await this.runGit(
+      ['grep', '-I', '-z', '--name-only', '--full-name', '-e', '', revision],
+      // 1 means nothing matched. A repository holding only binary blobs, or
+      // only empty files, is an ordinary repository with no text in it -- not
+      // a reason to fail the analysis, which is what treating this as an
+      // error did. Anything above 1 is a real failure and still throws.
+      [0, 1],
+    )
 
     const prefix = `${revision}:`
     const paths = new Set<string>()

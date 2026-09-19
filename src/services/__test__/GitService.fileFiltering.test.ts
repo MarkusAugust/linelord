@@ -283,3 +283,50 @@ describe('GitService - git decides what is binary', () => {
     expect(byPath.get('assets/åpen fil.bin')?.isBinary).toBe(true)
   })
 })
+
+describe('GitService - repositories with no text in them at all', () => {
+  let repo: TestRepo | undefined
+
+  afterEach(async () => {
+    await repo?.cleanup()
+    repo = undefined
+  })
+
+  const BLOB = new Uint8Array(
+    Array.from({ length: 3000 }, (_, index) => index % 256),
+  )
+
+  it('analyses a repository holding nothing but binary files', async () => {
+    // `git grep` reports "nothing matched" as exit code 1. Treating every
+    // non-zero exit as a failure meant this threw and took the whole analysis
+    // with it -- an ordinary repository that simply has no text in it.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'assets only',
+      write: { 'logo.png': BLOB, data: BLOB },
+    })
+
+    const { byPath, blamedFileCount } = await analyse(repo.path)
+
+    expect(byPath.size).toBe(2)
+    expect(byPath.get('logo.png')?.isBinary).toBe(true)
+    expect(byPath.get('data')?.isBinary).toBe(true)
+    expect(blamedFileCount).toBe(0)
+  })
+
+  it('analyses a repository holding nothing but empty files', async () => {
+    // Same exit code, different reason: an empty file has no line to match.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'placeholders',
+      write: { '.gitkeep': '', 'docs/.gitkeep': '' },
+    })
+
+    const { byPath } = await analyse(repo.path)
+
+    expect(byPath.size).toBe(2)
+    // Empty is not binary, and saying otherwise would misreport them.
+    expect(byPath.get('.gitkeep')?.isBinary).toBeFalsy()
+    expect(byPath.get('.gitkeep')?.totalLines).toBe(0)
+  })
+})
