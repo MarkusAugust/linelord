@@ -1,6 +1,7 @@
 {
   "name": "linelord",
   "version": "0.8.0",
+  "private": true,
   "module": "cli.ts",
   "type": "module",
   "description": "Analyze git blame data with developer contribution statistics",
@@ -24,9 +25,6 @@
     "repository-analysis",
     "developer-statistics"
   ],
-  "bin": {
-    "linelord": "./dist/cli.js"
-  },
   "dependencies": {
     "drizzle-orm": "^0.44.1",
     "fastest-levenshtein": "^1.0.16",
