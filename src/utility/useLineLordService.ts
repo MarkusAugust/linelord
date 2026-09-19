@@ -39,7 +39,8 @@ export function useLineLordService(repoPath: string, thresholdBytes: number) {
     }
 
     const handleError = (error: unknown) => {
-      console.error('Repository initialization failed:', error)
+      // No console while Ink holds the terminal; the message reaches the user
+      // through initError, which App renders as the error screen.
       setInitError(error instanceof Error ? error.message : String(error))
       setIsInitialized(false)
     }

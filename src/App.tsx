@@ -59,6 +59,10 @@ export default function App({
     ? lineLordService.getAnalysisContext()
     : undefined
 
+  const failures = lineLordService?.isInitialized()
+    ? lineLordService.getFailures()
+    : []
+
   const handleMenuSelect = (option: MenuOption) => {
     if (option.value === 'exit') {
       clearTerminal()
@@ -140,6 +144,33 @@ export default function App({
                     analysisContext.uncommittedFileCount === 1 ? '' : 's'
                   } have uncommitted changes that are not counted`}
               </Text>
+            )}
+
+            {/*
+              A file that could not be read is missing from every number on
+              every screen. Saying so here is the whole point of collecting
+              these rather than printing them into the middle of the UI.
+            */}
+            {failures.length > 0 && (
+              <Box flexDirection="column" marginTop={1}>
+                <Text color="yellow">
+                  ⚠ {failures.length} file{failures.length === 1 ? '' : 's'}{' '}
+                  could not be analysed and{' '}
+                  {failures.length === 1 ? 'is' : 'are'} missing from these
+                  numbers:
+                </Text>
+                {failures.slice(0, 3).map((failure) => (
+                  <Text key={failure.path} color="gray">
+                    {'  '}
+                    {failure.path} — {failure.error.split('\n')[0]}
+                  </Text>
+                ))}
+                {failures.length > 3 && (
+                  <Text color="gray">
+                    {'  '}… and {failures.length - 3} more
+                  </Text>
+                )}
+              </Box>
             )}
           </Box>
 

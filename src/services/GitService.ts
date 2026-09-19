@@ -28,6 +28,28 @@ interface HeadFile {
   size: number
 }
 
+/**
+ * Rows per insert statement. Six columns each, so 500 rows binds 3,000
+ * parameters -- comfortably inside what SQLite accepts, with room for the
+ * schema to gain a column without anyone having to remember this number.
+ */
+const BLAME_INSERT_CHUNK = 500
+
+type BlameLineInsert = {
+  fileId: number
+  authorId: number
+  lineNumber: number
+  content: string | null
+  commitHash: string | null
+  commitDate: string | null
+}
+
+/** A file whose blame could not be read, kept for the UI to report. */
+export interface AnalysisFailure {
+  path: string
+  error: string
+}
+
 export class GitService {
   private authorCache = new Map<string, number>() // email -> id
   private fileIdCache = new Map<string, number>() // filepath -> id
@@ -35,6 +57,17 @@ export class GitService {
     headSha: null,
     uncommittedFileCount: 0,
   }
+  /**
+   * Files that could not be read, collected rather than printed.
+   *
+   * Writing to stdout or stderr while Ink holds the terminal puts text where
+   * the UI is drawing. Ink's patchConsole relocates it above the frame rather
+   * than letting it overwrite the app, so the result is a disturbed display
+   * rather than a destroyed one -- but the message still appears from nowhere,
+   * is lost on the next render, and never reaches anyone who has scrolled.
+   * The UI reports these instead.
+   */
+  private failures: AnalysisFailure[] = []
 
   constructor(
     private repoPath: string,
@@ -48,6 +81,7 @@ export class GitService {
   ) {
     onProgress?.(0, 100, 'Getting repository files...')
 
+    this.failures = []
     this.analysisContext = await this.resolveAnalysisContext()
 
     const allFiles = await this.listHeadFiles()
@@ -290,21 +324,51 @@ export class GitService {
       }
 
       if (blameData.length > 0) {
-        await this.db.insert(blameLines).values(blameData)
-        await this.db
-          .update(files)
-          .set({ totalLines: blameData.length })
-          .where(eq(files.id, fileId))
+        this.storeBlameLines(fileId, blameData)
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      // A tracked file that has been staged but never committed has no content
-      // in HEAD. Excluding it is the correct outcome of a HEAD analysis, not a
-      // failure worth reporting.
-      if (message.includes('no such path')) return
-
-      console.warn(`Failed to process blame for ${filePath}:`, error)
+      // There used to be a guard here that swallowed "no such path", for a file
+      // staged but never committed. That case cannot arise any more: the file
+      // list is enumerated from the tree of the same revision blame is given,
+      // so every path reaching this point exists in it. What the guard did
+      // instead was hide the real cause of that message -- an object missing
+      // from the repository -- turning a corrupt blob into a file that quietly
+      // contributed nothing.
+      this.failures.push({
+        path: filePath,
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
+  }
+
+  /**
+   * Store one file's blame lines, in chunks, inside a transaction.
+   *
+   * Each row binds six values, and an insert is a single statement with one
+   * placeholder per value, so one `values()` call for a long file asks SQLite
+   * to bind more parameters than it will accept. The insert then threw, the
+   * catch above swallowed it, and the file's entire blame was lost -- not a
+   * crash, and not a partial result either: nothing at all, for that file.
+   * Measured before this change, a 10,000-line file stored all of its lines
+   * and a 20,000-line file stored none of them.
+   *
+   * The transaction makes the rows and the line count on the file row land
+   * together, so a failure part-way cannot leave a file claiming a total it
+   * does not have.
+   */
+  private storeBlameLines(fileId: number, rows: BlameLineInsert[]): void {
+    this.db.transaction((tx) => {
+      for (let start = 0; start < rows.length; start += BLAME_INSERT_CHUNK) {
+        tx.insert(blameLines)
+          .values(rows.slice(start, start + BLAME_INSERT_CHUNK))
+          .run()
+      }
+
+      tx.update(files)
+        .set({ totalLines: rows.length })
+        .where(eq(files.id, fileId))
+        .run()
+    })
   }
 
   /**
@@ -446,6 +510,11 @@ export class GitService {
 
   getAnalysisContext(): AnalysisContext {
     return { ...this.analysisContext }
+  }
+
+  /** Files this run could not read. Empty when everything was analysed. */
+  getFailures(): AnalysisFailure[] {
+    return [...this.failures]
   }
 
   private async execGitBlame(filePath: string): Promise<string> {

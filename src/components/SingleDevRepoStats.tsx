@@ -171,7 +171,7 @@ export default function SingleDevRepoStats({
           })
         }, 300)
       } catch (error) {
-        console.error('Error analyzing stats:', error)
+        // Reported through the stats state below, not to the terminal Ink owns.
         setStats({
           isLoading: false,
           authorStats: null,
@@ -215,7 +215,20 @@ export default function SingleDevRepoStats({
         setMode('stats')
       }
     } catch (error) {
-      console.error('Error finding author:', error)
+      // This used to go to the console and nowhere else, so a lookup failure
+      // looked like the key press had simply not registered. Show it on the
+      // stats screen, which is where the user was headed.
+      setStats({
+        isLoading: false,
+        authorStats: null,
+        currentStep: 'complete',
+        progress: 100,
+        stepMessage: 'By Huge, the warrior could not be found!',
+        error: `Error finding author: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      })
+      setMode('stats')
     }
   }
 
