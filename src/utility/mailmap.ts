@@ -64,8 +64,13 @@ export async function writeMailmap(
   let existing = ''
   try {
     existing = await readFile(path, 'utf8')
-  } catch {
-    // No .mailmap yet, which is the usual case the first time.
+  } catch (error) {
+    // "Not there" is the usual case the first time, and means there is
+    // nothing to preserve. Anything else -- a file that exists but cannot be
+    // read, which on most systems can still be appended to -- is not the same
+    // thing at all: carrying on would append lines the file may already have,
+    // duplicating the entries this promises to leave alone. Better to say so.
+    if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') throw error
   }
 
   const present = new Set(

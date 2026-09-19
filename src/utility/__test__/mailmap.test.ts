@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { readFile, writeFile } from 'node:fs/promises'
+import { chmod, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
   createTestRepo,
@@ -141,6 +141,31 @@ describe('writeMailmap', () => {
     expect(lines[0]).toBe('Someone Else <them@example.com> <old@example.com>')
   })
 
+  // Root can read a file whatever its mode, so the case cannot be staged.
+  const cannotBeRead =
+    typeof process.getuid === 'function' && process.getuid() === 0
+  it.skipIf(cannotBeRead)(
+    'refuses to append when the file is there but cannot be read',
+    async () => {
+      // A write-only .mailmap can still be appended to. Treating the failed
+      // read as "no file yet" would therefore append entries the file already
+      // contains, duplicating the very lines this promises to leave alone.
+      repo = await repoWithTwoAddresses()
+      const path = join(repo.path, '.mailmap')
+      await writeFile(
+        path,
+        'Someone Else <them@example.com> <old@example.com>\n',
+      )
+      await chmod(path, 0o222)
+
+      await expect(
+        writeMailmap(repo.path, await guessedMerges(repo.path)),
+      ).rejects.toThrow()
+
+      await chmod(path, 0o644)
+    },
+  )
+
   it('writes nothing when everybody has one address', async () => {
     repo = await createTestRepo()
     await repo.commit({
@@ -186,7 +211,10 @@ describe('the guesses that get written', () => {
     expect(merge?.absorbed[0]?.reason).not.toBe('')
   })
 
-  it('has nothing to explain under the default, which guesses nothing', async () => {
+  it('is reported under the default too, which shows them without taking them', async () => {
+    // The default merges nothing. It still has to say what it saw, or a user
+    // faced with two entries for one person has no way to know that the tool
+    // noticed and declined to act.
     repo = await createTestRepo()
     await repo.commit({
       message: 'one address',
@@ -202,6 +230,9 @@ describe('the guesses that get written', () => {
     const service = new LineLordService(repo.path)
     await service.initialize()
 
-    expect(service.getIdentityMerges()).toEqual([])
+    expect(service.getIdentityMerges()).toHaveLength(1)
+    // Shown, not acted on: both addresses still count separately.
+    const authors = await service.getAnalysisService().getAllAuthors()
+    expect(authors).toHaveLength(2)
   })
 })

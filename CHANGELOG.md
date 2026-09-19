@@ -76,6 +76,13 @@ because the earlier answer was wrong.
 
 ### Fixed — using it
 
+- **`-p` now points at the repository it names.** The short form of `--path`
+  has been in the help text and the README since the first release, but it was
+  never declared, so it was dropped rather than rejected: `linelord -p ~/other`
+  analysed the current directory and reported the path it had been handed, and
+  `linelord --clear-cache -p ~/other` forgot the wrong repository's analysis
+  while saying it had forgotten the right one.
+
 - **Invalid input is refused instead of quietly changing the answer.**
   `--threshold 0` or a negative value made every file count as oversized, so
   the analysis came back empty; a non-numeric value became `NaN`, and since
@@ -97,26 +104,29 @@ because the earlier answer was wrong.
 
 ### Added
 
-- **`--write-mailmap` writes down what the guessing found.** Turning
-  `--fuzzy-authors` off left a real chore behind: the honest answer to "one
-  person, several addresses" is a `.mailmap`, and working out what belongs in
-  it meant reading a contributor list and typing the lines by hand. The flag
-  runs the guessing, prints every line, appends the new ones to the
-  repository's `.mailmap`, and stops. Lines that were already there are shown
-  but not repeated, and nothing is ever overwritten or removed — a wrong guess
-  is a line to delete.
+- **LineLord drafts the `.mailmap` for you.** Turning the guessing off left a
+  real chore behind: the honest answer to "one person, several addresses" is a
+  `.mailmap`, and working out what belongs in it meant reading a contributor
+  list and typing the lines by hand. **Draft a .mailmap from identity guesses**
+  on the menu shows what a guessing run would merge and writes the lines on a
+  keypress; `--write-mailmap` does the same job without opening the interface,
+  for a script or for someone who already knows what they want.
 
-  They are guesses, and the output says so. The point is that a person reads
-  them before they are committed. Once a line is in the file, `git blame`
-  applies it and the guess is never made again, so a second run has nothing
-  left to write.
+  The analysis behind it stays strict either way — nobody is merged, and the
+  stored analysis the next ordinary run reuses is not disturbed. Lines the file
+  already had are shown but not repeated, and nothing is ever overwritten or
+  removed: a wrong guess is a line to delete.
 
-- **The menu screen says when a guess *would* have been made.** Under the
-  default nothing is merged, which is right but silent: two entries for the
-  same person look like two people and there is no hint that LineLord noticed.
-  It now lists the contributors a loose run would have merged, with the reason
-  for each — `the names "Gorvek the Ironbane" and "Gorvek Ironbane" are alike`
-  — and points at `--write-mailmap`. It still merges nothing.
+  They are guesses, and it says so. Once a line is in the file, `git blame`
+  applies it and the guess is never made again, so asking a second time has
+  nothing left to write.
+
+- **The default run says when two contributors may be one person.** It merges
+  nothing, which is right, but it used to do so in silence: two entries for one
+  person looked like two people, with no hint that LineLord had noticed. The
+  menu screen now lists them with the reason for each guess — `the names
+  "gorvek the ironbane" and "gorvek" are alike` — and points at the menu entry
+  that records them. Both addresses still count separately.
 
 - **The analysis is kept between runs.** It used to be thrown away when the
   process exited, so every launch read the whole repository again. A run that

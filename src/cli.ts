@@ -19,6 +19,11 @@ const cli = meow(CLI_HELP, {
   flags: {
     path: {
       type: 'string',
+      // The help text and the README have both promised -p since the first
+      // release. Without it meow drops the flag rather than rejecting it, and
+      // LineLord analyses the current directory while reporting the path it
+      // was handed -- or, with --clear-cache, forgets the wrong repository.
+      shortFlag: 'p',
     },
 
     version: {
@@ -153,13 +158,15 @@ if (cli.flags.clearCache) {
   process.exit(0)
 }
 
-// Pass repoPath to your existing App component
-// Writing a .mailmap is a job in itself, and it needs the guessing switched on
-// -- there is nothing to write down otherwise. Do it, say what was written,
-// and stop, rather than opening a screen that reports the state before it.
+// Writing a .mailmap without opening the interface, for a script or for
+// someone who already knows what they want. The same job is on the menu once
+// LineLord has started; both run the guessing as a question -- the analysis
+// itself stays strict, so this neither merges anybody nor disturbs the stored
+// analysis the next ordinary run will reuse.
 if (cli.flags.writeMailmap) {
   const service = new LineLordService(repoPath, thresholdBytes, {
-    authorPolicy: 'loose',
+    useCache: !cli.flags.noCache,
+    refresh: cli.flags.refresh,
   })
   await service.initialize()
 

@@ -85,6 +85,7 @@ export class LineLordService {
   private useCache: boolean
   private refresh: boolean
   private authorPolicy: AuthorPolicy
+  private identityMerges: IdentityMerge[] = []
   private cacheLock: CacheLock | null = null
   private cacheStatus: CacheStatus = {
     mode: 'disabled',
@@ -207,6 +208,7 @@ export class LineLordService {
 
       if (decision.plan === 'reuse') {
         onProgress?.(100, 100, 'Reusing the stored analysis')
+        this.identityMerges = await this.collectIdentityMerges()
         this.initialized = true
         return
       }
@@ -236,6 +238,7 @@ export class LineLordService {
       // repository, so they cannot be updated in part: both run again after
       // any change, however small.
       await this.normalizationService.normalizeAllAuthors(this.authorPolicy)
+      this.identityMerges = await this.collectIdentityMerges()
 
       onProgress?.(80, 100, 'Calculating ranks and percentages...')
       await this.rankingService.calculateAndAssignRanksAndPercentages()
@@ -470,13 +473,37 @@ export class LineLordService {
   }
 
   /**
-   * Identities the run decided were one person, and why.
+   * Identities that are, or may be, one person -- and why.
    *
-   * Empty under the default policy, which merges only identical addresses.
-   * Under `--fuzzy-authors` this is the record of every assumption made, so
-   * the user can see them rather than take them.
+   * Under the default policy nothing is merged, so this is what a guessing run
+   * *would* have merged: the only way a user looking at two entries for one
+   * person learns that LineLord noticed. Under `--fuzzy-authors` the merging
+   * has already happened and this is the record of every assumption taken.
+   *
+   * Worked out during initialization, including on a reused run, so that the
+   * interface can ask for it while rendering.
    */
   getIdentityMerges(): IdentityMerge[] {
-    return this.normalizationService.getMerges()
+    return this.identityMerges
+  }
+
+  /**
+   * Ask the normalization service which identities belong together.
+   *
+   * Read-only under either policy: after guessing, the merges are read back
+   * from the alias rows the merging wrote, which the cache keeps; without it,
+   * the guessing is run as a question and its answer discarded. Either way a
+   * run that reused its cache -- and so never normalised anything -- answers
+   * the same as the run that did the work.
+   */
+  private async collectIdentityMerges(): Promise<IdentityMerge[]> {
+    try {
+      return this.authorPolicy === 'loose'
+        ? await this.normalizationService.describeExistingMerges()
+        : await this.normalizationService.findIdentityGuesses()
+    } catch {
+      // A warning nobody can render is not worth failing an analysis over.
+      return []
+    }
   }
 }

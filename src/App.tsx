@@ -6,6 +6,7 @@ import ErrorScreen from './components/ErrorScreen'
 import ExitScreen from './components/ExitScreen'
 import Layout from './components/Layout'
 import LoadingScreen from './components/LoadingScreen'
+import MailmapDraft from './components/MailmapDraft'
 import Menu, { type MenuOption } from './components/Menu'
 import RepoPathInput from './components/RepoPathInput'
 import RepoStats from './components/RepoStats'
@@ -185,16 +186,17 @@ export default function App({
             )}
 
             {/*
-              Every assumption --fuzzy-authors made, shown rather than taken.
-              A guess nobody can inspect is a guess nobody can correct, and
-              these decide whose work is whose.
+              Who the guessing would have taken to be one person. Under the
+              default nothing is merged, so this is shown rather than acted
+              on -- a guess nobody can inspect is a guess nobody can correct,
+              and these decide whose work is whose.
             */}
             {identityMerges.length > 0 && (
               <Box flexDirection="column" marginTop={1}>
                 <Text color="yellow">
-                  ⚠ Guessed that {identityMerges.length} contributor
-                  {identityMerges.length === 1 ? '' : 's'} committed under more
-                  than one address:
+                  ⚠ {identityMerges.length} contributor
+                  {identityMerges.length === 1 ? '' : 's'} may have committed
+                  under more than one address:
                 </Text>
                 {identityMerges.slice(0, 3).map((merge) => (
                   <Box key={merge.canonical.email} flexDirection="column">
@@ -216,8 +218,8 @@ export default function App({
                   </Text>
                 )}
                 <Text color="gray">
-                  {'  '}Run with --write-mailmap to record the ones that are
-                  right.
+                  {'  '}Nothing was merged. Pick "Draft a .mailmap" below to
+                  record the ones that are right.
                 </Text>
               </Box>
             )}
@@ -258,6 +260,14 @@ export default function App({
             onSelect={handleMenuSelect}
           />
         </Box>
+      )}
+
+      {state === 'mailmap' && (
+        <MailmapDraft
+          repoPath={repoPath}
+          merges={identityMerges}
+          onBack={returnToMenu}
+        />
       )}
 
       {state === 'repostats' && (

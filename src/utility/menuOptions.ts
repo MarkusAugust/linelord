@@ -8,6 +8,7 @@ export const menuOptions: MenuOption[] = [
     value: 'singledevrepostats',
   },
   { label: 'Brutal Barbarian Rankings', value: 'barbarianrankings' },
+  { label: 'Draft a .mailmap from identity guesses', value: 'mailmap' },
   { label: 'Change Repository', value: 'change-repo' },
   { label: 'About', value: 'about' },
   { label: 'Exit', value: 'exit' },
