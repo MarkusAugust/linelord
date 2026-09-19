@@ -23,6 +23,12 @@ const WORKFLOW = join(
 
 const workflow = readFileSync(WORKFLOW, 'utf8')
 
+/** The build-and-release job, up to where the next job starts. */
+const buildJob = workflow.slice(
+  workflow.indexOf('  build-and-release:'),
+  workflow.indexOf('  update-homebrew-tap:'),
+)
+
 describe('release workflow', () => {
   it('runs only scripts from this repository, never the tap checkout', () => {
     // The tap is checked out to ./tap, and nothing executable may come from
@@ -53,6 +59,26 @@ describe('release workflow', () => {
 
     expect(header).toContain('permissions:\n  contents: read')
     expect(header).not.toContain('contents: write')
+  })
+
+  it('keeps the write permission the release step needs', () => {
+    // The assertion above only says the write is not workflow-wide. On its
+    // own it is satisfied by removing the permission altogether, which would
+    // leave action-gh-release unable to publish -- a failure that only shows
+    // up when a tag is pushed. Pin the job that legitimately needs it.
+    expect(buildJob).toContain('permissions:\n      contents: write')
+  })
+
+  it('does not hold a write token while dependency and build code runs', () => {
+    // This job installs dependencies, which executes lifecycle scripts from
+    // the dependency tree, and then builds. A persisted token would sit in
+    // .git/config throughout. The release step is handed GITHUB_TOKEN
+    // explicitly, so nothing here needs credentials on disk.
+    const checkout = buildJob.slice(buildJob.indexOf('actions/checkout@v4'))
+    const nextStep = checkout.indexOf('\n      - name:')
+    const block = nextStep === -1 ? checkout : checkout.slice(0, nextStep)
+
+    expect(block).toContain('persist-credentials: false')
   })
 
   it('still refuses to run when the tap token is missing', () => {

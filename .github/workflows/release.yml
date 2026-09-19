@@ -28,10 +28,16 @@ jobs:
     permissions:
       contents: write
     steps:
+      # persist-credentials is off because this job holds contents: write and
+      # then runs `bun install`, which executes dependency lifecycle scripts,
+      # followed by the build. Persisting would put a write-capable token in
+      # .git/config while all of that third-party code runs. The release step
+      # receives GITHUB_TOKEN explicitly, and nothing here pushes with git.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           fetch-tags: true
+          persist-credentials: false
 
       - name: Setup Bun
         # Pinned, and deliberately the same version CI verifies against: the

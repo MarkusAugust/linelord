@@ -77,9 +77,15 @@ def main():
         else:
             print(f"  ok       {asset}")
 
+    # Checking only the pairs that happen to be present would pass a formula
+    # that lost a platform: the remaining three would verify cleanly and the
+    # release would ship with one platform silently unavailable. A published
+    # binary the formula does not offer is a failure, not a note.
+    # checksums.txt is published beside the binaries and is not installed.
     unreferenced = set(digests) - {a for a, _ in pairs} - {"checksums.txt"}
-    if unreferenced:
-        print(f"\nnote: published but not referenced: {', '.join(sorted(unreferenced))}")
+    for asset in sorted(unreferenced):
+        failures.append(f"{asset}: published in {tag} but not offered by the formula")
+        print(f"  ABSENT   {asset}")
 
     if failures:
         print("\n" + "\n".join(f"FAIL: {f}" for f in failures))
