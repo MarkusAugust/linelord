@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { sql } from 'drizzle-orm'
-import { clearDatabase, createDatabase, SCHEMA_VERSION } from '../database'
+import { clearDatabase, createDatabase } from '../database'
 import { readAllMeta, readMeta, writeMeta } from '../meta'
 import { authors } from '../schema'
 
@@ -38,14 +38,7 @@ describe('createDatabase on disk', () => {
     const path = await cachePath('cache.db')
 
     const first = createDatabase({ path })
-    // The version stamp is what marks the file as one this LineLord wrote.
-    // Without it the next open treats it as a cache from elsewhere and starts
-    // again, which is the right answer for a file of unknown shape and the
-    // wrong one for this test.
-    writeMeta(first, {
-      schema_version: String(SCHEMA_VERSION),
-      head_sha: 'abc123',
-    })
+    writeMeta(first, { head_sha: 'abc123' })
 
     const second = createDatabase({ path })
 
@@ -56,7 +49,6 @@ describe('createDatabase on disk', () => {
     const path = await cachePath('cache.db')
 
     const first = createDatabase({ path })
-    writeMeta(first, { schema_version: String(SCHEMA_VERSION) })
     await first.insert(authors).values({
       id: 1,
       name: 'Gorvek the Ironbane',

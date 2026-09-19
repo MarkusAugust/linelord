@@ -19,8 +19,12 @@ export interface BlameEntry {
   author: string
   /** Angle brackets stripped, as git writes them. */
   authorEmail: string
-  /** Author time, in whole seconds since the epoch. */
-  authorTime: number
+  /**
+   * Author time, in whole seconds since the epoch, or null if git did not
+   * report one. Null rather than zero: zero is a real instant, and a commit
+   * dated to it would otherwise be indistinguishable from a missing field.
+   */
+  authorTime: number | null
   /** The line itself, without the tab git puts in front of it. */
   content: string
 }
@@ -28,7 +32,7 @@ export interface BlameEntry {
 interface CommitHeader {
   author: string
   authorEmail: string
-  authorTime: number
+  authorTime: number | null
 }
 
 /**
@@ -109,7 +113,7 @@ export function parseBlamePorcelain(stdout: string): BlameEntry[] {
     const commit: CommitHeader = {
       author: pending.author ?? known?.author ?? '',
       authorEmail: pending.authorEmail ?? known?.authorEmail ?? '',
-      authorTime: pending.authorTime ?? known?.authorTime ?? 0,
+      authorTime: pending.authorTime ?? known?.authorTime ?? null,
     }
     commits.set(sha, commit)
 

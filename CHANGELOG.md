@@ -103,8 +103,9 @@ because the earlier answer was wrong.
   column added in a later version was simply missing, and the run that
   rebuilt the analysis failed on every single file. The analysis was not
   wrong, it was absent — and it stayed absent, because the cache it failed to
-  write was the same cache it failed to write next time. A file whose layout
-  was stamped by another version is now dropped and built again.
+  write was the same cache it failed to write next time. The layout is now
+  stamped in the file itself, with SQLite's `user_version`, and a file stamped
+  by another version is dropped and built again.
 
 - **`-p` now points at the repository it names.** The short form of `--path`
   has been in the help text and the README since the first release, but it was

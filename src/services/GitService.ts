@@ -453,8 +453,11 @@ export class GitService {
           fileId,
           authorId,
           lineNumber: entry.lineNumber,
-          commitHash: entry.sha || null,
-          commitTimestamp: entry.authorTime || null,
+          commitHash: entry.sha,
+          // Not `|| null`: a commit dated to the epoch has an author time of
+          // zero, and treating that as missing would drop the line out of
+          // every question asked about age.
+          commitTimestamp: entry.authorTime,
         })
       }
 

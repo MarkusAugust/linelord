@@ -148,6 +148,20 @@ describe('parseBlamePorcelain', () => {
     expect(parseBlamePorcelain(output)).toHaveLength(1)
   })
 
+  it('keeps a commit dated to the epoch', () => {
+    // Zero is a real instant. Reading it as "no time given" would drop the
+    // line out of every question asked about age, silently.
+    const output = `${header(SHA_A, 1, 1, 'A', 'a@x.com', 0)}\n\tone`
+
+    expect(parseBlamePorcelain(output)[0]?.authorTime).toBe(0)
+  })
+
+  it('says so when there is no time at all, rather than guessing at one', () => {
+    const output = `${SHA_A} 1 1\nauthor A\nauthor-mail <a@x.com>\nfilename f.txt\n\tone`
+
+    expect(parseBlamePorcelain(output)[0]?.authorTime).toBe(null)
+  })
+
   it('gives nothing back for an empty file', () => {
     expect(parseBlamePorcelain('')).toEqual([])
   })

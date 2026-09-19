@@ -35,24 +35,19 @@ export interface CreateDatabaseOptions {
  * version was never going to be read again.
  */
 function discardIfWrittenByAnotherVersion(sqlite: Database): void {
-  let stored: string | null = null
-  try {
-    const row = sqlite
-      .query<{ value: string }, []>(
-        "SELECT value FROM meta WHERE key = 'schema_version'",
-      )
-      .get()
-    stored = row?.value ?? null
-  } catch {
-    // No meta table at all. Either the file is empty, in which case there is
-    // nothing to drop, or it predates the fingerprint entirely -- and both
-    // want the same thing.
-  }
+  // SQLite keeps this number in the file header, for exactly this purpose. It
+  // is a property of the file rather than a row in it, so emptying the tables
+  // does not disturb it and a caller need not remember to write it.
+  const row = sqlite
+    .query<{ user_version: number }, []>('PRAGMA user_version')
+    .get()
+  const stored = row?.user_version ?? 0
 
-  if (stored === String(SCHEMA_VERSION)) return
+  if (stored === SCHEMA_VERSION) return
 
-  // A file that was never written to has no tables either, so this is a
-  // no-op on a first run rather than a special case.
+  // Zero is both a brand-new file and one written before this stamp existed.
+  // Dropping is right for the second and a no-op for the first.
+
   sqlite.exec(`
     PRAGMA foreign_keys = OFF;
     DROP TABLE IF EXISTS blame_lines;
@@ -152,6 +147,10 @@ export function createDatabase(options: CreateDatabaseOptions = {}) {
     CREATE INDEX IF NOT EXISTS idx_author_aliases_canonical ON author_aliases(canonical_author_id);
   `)
 
+  // Stamped after the tables exist, so a file that fails halfway through
+  // creation is not marked as though it had succeeded.
+  sqlite.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`)
+
   return db
 }
 
@@ -163,6 +162,9 @@ export function createDatabase(options: CreateDatabaseOptions = {}) {
  * leave a description of data that is no longer there. The caller that empties
  * the database to analyse a different repository would then be handed the
  * previous repository's fingerprint as though it were its own.
+ *
+ * The layout version is not in meta and so is not touched: it describes the
+ * shape of the tables, which emptying them does not change.
  */
 export function clearDatabase(db: LineLordDatabase) {
   db.delete(schema.blameLines).run()
