@@ -95,7 +95,7 @@ export class LineLordService {
   private extraIgnoreRevisions: string[]
   private ignoredRevisions: IgnoreRevs = {
     revisions: [],
-    usedFile: false,
+    sources: { file: false, flag: false },
     unresolved: [],
   }
   private identityMerges: IdentityMerge[] = []

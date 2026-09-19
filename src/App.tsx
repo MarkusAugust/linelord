@@ -33,6 +33,19 @@ type AppProps = {
   ignoreRevisions?: string[]
 }
 
+/**
+ * Where the commits being looked past were named.
+ *
+ * Both sources at once is ordinary, and saying only one of them would be a
+ * plain falsehood about where the numbers came from.
+ */
+function namedBy(sources: { file: boolean; flag: boolean }): string {
+  if (sources.file && sources.flag) {
+    return 'in .git-blame-ignore-revs and with --ignore-rev'
+  }
+  return sources.file ? 'in .git-blame-ignore-revs' : 'with --ignore-rev'
+}
+
 export default function App({
   repoPath: initialRepoPath,
   thresholdKB,
@@ -197,11 +210,9 @@ export default function App({
             {analysisContext && analysisContext.ignoredRevisionCount > 0 && (
               <Text color="gray">
                 Looking past {analysisContext.ignoredRevisionCount} commit
-                {analysisContext.ignoredRevisionCount === 1 ? '' : 's'}
-                {analysisContext.usedIgnoreRevsFile
-                  ? ' named in .git-blame-ignore-revs'
-                  : ' named with --ignore-rev'}
-                , so their lines are credited to whoever wrote them
+                {analysisContext.ignoredRevisionCount === 1 ? '' : 's'} named{' '}
+                {namedBy(analysisContext.ignoreRevSources)}, so their lines are
+                credited to whoever wrote them
               </Text>
             )}
 
@@ -216,12 +227,8 @@ export default function App({
                   <Text color="yellow">
                     ⚠ {analysisContext.unresolvedIgnoreRevs.length} entr
                     {analysisContext.unresolvedIgnoreRevs.length === 1
-                      ? 'y'
-                      : 'ies'}{' '}
-                    in .git-blame-ignore-revs{' '}
-                    {analysisContext.unresolvedIgnoreRevs.length === 1
-                      ? 'names'
-                      : 'name'}{' '}
+                      ? 'y names'
+                      : 'ies name'}{' '}
                     no commit here and{' '}
                     {analysisContext.unresolvedIgnoreRevs.length === 1
                       ? 'was'
@@ -230,10 +237,13 @@ export default function App({
                   </Text>
                   {analysisContext.unresolvedIgnoreRevs
                     .slice(0, 3)
-                    .map((entry) => (
-                      <Text key={entry} color="gray">
+                    .map((unresolved) => (
+                      <Text key={unresolved.entry} color="gray">
                         {'  '}
-                        {entry}
+                        {unresolved.entry} —{' '}
+                        {unresolved.source === 'file'
+                          ? 'in .git-blame-ignore-revs'
+                          : 'given with --ignore-rev'}
                       </Text>
                     ))}
                   {analysisContext.unresolvedIgnoreRevs.length > 3 && (

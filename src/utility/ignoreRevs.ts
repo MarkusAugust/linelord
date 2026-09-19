@@ -18,11 +18,25 @@ import { runGit } from './gitRepository'
 /** The file git and the wider ecosystem have settled on. */
 export const IGNORE_REVS_FILENAME = '.git-blame-ignore-revs'
 
+/** Where a commit was named: the repository's file, or the command line. */
+export type IgnoreRevSource = 'file' | 'flag'
+
+/** An entry that names no commit here, and where it was named. */
+export interface UnresolvedIgnoreRev {
+  entry: string
+  source: IgnoreRevSource
+}
+
 export interface IgnoreRevs {
   /** Full commit hashes, sorted, with duplicates removed. */
   revisions: string[]
-  /** Whether the repository's ignore-revs file supplied any of them. */
-  usedFile: boolean
+  /**
+   * Which sources named any of them. Both at once is ordinary, and the
+   * interface has to be able to say so: a run that used the flag alongside
+   * the file would otherwise report the lot as coming from the file, and a
+   * run with only the flag would blame a file that need not even exist.
+   */
+  sources: { file: boolean; flag: boolean }
   /**
    * Entries that name no commit in this repository.
    *
@@ -31,10 +45,14 @@ export interface IgnoreRevs {
    * so a single typo turns into every file in the repository failing to be
    * read, with nothing on screen to connect the two.
    */
-  unresolved: string[]
+  unresolved: UnresolvedIgnoreRev[]
 }
 
-const EMPTY: IgnoreRevs = { revisions: [], usedFile: false, unresolved: [] }
+const EMPTY: IgnoreRevs = {
+  revisions: [],
+  sources: { file: false, flag: false },
+  unresolved: [],
+}
 
 /** Strip comments and blank lines, as git does when it reads the file. */
 export function parseIgnoreRevsFile(contents: string): string[] {
@@ -60,7 +78,6 @@ export async function resolveIgnoreRevs(
   extraRevisions: string[] = [],
 ): Promise<IgnoreRevs> {
   let fromFile: string[] = []
-  let usedFile = false
 
   try {
     const contents = await readFile(
@@ -68,26 +85,51 @@ export async function resolveIgnoreRevs(
       'utf8',
     )
     fromFile = parseIgnoreRevsFile(contents)
-    usedFile = fromFile.length > 0
-  } catch {
-    // No file, which is the usual case and not a problem.
+  } catch (error) {
+    // "Not there" is the usual case and means the repository is asking for
+    // nothing. Anything else -- a file that exists but cannot be read -- is
+    // not the same: carrying on would analyse without the ignore set the
+    // repository did ask for, which is wrong ownership on every screen, and
+    // the cache would store it as though it were right.
+    const code = (error as NodeJS.ErrnoException)?.code
+    if (code !== 'ENOENT' && code !== 'ENOTDIR') {
+      // Said plainly, and naming the file. Stopping is the right answer here,
+      // but `EISDIR: illegal operation on a directory` on its own tells
+      // nobody what LineLord was doing or what to fix.
+      throw new Error(
+        `${IGNORE_REVS_FILENAME} exists but could not be read, so the commits ` +
+          'it names cannot be looked past. Analysing without them would ' +
+          'credit a reformatting to whoever ran it. Fix the file, or move it ' +
+          `aside to analyse without it. (${
+            error instanceof Error ? error.message : String(error)
+          })`,
+      )
+    }
   }
 
-  const named = [...fromFile, ...extraRevisions]
-  if (named.length === 0) return { ...EMPTY }
+  const named: UnresolvedIgnoreRev[] = [
+    ...fromFile.map((entry) => ({ entry, source: 'file' as const })),
+    ...extraRevisions.map((entry) => ({ entry, source: 'flag' as const })),
+  ]
+  if (named.length === 0) return { ...EMPTY, sources: { ...EMPTY.sources } }
 
   const revisions = new Set<string>()
-  const unresolved: string[] = []
+  const unresolved: UnresolvedIgnoreRev[] = []
+  const sources = { file: false, flag: false }
 
-  for (const entry of named) {
+  for (const { entry, source } of named) {
     const resolved = await resolveCommit(repositoryRoot, entry)
-    if (resolved) revisions.add(resolved)
-    else unresolved.push(entry)
+    if (resolved) {
+      revisions.add(resolved)
+      sources[source] = true
+    } else {
+      unresolved.push({ entry, source })
+    }
   }
 
   return {
     revisions: [...revisions].sort(),
-    usedFile,
+    sources,
     unresolved,
   }
 }

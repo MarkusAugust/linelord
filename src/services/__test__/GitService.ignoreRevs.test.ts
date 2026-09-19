@@ -136,7 +136,7 @@ describe('a commit blame is told to look past', () => {
 
     const context = service.getAnalysisContext()
     expect(context.ignoredRevisionCount).toBe(1)
-    expect(context.usedIgnoreRevsFile).toBe(true)
+    expect(context.ignoreRevSources).toEqual({ file: true, flag: false })
     expect(context.unresolvedIgnoreRevs).toEqual([])
   })
 
@@ -156,7 +156,7 @@ describe('a commit blame is told to look past', () => {
     expect(service.getFailures()).toEqual([])
     expect((await ownership(service)).get(GORVEK.email)).toBe(3)
     expect(service.getAnalysisContext().unresolvedIgnoreRevs).toEqual([
-      'not a commit at all',
+      { entry: 'not a commit at all', source: 'file' },
     ])
   })
 })

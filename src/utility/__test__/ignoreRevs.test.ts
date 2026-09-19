@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
   createTestRepo,
@@ -67,7 +67,11 @@ describe('resolveIgnoreRevs', () => {
 
     const result = await resolveIgnoreRevs(repo.path)
 
-    expect(result).toEqual({ revisions: [], usedFile: false, unresolved: [] })
+    expect(result).toEqual({
+      revisions: [],
+      sources: { file: false, flag: false },
+      unresolved: [],
+    })
   })
 
   it('reads the commits the repository asks to be looked past', async () => {
@@ -81,7 +85,7 @@ describe('resolveIgnoreRevs', () => {
     const result = await resolveIgnoreRevs(repo.path)
 
     expect(result.revisions).toEqual([reformat])
-    expect(result.usedFile).toBe(true)
+    expect(result.sources).toEqual({ file: true, flag: false })
     expect(result.unresolved).toEqual([])
   })
 
@@ -126,7 +130,9 @@ describe('resolveIgnoreRevs', () => {
     const result = await resolveIgnoreRevs(repo.path)
 
     expect(result.revisions).toEqual([reformat])
-    expect(result.unresolved).toEqual(['not a commit at all'])
+    expect(result.unresolved).toEqual([
+      { entry: 'not a commit at all', source: 'file' },
+    ])
   })
 
   it('refuses a name that exists but is not a commit', async () => {
@@ -137,7 +143,7 @@ describe('resolveIgnoreRevs', () => {
     const result = await resolveIgnoreRevs(repo.path, [blob])
 
     expect(result.revisions).toEqual([])
-    expect(result.unresolved).toEqual([blob])
+    expect(result.unresolved).toEqual([{ entry: blob, source: 'flag' }])
   })
 
   it('says the file was not the source when only the flag was used', async () => {
@@ -146,8 +152,46 @@ describe('resolveIgnoreRevs', () => {
 
     const result = await resolveIgnoreRevs(repo.path, [reformat])
 
-    expect(result.usedFile).toBe(false)
+    expect(result.sources).toEqual({ file: false, flag: true })
     expect(result.revisions).toEqual([reformat])
+  })
+
+  it('remembers which source named each commit, when both did', async () => {
+    // Otherwise a run that used both says everything came from the file, and
+    // a run with only the flag blames a file that may not even exist.
+    const { repo: created, reformat } = await repoWithAReformatting()
+    repo = created
+    const first = await repo.git(['rev-parse', 'HEAD~1'])
+    await writeFile(join(repo.path, IGNORE_REVS_FILENAME), `${reformat}\n`)
+
+    const result = await resolveIgnoreRevs(repo.path, [first.trim()])
+
+    expect(result.sources).toEqual({ file: true, flag: true })
+    expect(result.revisions).toHaveLength(2)
+  })
+
+  it('says a bad entry came from the flag when there is no file at all', async () => {
+    const { repo: created } = await repoWithAReformatting()
+    repo = created
+
+    const result = await resolveIgnoreRevs(repo.path, ['not a commit'])
+
+    expect(result.sources.file).toBe(false)
+    expect(result.unresolved).toEqual([
+      { entry: 'not a commit', source: 'flag' },
+    ])
+  })
+
+  it('refuses to guess when the file is there but cannot be read', async () => {
+    // Carrying on would analyse without the ignore set the repository asked
+    // for -- wrong ownership on every screen, and stored in the cache as
+    // though it were right. The same mistake as treating an unreadable
+    // .mailmap as absent, and with a louder consequence.
+    const { repo: created } = await repoWithAReformatting()
+    repo = created
+    await mkdir(join(repo.path, IGNORE_REVS_FILENAME))
+
+    await expect(resolveIgnoreRevs(repo.path)).rejects.toThrow()
   })
 })
 

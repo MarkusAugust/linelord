@@ -276,8 +276,14 @@ credited to whoever wrote them
 ```
 
 An entry that names no commit in this repository is left out and reported
-rather than passed on. Handed to git, a single bad line makes it refuse the
-blame — for every file — and the repository comes back unreadable over a typo.
+rather than passed on, saying which source named it. Handed to git, a single
+bad line makes it refuse the blame — for every file — and the repository comes
+back unreadable over a typo.
+
+A `.git-blame-ignore-revs` that exists but cannot be read stops the analysis
+with an explanation, rather than quietly analysing without it. Carrying on
+would hand the reformatting back to whoever ran it, on every screen, and store
+that in the cache as though it were right.
 
 ### Who counts as one person
 

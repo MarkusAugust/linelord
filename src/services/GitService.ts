@@ -8,7 +8,11 @@ import {
   ignoredFileExtensions,
   isIgnoredByPattern,
 } from '../resources/ignoreFiles'
-import { type IgnoreRevs, ignoreRevArguments } from '../utility/ignoreRevs'
+import {
+  type IgnoreRevs,
+  ignoreRevArguments,
+  type UnresolvedIgnoreRev,
+} from '../utility/ignoreRevs'
 import { parseBlamePorcelain } from './blamePorcelain'
 
 const execAsync = promisify(exec)
@@ -26,10 +30,10 @@ export interface AnalysisContext {
    * whoever wrote them rather than to whoever reformatted them.
    */
   ignoredRevisionCount: number
-  /** Whether those came from the repository's `.git-blame-ignore-revs`. */
-  usedIgnoreRevsFile: boolean
-  /** Entries in that file that name no commit here, and were left out. */
-  unresolvedIgnoreRevs: string[]
+  /** Which sources named them: the repository's file, `--ignore-rev`, or both. */
+  ignoreRevSources: { file: boolean; flag: boolean }
+  /** Entries that name no commit here, with where each was named. */
+  unresolvedIgnoreRevs: UnresolvedIgnoreRev[]
 }
 
 /** One blob in the HEAD tree: the path it is stored under, and its size there. */
@@ -97,7 +101,7 @@ export class GitService {
     headSha: null,
     uncommittedFileCount: 0,
     ignoredRevisionCount: 0,
-    usedIgnoreRevsFile: false,
+    ignoreRevSources: { file: false, flag: false },
     unresolvedIgnoreRevs: [],
   }
 
@@ -134,7 +138,7 @@ export class GitService {
     this.analysisContext = {
       ...this.analysisContext,
       ignoredRevisionCount: revisions.revisions.length,
-      usedIgnoreRevsFile: revisions.usedFile,
+      ignoreRevSources: revisions.sources,
       unresolvedIgnoreRevs: revisions.unresolved,
     }
   }

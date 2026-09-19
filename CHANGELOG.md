@@ -23,9 +23,12 @@ because the earlier answer was wrong.
   for a commit nobody has written down yet.
 
   An entry that names no commit here is left out and reported rather than
-  passed on. Given it, git refuses the blame — once per file — so a single
-  typo would otherwise turn into every file in the repository coming back
-  unreadable, with nothing on screen connecting the two.
+  passed on, saying which source named it. Given it, git refuses the blame —
+  once per file — so a single typo would otherwise turn into every file in the
+  repository coming back unreadable, with nothing on screen connecting the two.
+  A file that exists but cannot be read stops the analysis with an explanation
+  instead: carrying on would hand the reformatting back to whoever ran it and
+  store that in the cache as though it were right.
 
   The menu screen says when commits are being looked past, because the
   ownership shown is then deliberately not what plain `git blame` reports. The
