@@ -252,8 +252,17 @@ export class LineLordService {
 
     // The revision moved. Only forwards can be updated: a rebase, a force-push
     // or a branch switch leaves no way to tell what survived.
-    if (!(await isAncestor(root, decision.storedHeadSha, headSha))) {
-      return full('the history was rewritten or a different branch checked out')
+    const ancestry = await isAncestor(root, decision.storedHeadSha, headSha)
+    if (ancestry !== true) {
+      // Two different situations, and the message should not assert the wrong
+      // one. Either history genuinely moved sideways, or git could not answer
+      // -- an unknown revision, most likely, which a pruned or damaged
+      // repository produces just as readily as a rebase does.
+      return full(
+        ancestry === false
+          ? 'the history was rewritten or a different branch checked out'
+          : 'the stored revision could not be found in this repository',
+      )
     }
 
     try {
@@ -305,10 +314,12 @@ export class LineLordService {
     onProgress?: (current: number, total: number, message: string) => void,
     newThresholdBytes?: number,
   ): Promise<void> {
-    onProgress?.(0, 100, 'Clearing old repository data...')
+    onProgress?.(0, 100, 'Switching repositories...')
 
-    // Clear the existing database
-    clearDatabase(this.db)
+    // The database being left behind is the previous repository's cache, and
+    // emptying it would throw away an analysis the user paid for and may come
+    // back to. Detaching is enough: initialize opens whichever database the
+    // new repository should use.
 
     // Update the repository path and threshold if provided
     this.currentRepoPath = newRepoPath

@@ -239,9 +239,14 @@ export class GitService {
         inserts.push({ ...row, totalLines: 0, analysisFailed: false })
       } else if (
         stored.size !== row.size ||
-        Boolean(stored.isBinary) !== row.isBinary ||
-        Boolean(stored.isIgnored) !== row.isIgnored ||
-        Boolean(stored.isLargerThanThreshold) !== row.isLargerThanThreshold
+        // A stored NULL is not the same as false, and must be rewritten. In
+        // SQLite `NULL = false` is NULL rather than true, so a row left that
+        // way matches none of the category queries at all -- it would vanish
+        // from analysed, binary, ignored and oversized alike, and the
+        // categories would stop adding up to the number of files.
+        stored.isBinary !== row.isBinary ||
+        stored.isIgnored !== row.isIgnored ||
+        stored.isLargerThanThreshold !== row.isLargerThanThreshold
       ) {
         // Only rows whose classification actually moved are written. On an
         // incremental run almost none have, and issuing an update for every

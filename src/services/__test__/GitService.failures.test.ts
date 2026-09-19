@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'bun:test'
 import { readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import {
   createTestRepo,
   type TestRepo,
@@ -226,5 +226,51 @@ describe('GitService - a failed file is not counted as analysed', () => {
     expect(stats.totalFailedFiles).toBe(gitService.getFailures().length)
     // And the unread file contributes no lines either.
     expect(stats.totalLines).toBe(1)
+  })
+})
+
+describe('GitService - a partly written row is repaired, not left alone', () => {
+  let repo: TestRepo | undefined
+
+  afterEach(async () => {
+    await repo?.cleanup()
+    repo = undefined
+  })
+
+  it('rewrites a file row whose flags are null rather than false', async () => {
+    // The two are not the same in SQLite: `NULL = false` evaluates to NULL,
+    // not true, so a row left that way matches none of the category queries.
+    // It would disappear from analysed, binary, ignored and oversized alike,
+    // and the categories would stop adding up to the number of files.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'two files',
+      write: { 'a.ts': 'const a = 1\n', 'b.ts': 'const b = 2\n' },
+    })
+
+    const db = createDatabase()
+    const gitService = new GitService(repo.path, db)
+    await gitService.initialize()
+
+    db.run(sql`UPDATE files SET is_binary = NULL WHERE path = 'a.ts'`)
+
+    // Any later run reconciles the file table, and must notice the difference.
+    await gitService.updateIncrementally(new Set(['b.ts']))
+
+    const [row] = await db
+      .select({ isBinary: files.isBinary })
+      .from(files)
+      .where(eq(files.path, 'a.ts'))
+
+    expect(row?.isBinary).toBe(false)
+
+    const stats = await new AnalysisService(db).getRepositoryStats()
+    expect(
+      stats.totalAnalyzedFiles +
+        stats.totalBinaryFiles +
+        stats.totalIgnoredFiles +
+        stats.totalLargeFiles +
+        stats.totalFailedFiles,
+    ).toBe(stats.totalFiles)
   })
 })

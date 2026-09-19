@@ -160,7 +160,7 @@ export default function App({
                 {cache.mode === 'reused'
                   ? `Reused the stored analysis of ${cache.filesReused} file${cache.filesReused === 1 ? '' : 's'}`
                   : cache.mode === 'incremental'
-                    ? `Re-read ${cache.filesBlamed} changed file${cache.filesBlamed === 1 ? '' : 's'}, reused ${cache.filesReused}`
+                    ? `Re-read ${cache.filesBlamed} changed file${cache.filesBlamed === 1 ? '' : 's'}, reused the stored analysis of ${cache.filesReused}`
                     : cache.reason
                       ? `Analysed everything again: ${cache.reason}`
                       : `Analysed ${cache.filesBlamed} file${cache.filesBlamed === 1 ? '' : 's'}`}

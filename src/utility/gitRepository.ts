@@ -94,14 +94,19 @@ export async function isAncestor(
   cwd: string,
   ancestor: string,
   descendant: string,
-): Promise<boolean> {
+): Promise<boolean | null> {
   const result = await runGit(
     ['merge-base', '--is-ancestor', ancestor, descendant],
     cwd,
   )
-  // Exit 0 means yes, 1 means no, anything else -- an unknown revision, most
-  // likely -- is not an answer, and the caller must fall back to a full run.
-  return result.spawned && result.code === 0
+  if (!result.spawned) return null
+  // Exit 0 means yes and 1 means no. Anything else -- an unknown revision,
+  // most likely -- is not an answer at all, and null says so rather than
+  // letting "no" stand in for "cannot tell". The caller falls back to a full
+  // run either way, but only one of them is a rebase.
+  if (result.code === 0) return true
+  if (result.code === 1) return false
+  return null
 }
 
 /**

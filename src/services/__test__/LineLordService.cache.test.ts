@@ -6,6 +6,7 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { writeMeta } from '../../db/meta'
 import { LineLordService } from '../LineLordService'
 
 /**
@@ -43,7 +44,7 @@ describe('LineLordService - the cache', () => {
   afterEach(async () => {
     await repo?.cleanup()
     repo = undefined
-    process.env.XDG_CACHE_HOME = undefined
+    delete process.env.XDG_CACHE_HOME
     await rm(cacheHome, { force: true, recursive: true })
   })
 
@@ -247,6 +248,56 @@ describe('LineLordService - the cache', () => {
     }
   })
 
+  it("keeps a repository's analysis when the user looks at another one", async () => {
+    // Switching repositories used to empty the database it was holding, which
+    // once the database is a cache file means throwing away the analysis the
+    // user just paid for. Coming back to it should cost nothing.
+    repo = await baseRepo()
+    const other = await createTestRepo()
+    try {
+      await other.commit({
+        message: 'elsewhere',
+        author: NIGHTSHROUD,
+        write: { 'only-here.txt': 'a\nb\n' },
+      })
+
+      const service = new LineLordService(repo.path, 50 * 1024, {
+        useCache: true,
+      })
+      await service.initialize()
+      await service.changeRepository(other.path)
+
+      const { status } = await cached(repo.path)
+
+      expect(status.mode).toBe('reused')
+    } finally {
+      await other.cleanup()
+    }
+  })
+
+  it('does not claim a rebase when it simply cannot tell', async () => {
+    // A stored revision git has never heard of -- a pruned or damaged
+    // repository does this as readily as a rebase -- is not the same as a
+    // revision that is genuinely no longer an ancestor, and the message the
+    // user reads should not assert the wrong one.
+    repo = await baseRepo()
+    await cached(repo.path)
+
+    const service = new LineLordService(repo.path, 50 * 1024, {
+      useCache: true,
+    })
+    await service.initialize()
+    // Point the stored fingerprint at a commit that does not exist.
+    writeMeta(service.getDatabase(), { head_sha: 'f'.repeat(40) })
+
+    const { status } = await cached(repo.path)
+
+    expect(status.mode).toBe('full')
+    expect(status.reason).toBe(
+      'the stored revision could not be found in this repository',
+    )
+  })
+
   it('analyses anyway when the cache cannot be written', async () => {
     // A cache is an optimisation. A cache directory that cannot be used is a
     // reason to analyse from scratch, not a reason to refuse to analyse.
@@ -274,7 +325,7 @@ describe('LineLordService - incremental and full agree, whatever the history', (
   afterEach(async () => {
     await repo?.cleanup()
     repo = undefined
-    process.env.XDG_CACHE_HOME = undefined
+    delete process.env.XDG_CACHE_HOME
     await rm(cacheHome, { force: true, recursive: true })
   })
 
