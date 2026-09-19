@@ -5,6 +5,8 @@ import { render } from 'ink'
 import meow from 'meow'
 import React from 'react'
 import App from './App'
+import { resolveCachePath } from './db/cacheLocation'
+import { removeAllCaches, removeCacheFor } from './db/cacheMaintenance'
 import { CLI_HELP } from './resources/cliHelp'
 import { expandTilde, validateThresholdKB } from './utility/cliValidation'
 import { findRepositoryRoot } from './utility/gitRepository'
@@ -25,6 +27,22 @@ const cli = meow(CLI_HELP, {
       type: 'number',
       default: 50,
       shortFlag: 't',
+    },
+    noCache: {
+      type: 'boolean',
+      default: false,
+    },
+    refresh: {
+      type: 'boolean',
+      default: false,
+    },
+    clearCache: {
+      type: 'boolean',
+      default: false,
+    },
+    clearAllCaches: {
+      type: 'boolean',
+      default: false,
     },
   },
 })
@@ -98,10 +116,35 @@ if (!thresholdCheck.ok) {
 
 const thresholdKB = thresholdCheck.thresholdKB
 
+// Clearing a cache is a whole job in itself: say what happened and stop,
+// rather than deleting something and then opening a screen that says nothing
+// about it.
+if (cli.flags.clearAllCaches) {
+  const forgotten = removeAllCaches()
+  console.log(
+    forgotten === 0
+      ? '⚔️  No repositories were cached.'
+      : `⚔️  Forgot the stored analysis of ${forgotten} repositor${forgotten === 1 ? 'y' : 'ies'}.`,
+  )
+  process.exit(0)
+}
+
+if (cli.flags.clearCache) {
+  const had = removeCacheFor(resolveCachePath(repoPath))
+  console.log(
+    had
+      ? `⚔️  Forgot the stored analysis of ${repoPath}.`
+      : `⚔️  Nothing was stored for ${repoPath}.`,
+  )
+  process.exit(0)
+}
+
 // Pass repoPath to your existing App component
 const element = React.createElement(App, {
   repoPath: repoPath,
   thresholdKB: thresholdKB,
+  useCache: !cli.flags.noCache,
+  refresh: cli.flags.refresh,
 })
 
 const app = render(element)

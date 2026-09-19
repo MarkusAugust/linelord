@@ -6,7 +6,10 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { resolveCachePath } from '../../db/cacheLocation'
+import { acquireCacheLock } from '../../db/cacheMaintenance'
 import { writeMeta } from '../../db/meta'
+import { findRepositoryRoot } from '../../utility/gitRepository'
 import { LineLordService } from '../LineLordService'
 
 /**
@@ -296,6 +299,52 @@ describe('LineLordService - the cache', () => {
     expect(status.reason).toBe(
       'the stored revision could not be found in this repository',
     )
+  })
+
+  it('reads everything again when asked to refresh, and says that is why', async () => {
+    repo = await baseRepo()
+    await cached(repo.path)
+
+    const service = new LineLordService(repo.path, 50 * 1024, {
+      useCache: true,
+      refresh: true,
+    })
+    await service.initialize()
+
+    expect(service.getCacheStatus().mode).toBe('full')
+    expect(service.getCacheStatus().reason).toBe(
+      'you asked for a fresh analysis',
+    )
+
+    // And it leaves a usable cache behind rather than only discarding one.
+    const after = await cached(repo.path)
+    expect(after.status.mode).toBe('reused')
+  })
+
+  it('does not write while another run holds the same repository', async () => {
+    // SQLite would keep the file intact, but two analyses interleaving would
+    // leave a fingerprint describing neither. The second run works from
+    // memory, which costs it its cache and nothing else.
+    repo = await baseRepo()
+
+    const holder = new LineLordService(repo.path, 50 * 1024, { useCache: true })
+    const lookup = await findRepositoryRoot(repo.path)
+    const lock = acquireCacheLock(
+      resolveCachePath(lookup.found ? lookup.root : repo.path),
+    )
+    expect(lock).not.toBe(null)
+
+    try {
+      await holder.initialize()
+
+      expect(holder.getCacheStatus().path).toBeUndefined()
+      // The analysis itself is unaffected.
+      expect(await ownership(holder)).toBe(
+        await ownership(await fromScratch(repo.path)),
+      )
+    } finally {
+      lock?.release()
+    }
   })
 
   it('analyses anyway when the cache cannot be written', async () => {
