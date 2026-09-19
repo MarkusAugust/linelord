@@ -361,7 +361,7 @@ export class GitService {
   /**
    * Store one file's blame lines, in chunks, inside a transaction.
    *
-   * Each row binds six values, and an insert is a single statement with one
+   * Each row binds five values, and an insert is a single statement with one
    * placeholder per value, so one `values()` call for a long file asks SQLite
    * to bind more parameters than it will accept. The insert then threw, the
    * catch above swallowed it, and the file's entire blame was lost -- not a

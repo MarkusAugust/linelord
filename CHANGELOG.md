@@ -39,10 +39,14 @@ because the earlier answer was wrong.
   while contributing nothing, so the statistics claimed to have read a file the
   rest of the screen could not. They are now a category of their own, named on
   the menu screen.
-- **The analysis is pinned to one commit.** Every git command is given a
+- **The analysis is pinned to one commit.** Every command that reads the tree
+  being analysed — the file listing, the binary check, and blame — is given a
   resolved SHA rather than `HEAD`, so a commit or branch switch partway through
   cannot leave the file list, the blame output and the revision on screen
-  describing different trees.
+  describing different trees. Resolving `HEAD` in the first place, and the
+  advisory check for uncommitted changes, deliberately still read the symbolic
+  ref: one produces the SHA, and the other is about the working copy as it is
+  right now.
 - **The contributor count matches the contributor list.** Repository statistics
   counted every author row, merged-away identities included.
 - **A readable name wins over an encoded one.** The check for encoded author
@@ -106,7 +110,9 @@ because the earlier answer was wrong.
 ### Removed
 
 - `src/utility/filtesToIgnore.ts`, 152 lines imported nowhere.
-- The hand-maintained list of binary file extensions, now that git decides.
+- The hand-maintained lists of binary file extensions, now that git decides:
+  the one binary detection used, and `src/resources/fileExtensions.ts`, which
+  held a second copy that nothing had imported.
 
 ## [0.7.2] — 2025-11-04
 
