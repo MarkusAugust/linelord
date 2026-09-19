@@ -109,7 +109,8 @@ because the earlier answer was wrong.
 
 ### Removed
 
-- `src/utility/filtesToIgnore.ts`, 152 lines imported nowhere.
+- `src/utility/filtesToIgnore.ts` and `src/resources/titles.ts`, 282 lines
+  between them, imported nowhere.
 - The hand-maintained lists of binary file extensions, now that git decides:
   the one binary detection used, and `src/resources/fileExtensions.ts`, which
   held a second copy that nothing had imported.
