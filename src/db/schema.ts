@@ -52,6 +52,18 @@ export const blameLines = sqliteTable('blame_lines', {
   commitDate: text('commit_date'),
 })
 
+/**
+ * Key/value pairs describing how this database was built.
+ *
+ * Kept separate from the analysis tables because it is read first and on its
+ * own: before trusting a single row of blame data, the cache has to establish
+ * that the revision and the settings behind it still hold.
+ */
+export const meta = sqliteTable('meta', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+})
+
 export type Author = typeof authors.$inferSelect
 export type AuthorInsert = typeof authors.$inferInsert
 export type AuthorAlias = typeof authorAliases.$inferSelect
