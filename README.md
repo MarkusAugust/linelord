@@ -78,6 +78,12 @@ linelord --path=~/enterprise-codebase --threshold=200
 linelord -p ~/code/project -t 75
 ```
 
+Run it anywhere inside a repository and it analyses the whole repository, not
+just the directory you happen to be standing in. Point it somewhere that is not
+a repository, or give a threshold that is zero, negative or not a number, and it
+says so and stops — rather than handing you an empty or unfiltered analysis with
+no explanation.
+
 ### Navigation Commands
 
 Once in LineLord's realm:
