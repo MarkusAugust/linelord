@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { existsSync, utimesSync, writeFileSync } from 'node:fs'
+import { existsSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -7,6 +7,7 @@ import {
   acquireCacheLock,
   CACHE_MAX_AGE_DAYS,
   CACHE_MAX_BYTES,
+  markCacheUsed,
   removeAllCaches,
   removeCacheFor,
   tidyCacheDirectory,
@@ -87,6 +88,51 @@ describe('tidyCacheDirectory', () => {
     tidyCacheDirectory(undefined, Date.now(), directory)
 
     expect(existsSync(`${stale}-wal`)).toBe(false)
+  })
+})
+
+describe('markCacheUsed', () => {
+  let directory: string
+
+  beforeEach(async () => {
+    directory = await mkdtemp(join(tmpdir(), 'linelord-used-'))
+  })
+
+  afterEach(async () => {
+    await rm(directory, { force: true, recursive: true })
+  })
+
+  it('saves a cache that is read often but written rarely', async () => {
+    // Age is read from the file's modification time, and a run that reuses its
+    // cache writes nothing. Without saying so, a repository opened every day
+    // but not committed to for a fortnight is evicted -- deleted precisely
+    // because the cache was doing its job, and rebuilt from nothing after.
+    const path = join(directory, 'daily.db')
+    writeFileSync(path, Buffer.alloc(1024))
+    const longAgo = new Date(Date.now() - (CACHE_MAX_AGE_DAYS + 5) * DAY_MS)
+    utimesSync(path, longAgo, longAgo)
+
+    markCacheUsed(path)
+    tidyCacheDirectory(undefined, Date.now(), directory)
+
+    expect(existsSync(path)).toBe(true)
+  })
+
+  it('moves a cache to the back of the eviction queue', async () => {
+    const path = join(directory, 'used.db')
+    writeFileSync(path, Buffer.alloc(1024))
+    const longAgo = new Date(Date.now() - 10 * DAY_MS)
+    utimesSync(path, longAgo, longAgo)
+
+    const before = statSync(path).mtimeMs
+    markCacheUsed(path)
+
+    expect(statSync(path).mtimeMs).toBeGreaterThan(before)
+  })
+
+  it('says nothing when there is no file yet', () => {
+    // A first run marks a cache that the analysis is about to create.
+    expect(() => markCacheUsed(join(directory, 'absent.db'))).not.toThrow()
   })
 })
 

@@ -6,6 +6,7 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  utimesSync,
   writeSync,
 } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -33,7 +34,7 @@ import { resolveCacheDirectory } from './cacheLocation'
  */
 export const CACHE_MAX_AGE_DAYS = 15
 
-/** Total size the cache directory is allowed to reach before the least recently used go. */
+/** Total size the cache directory may reach before old caches are evicted. */
 export const CACHE_MAX_BYTES = 500 * 1024 * 1024
 
 /** A lock older than this is assumed to belong to a process that died. */
@@ -62,8 +63,8 @@ function listCacheFiles(directory: string): CacheFile[] {
       cacheFiles.push({
         path,
         // The write-ahead log and its index sit beside the database and can be
-        // larger than it is, so a size that ignored them would understate the
-        // directory badly.
+        // larger than it is, so a measurement that ignored them would
+        // understate the directory badly.
         bytes: stats.size + sidecarBytes(path),
         usedAt: stats.mtimeMs,
       })
@@ -104,8 +105,8 @@ export interface TidyResult {
 }
 
 /**
- * Remove caches that are too old, then the least recently used until the
- * directory is back under its limit.
+ * Remove caches that are too old, then delete caches in least-recently-used
+ * order until the directory is back under its size limit.
  *
  * `keep` is the cache this run is about to use, which is never removed however
  * the arithmetic comes out: deleting the file currently open would trade a
@@ -135,7 +136,7 @@ export function tidyCacheDirectory(
   if (total <= CACHE_MAX_BYTES) return result
 
   // Least recently used first, so the caches someone is actually working in
-  // are the last to go.
+  // are the last ones deleted.
   survivors.sort((a, b) => a.usedAt - b.usedAt)
   for (const file of survivors) {
     if (total <= CACHE_MAX_BYTES) break
@@ -152,6 +153,28 @@ function sizeOf(databasePath: string): number {
     return statSync(databasePath).size + sidecarBytes(databasePath)
   } catch {
     return 0
+  }
+}
+
+/**
+ * Mark a cache as used, now.
+ *
+ * Age and eviction order are read from the file's modification time, which
+ * records the last *write*. A reuse writes nothing, so without this a
+ * repository opened every day but not committed to for a fortnight looks
+ * untouched and is removed -- deleted precisely because the cache was doing
+ * its job, and then rebuilt from nothing the next morning.
+ */
+export function markCacheUsed(
+  databasePath: string,
+  now: number = Date.now(),
+): void {
+  try {
+    const when = new Date(now)
+    utimesSync(databasePath, when, when)
+  } catch {
+    // The file may not exist yet on a first run, which is not a problem: the
+    // analysis is about to create it, and creating it sets the time anyway.
   }
 }
 

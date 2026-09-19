@@ -101,9 +101,10 @@ because the earlier answer was wrong.
   written, the analysis runs anyway.
 
   `--no-cache`, `--refresh`, `--clear-cache` and `--clear-all-caches` control
-  it. Caches nobody has opened for fifteen days are removed, as are the least
-  recently used once the directory passes 500 MB, and two LineLords started on
-  the same repository at once will not write over each other.
+  it. Caches nobody has opened for fifteen days are removed, and once the
+  directory passes 500 MB the least recently used caches are deleted until it
+  is back under. Two LineLords started on the same repository at once will not
+  write over each other.
 
 - **Brutal Barbarian Rankings**, a ranking by ground still held: territory
   owned, files conquered alone, and code that has outlived a year. Metrics

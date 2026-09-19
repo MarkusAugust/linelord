@@ -2,6 +2,7 @@ import { resolveCachePath } from '../db/cacheLocation'
 import {
   acquireCacheLock,
   type CacheLock,
+  markCacheUsed,
   tidyCacheDirectory,
 } from '../db/cacheMaintenance'
 import {
@@ -138,6 +139,12 @@ export class LineLordService {
       this.attachDatabase(createDatabase(), repositoryRoot)
       return undefined
     }
+
+    // Age and eviction order come from the file's modification time, and a
+    // run that reuses its cache writes nothing at all. Saying so explicitly
+    // is what keeps a repository opened daily, but unchanged, from being
+    // evicted for looking untouched.
+    markCacheUsed(path)
 
     // Other repositories' caches are tidied here rather than on a timer,
     // because this is the only moment the program is reliably running. The

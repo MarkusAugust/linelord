@@ -66,6 +66,20 @@ function exitWithError(message: string, ...hints: string[]): never {
   process.exit(1)
 }
 
+// Clearing every cache has nothing to do with any particular repository, so
+// it runs before the repository is resolved at all. Behind that check it was
+// unreachable from an ordinary directory: someone tidying up from their home
+// folder was told their home folder is not a git repository.
+if (cli.flags.clearAllCaches) {
+  const forgotten = removeAllCaches()
+  console.log(
+    forgotten === 0
+      ? '⚔️  No repositories were cached.'
+      : `⚔️  Forgot the stored analysis of ${forgotten} repositor${forgotten === 1 ? 'y' : 'ies'}.`,
+  )
+  process.exit(0)
+}
+
 // Priority: CLI argument > --path flag > current directory
 const candidatePath = cli.input[0] || cli.flags.path || process.cwd()
 const expandedPath = expandTilde(candidatePath)
@@ -116,19 +130,8 @@ if (!thresholdCheck.ok) {
 
 const thresholdKB = thresholdCheck.thresholdKB
 
-// Clearing a cache is a whole job in itself: say what happened and stop,
-// rather than deleting something and then opening a screen that says nothing
-// about it.
-if (cli.flags.clearAllCaches) {
-  const forgotten = removeAllCaches()
-  console.log(
-    forgotten === 0
-      ? '⚔️  No repositories were cached.'
-      : `⚔️  Forgot the stored analysis of ${forgotten} repositor${forgotten === 1 ? 'y' : 'ies'}.`,
-  )
-  process.exit(0)
-}
-
+// This one does concern a particular repository, so it stays behind the
+// resolution that establishes which.
 if (cli.flags.clearCache) {
   const had = removeCacheFor(resolveCachePath(repoPath))
   console.log(
