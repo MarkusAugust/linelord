@@ -27,7 +27,7 @@ export const CLI_HELP = `
 ║                                                              ║
 ║ FEATURES:                                                    ║
 ║   🗡️  Native Git Power - Uses only git commands               ║
-║   🧠 Intelligent Author Merging on similar names             ║
+║   🧠 Honest Identity - one address is one warrior            ║
 ║   📊 Comprehensive Battle Reports - File ownership stats     ║
 ║   🎯 Smart Filtering - Excludes binaries & large files       ║
 ║   ⚙️  Configurable Thresholds - Control large file limits     ║

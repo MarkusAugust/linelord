@@ -261,14 +261,25 @@ Different people, and one of each pair then vanished from the ranking while the
 other was credited with their work. Use it to find candidates for a `.mailmap`,
 not to trust the output.
 
-### Understanding Merged Authors
+### When one warrior appears twice
 
-LineLord automatically merges similar names:
+Someone who has committed from a work machine and a personal one, or before and
+after changing employer, has two addresses and so counts as two warriors. The
+contributor list shows the address under each name, which is what tells them
+apart:
 
-- "gorvek@ashendale.realm" + "Gorvek the Ironbane" → "Gorvek the Ironbane"
-- "z.tera" + "Zytera the Defiler" → "Zytera the Defiler"
-- "raven.sister@koracia.village" + "Sister Nightshroud" → "Sister Nightshroud"
-- Uses fuzzy matching with ancient rune-comparison techniques
+```
+Gorvek the Ironbane  <gorvek@firma.no>                        3 lines
+Gorvek the Ironbane  <gorvek@privat.no>                       2 lines
+Gorvek the Ironbane  <4711+gorvek@users.noreply.github.com>   1 line
+```
+
+Two lines in `.mailmap` settle it, for LineLord and for `git shortlog` alike:
+
+```
+Gorvek the Ironbane <gorvek@firma.no> <gorvek@privat.no>
+Gorvek the Ironbane <gorvek@firma.no> <4711+gorvek@users.noreply.github.com>
+```
 
 ### Performance Notes
 
