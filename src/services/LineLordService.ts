@@ -6,7 +6,11 @@ import {
 import { AnalysisService } from './AnalysisService'
 import { AuthorNormalizationService } from './AuthorNormalizationService'
 import { AuthorRankingService } from './AuthorRankingService'
-import { type AnalysisContext, GitService } from './GitService'
+import {
+  type AnalysisContext,
+  type AnalysisFailure,
+  GitService,
+} from './GitService'
 
 export class LineLordService {
   private db: LineLordDatabase
@@ -137,5 +141,10 @@ export class LineLordService {
   /** Which revision the numbers describe, and how much of the working copy they leave out. */
   getAnalysisContext(): AnalysisContext {
     return this.gitService.getAnalysisContext()
+  }
+
+  /** Files the analysis could not read. Empty when everything was analysed. */
+  getFailures(): AnalysisFailure[] {
+    return this.gitService.getFailures()
   }
 }

@@ -29,6 +29,8 @@ export interface RepositoryStats {
   totalBinaryFiles: number
   totalIgnoredFiles: number
   totalLargeFiles: number
+  /** Files that were meant to be analysed but could not be read. */
+  totalFailedFiles: number
   totalLines: number
   totalAuthors: number
 }
@@ -41,12 +43,20 @@ export class AnalysisService {
       .select({ count: sql<number>`count(*)` })
       .from(files)
 
+    // "Analysed" has to mean the file was actually read. A file whose blame
+    // failed is none of binary, ignored or oversized, so without the last
+    // condition it would be counted here while the UI reports it as unread.
     const [analyzedFilesResult] = await this.db
       .select({ count: sql<number>`count(*)` })
       .from(files)
       .where(
-        sql`${files.isBinary} = false AND ${files.isIgnored} = false AND ${files.isLargerThanThreshold} = false`,
+        sql`${files.isBinary} = false AND ${files.isIgnored} = false AND ${files.isLargerThanThreshold} = false AND ${files.analysisFailed} = false`,
       )
+
+    const [failedFilesResult] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(files)
+      .where(eq(files.analysisFailed, true))
 
     const [binaryFilesResult] = await this.db
       .select({ count: sql<number>`count(*)` })
@@ -69,7 +79,7 @@ export class AnalysisService {
       .select({ total: sql<number>`sum(total_lines)` })
       .from(files)
       .where(
-        sql`${files.isBinary} = false AND ${files.isIgnored} = false AND ${files.isLargerThanThreshold} = false`,
+        sql`${files.isBinary} = false AND ${files.isIgnored} = false AND ${files.isLargerThanThreshold} = false AND ${files.analysisFailed} = false`,
       )
 
     // Canonical authors who actually hold lines: the same population the
@@ -88,6 +98,7 @@ export class AnalysisService {
       totalBinaryFiles: binaryFilesResult?.count || 0,
       totalIgnoredFiles: ignoredFilesResult?.count || 0,
       totalLargeFiles: largeFilesResult?.count || 0,
+      totalFailedFiles: failedFilesResult?.count || 0,
       totalLines: totalLinesResult?.total || 0,
       totalAuthors: totalAuthorsResult?.count || 0,
     }

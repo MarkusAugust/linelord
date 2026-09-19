@@ -64,6 +64,8 @@ export default function SingleDevRepoStats({
 }: SingleDevRepoStatsProps) {
   const [mode, setMode] = useState<'selector' | 'stats'>('selector')
   const [selectedAuthor, setSelectedAuthor] = useState<AuthorInfo | null>(null)
+  /** A lookup that failed or found nobody, reported where the user is standing. */
+  const [lookupError, setLookupError] = useState<string | null>(null)
   const [stats, setStats] = useState<StatsState>({
     isLoading: false,
     authorStats: null,
@@ -171,7 +173,7 @@ export default function SingleDevRepoStats({
           })
         }, 300)
       } catch (error) {
-        console.error('Error analyzing stats:', error)
+        // Reported through the stats state below, not to the terminal Ink owns.
         setStats({
           isLoading: false,
           authorStats: null,
@@ -192,10 +194,20 @@ export default function SingleDevRepoStats({
     // Find the author ID from the analysis service
     if (!analysisService) return
 
+    setLookupError(null)
+
     try {
       const authorId = await analysisService.findCanonicalAuthorByEmail(
         author.email,
       )
+      if (authorId === null) {
+        // Selecting a warrior the lookup cannot resolve used to do nothing at
+        // all, which is indistinguishable from the key press being ignored.
+        setLookupError(
+          `No warrior is recorded under ${author.email}. They may have been merged into another identity.`,
+        )
+        return
+      }
       if (authorId) {
         // Get the full author contribution data to get title and rank
         const authorContributions =
@@ -215,7 +227,13 @@ export default function SingleDevRepoStats({
         setMode('stats')
       }
     } catch (error) {
-      console.error('Error finding author:', error)
+      // This used to go to the console and nowhere else, so a lookup failure
+      // looked like the key press had simply not registered.
+      setLookupError(
+        `Could not look up ${author.name}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      )
     }
   }
 
@@ -225,11 +243,30 @@ export default function SingleDevRepoStats({
 
   if (mode === 'selector') {
     return (
-      <AuthorSelector
-        onSelect={handleSelectAuthor}
-        onCancel={handleAuthorSelectorCancel}
-        analysisService={analysisService}
-      />
+      <Box flexDirection="column">
+        {lookupError && (
+          <Box marginBottom={1}>
+            <Text color="yellow">⚠ {lookupError}</Text>
+          </Box>
+        )}
+        <AuthorSelector
+          onSelect={handleSelectAuthor}
+          onCancel={handleAuthorSelectorCancel}
+          analysisService={analysisService}
+        />
+      </Box>
+    )
+  }
+
+  if (!selectedAuthor) {
+    // Reachable only if something sets stats mode without a warrior. The
+    // template below would render the string "Statistics for undefined", so
+    // say what actually happened instead.
+    return (
+      <Box flexDirection="column">
+        <Text color="yellow">No warrior is selected.</Text>
+        <Text color="gray">Press 'q' to choose one.</Text>
+      </Box>
     )
   }
 
@@ -279,11 +316,11 @@ export default function SingleDevRepoStats({
 
       <Box flexDirection="column" marginY={1}>
         <Text>
-          Statistics for {selectedAuthor?.title && `${selectedAuthor.title} `}
-          {pc.bold(pc.green(`${selectedAuthor?.displayName}`))}
+          Statistics for {selectedAuthor.title && `${selectedAuthor.title} `}
+          {pc.bold(pc.green(selectedAuthor.displayName))}
         </Text>
 
-        {selectedAuthor?.aliases && selectedAuthor.aliases.length > 0 && (
+        {selectedAuthor.aliases.length > 0 && (
           <Text>
             {pc.dim(
               `Including lines committed under aliases: ${selectedAuthor.aliases.join(

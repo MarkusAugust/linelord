@@ -133,13 +133,14 @@ describe('AnalysisService - repository statistics', () => {
     expect(stats.totalIgnoredFiles).toBe(1)
     expect(stats.totalLargeFiles).toBe(1)
 
-    // The four categories must account for every file, with nothing counted
-    // twice: that is the whole point of the exclusions in the queries.
+    // The categories must account for every file, with nothing counted twice:
+    // that is the whole point of the exclusions in the queries.
     expect(
       stats.totalAnalyzedFiles +
         stats.totalBinaryFiles +
         stats.totalIgnoredFiles +
-        stats.totalLargeFiles,
+        stats.totalLargeFiles +
+        stats.totalFailedFiles,
     ).toBe(stats.totalFiles)
   })
 
@@ -161,6 +162,7 @@ describe('AnalysisService - repository statistics', () => {
       totalBinaryFiles: 0,
       totalIgnoredFiles: 0,
       totalLargeFiles: 0,
+      totalFailedFiles: 0,
       totalLines: 0,
       totalAuthors: 0,
     })

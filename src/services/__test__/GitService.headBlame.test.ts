@@ -124,8 +124,8 @@ describe('GitService - blames HEAD rather than the working copy', () => {
     await repo.writeFiles({ 'staged.ts': 'const staged = 1\n' })
     await repo.git(['add', 'staged.ts'])
 
-    // staged.ts is listed by `git ls-files` but has no content in HEAD.
-    // It must be excluded without failing the run.
+    // staged.ts is in the index but not in the HEAD tree, and the tree is what
+    // the file list is built from, so it never reaches blame at all.
     const result = await analyse(repo.path)
 
     expect(result.authors.map((a) => a.name)).toEqual([GORVEK.name])
