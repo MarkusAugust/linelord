@@ -44,6 +44,10 @@ const cli = meow(CLI_HELP, {
       type: 'boolean',
       default: false,
     },
+    fuzzyAuthors: {
+      type: 'boolean',
+      default: false,
+    },
   },
 })
 
@@ -148,6 +152,7 @@ const element = React.createElement(App, {
   thresholdKB: thresholdKB,
   useCache: !cli.flags.noCache,
   refresh: cli.flags.refresh,
+  authorPolicy: cli.flags.fuzzyAuthors ? 'loose' : 'strict',
 })
 
 const app = render(element)

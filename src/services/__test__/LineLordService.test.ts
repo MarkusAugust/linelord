@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it } from 'bun:test'
+import { writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import {
   createTestRepo,
   type TestRepo,
@@ -39,6 +41,18 @@ async function buildRepo(): Promise<TestRepo> {
     date: new Date('2023-03-10T09:00:00Z'),
     write: { 'src/c.ts': 'const five = 5\nconst six = 6\n' },
   })
+  // How one person with two addresses is declared, now that identities are
+  // matched by address and nothing is guessed. git blame applies this before
+  // LineLord sees a line, so the merging is git's own and not an inference.
+  //
+  // Written after the commits and never added: the helper stages everything,
+  // so a .mailmap present during a commit would become a tracked file, join
+  // the analysis, and change the very counts these tests assert.
+  await writeFile(
+    join(repo.path, '.mailmap'),
+    `${GORVEK.name} <${GORVEK.email}> <${GORVEK_AT_HOME.email}>\n`,
+  )
+
   return repo
 }
 
@@ -50,7 +64,7 @@ describe('LineLordService - end to end over a real repository', () => {
     repo = undefined
   })
 
-  it('normalises identities before ranking, so a merged author is ranked on their combined lines', async () => {
+  it('ranks a person declared in .mailmap on their combined lines', async () => {
     repo = await buildRepo()
     const service = new LineLordService(repo.path)
     await service.initialize()
@@ -59,9 +73,10 @@ describe('LineLordService - end to end over a real repository', () => {
       .getAnalysisService()
       .getAuthorContributions()
 
-    // Gorvek's two addresses must be one contributor holding 4 lines. Were
-    // ranking to run before normalisation, he would appear twice, with 3 and 1
-    // line, and Nightshroud's 2 lines would rank second rather than last.
+    // Gorvek's two addresses are one contributor holding 4 lines, because the
+    // .mailmap says so. Were ranking to run before normalisation, he would
+    // appear twice, with 3 and 1 line, and Nightshroud's 2 lines would rank
+    // second rather than last.
     expect(contributions).toHaveLength(2)
     const [first, second] = contributions
     expect(first?.displayName).toBe(GORVEK.name)
@@ -102,7 +117,10 @@ describe('LineLordService - end to end over a real repository', () => {
     expect(stats.totalAnalyzedFiles).toBe(3)
   })
 
-  it('resolves an author through the address they no longer commit from', async () => {
+  it('knows a person by the address .mailmap gives them, and only that one', async () => {
+    // Under a .mailmap the superseded address never reaches LineLord at all:
+    // git rewrites it while producing the blame, so there is no second
+    // identity to reconcile and nothing to look up.
     repo = await buildRepo()
     const service = new LineLordService(repo.path)
     await service.initialize()
@@ -110,13 +128,40 @@ describe('LineLordService - end to end over a real repository', () => {
     const analysis = service.getAnalysisService()
     const [first] = await analysis.getAuthorContributions()
 
-    // Whichever address became canonical, both must resolve to the same person.
-    const viaWork = await analysis.findCanonicalAuthorByEmail(GORVEK.email)
-    const viaHome = await analysis.findCanonicalAuthorByEmail(
-      GORVEK_AT_HOME.email,
+    expect(await analysis.findCanonicalAuthorByEmail(GORVEK.email)).toBe(
+      first?.id ?? -1,
     )
-    expect(viaWork).toBe(first?.id ?? -1)
-    expect(viaHome).toBe(first?.id ?? -1)
+    expect(
+      await analysis.findCanonicalAuthorByEmail(GORVEK_AT_HOME.email),
+    ).toBe(null)
+  })
+
+  it('resolves a superseded address through the alias table when guessing is on', async () => {
+    // With --fuzzy-authors the old address does reach the database, is merged
+    // by inference, and is recorded as an alias so it can still be looked up.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'under one address',
+      author: GORVEK,
+      write: { 'a.ts': 'const a = 1\n' },
+    })
+    await repo.commit({
+      message: 'under another',
+      author: GORVEK_AT_HOME,
+      write: { 'b.ts': 'const b = 2\n' },
+    })
+
+    const service = new LineLordService(repo.path, 50 * 1024, {
+      authorPolicy: 'loose',
+    })
+    await service.initialize()
+
+    const analysis = service.getAnalysisService()
+    const [first] = await analysis.getAuthorContributions()
+
+    expect(
+      await analysis.findCanonicalAuthorByEmail(GORVEK_AT_HOME.email),
+    ).toBe(first?.id ?? -1)
   })
 
   it('refuses to hand out services before it has been initialised', () => {

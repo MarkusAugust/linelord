@@ -15,6 +15,7 @@ export const CLI_HELP = `
 ║   --refresh        Ignore what is stored and read everything ║
 ║   --clear-cache    Forget this repository's stored analysis  ║
 ║   --clear-all-caches  Forget every repository's              ║
+║   --fuzzy-authors  Guess which identities are one person     ║
 ║   --help           Show this help                            ║
 ║                                                              ║
 ║ EXAMPLES:                                                    ║

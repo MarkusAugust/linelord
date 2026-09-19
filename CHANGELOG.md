@@ -12,6 +12,22 @@ because the earlier answer was wrong.
 
 ### Fixed — the numbers
 
+- **Different people are no longer merged into one.** Identities were matched
+  by guessing from names and from addresses that merely resembled each other,
+  and the threshold for an address was one character in a prefix of six or
+  fewer. In a company where everyone shares a domain that is not an edge case:
+  `mk@firma.no` and `ml@firma.no` became one person, as did `john@` and
+  `joan@`, and `erik.hansen@` and `erika.hansen@`. One of each pair disappeared
+  from the ranking entirely while the other was credited with their work.
+
+  An email address is now an identity, and `.mailmap` — which `git blame`
+  applies before LineLord sees a line — is how one person with several
+  addresses is declared. `--fuzzy-authors` restores the guessing for anyone who
+  needs it to work out what to put in a `.mailmap`.
+
+  Repositories where this was happening will show more contributors than
+  before. That is the correction, not a regression.
+
 - **Unsaved work is no longer attributed to anyone.** `git blame` was reading
   the working copy, so anyone with uncommitted changes saw a contributor named
   "Not Committed Yet" ranked among real people, holding a title and a share of

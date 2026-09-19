@@ -24,7 +24,7 @@ async function seedAuthors(db: Db, people: Person[]) {
  */
 async function mergeGroups(
   people: Person[],
-  policy: 'strict' | 'loose' = 'loose',
+  policy: 'strict' | 'loose' = 'strict',
 ): Promise<{ groups: string[][]; canonicalDisplayNames: string[] }> {
   const db = createDatabase()
   await seedAuthors(db, people)
@@ -60,10 +60,13 @@ describe('AuthorNormalizationService - who gets merged', () => {
   })
 
   it('merges one person who commits under two spellings of the same address', async () => {
-    const { groups } = await mergeGroups([
-      { name: 'Alpha', email: 'g.ironbane@corp.com' },
-      { name: 'Beta', email: 'gironbane@corp.com' },
-    ])
+    const { groups } = await mergeGroups(
+      [
+        { name: 'Alpha', email: 'g.ironbane@corp.com' },
+        { name: 'Beta', email: 'gironbane@corp.com' },
+      ],
+      'loose',
+    )
 
     expect(groups).toHaveLength(1)
   })
@@ -100,28 +103,70 @@ describe('AuthorNormalizationService - who gets merged', () => {
     expect(groups).toHaveLength(2)
   })
 
-  it.todo(
-    'BUG (N1/N2): must not merge two people because one name is a prefix of the other',
-    async () => {
-      // areStringsSimilar treats any substring relation as a match, so Ann is
-      // absorbed into Annabelle despite different names, different addresses
-      // and different domains. This is the false merge the plan's move to
-      // .mailmap is meant to remove.
-      const { groups } = await mergeGroups([
-        { name: 'Ann', email: 'ann@example.com' },
-        { name: 'Annabelle', email: 'annabelle@other.com' },
-      ])
+  it('does not merge two people because one name resembles the other', async () => {
+    // Guessing from names treats any substring relation as a match, so Ann was
+    // absorbed into Annabelle despite different names, different addresses and
+    // different domains. Matching by address alone cannot make that mistake.
+    const { groups } = await mergeGroups([
+      { name: 'Ann', email: 'ann@example.com' },
+      { name: 'Annabelle', email: 'annabelle@other.com' },
+    ])
 
+    expect(groups).toHaveLength(2)
+  })
+
+  it('keeps colleagues apart who share a domain and little else', async () => {
+    // Every pair below was merged into one person by the old default. The
+    // address threshold is one character in a prefix of six or fewer, which in
+    // a company where everyone shares a domain is not an edge case -- one of
+    // the two then disappears from the ranking entirely while the other is
+    // credited with their work.
+    const pairs: Array<[Person, Person]> = [
+      [
+        { name: 'Marius Kvam', email: 'mk@firma.no' },
+        { name: 'Mari Lie', email: 'ml@firma.no' },
+      ],
+      [
+        { name: 'John Smith', email: 'john@corp.com' },
+        { name: 'Joan Smith', email: 'joan@corp.com' },
+      ],
+      [
+        { name: 'Erik Hansen', email: 'erik.hansen@corp.com' },
+        { name: 'Erika Hansen', email: 'erika.hansen@corp.com' },
+      ],
+    ]
+
+    for (const [one, other] of pairs) {
+      const { groups } = await mergeGroups([one, other])
       expect(groups).toHaveLength(2)
-    },
-  )
+    }
+  })
+
+  it('still merges one person under two spellings when asked to guess', async () => {
+    // The guessing is kept behind a flag rather than deleted: a repository
+    // whose history genuinely holds one person under several addresses needs
+    // a way out, and seeing the guesses is how you learn what to write in a
+    // .mailmap.
+    const { groups } = await mergeGroups(
+      [
+        { name: 'Alpha', email: 'g.ironbane@corp.com' },
+        { name: 'Beta', email: 'gironbane@corp.com' },
+      ],
+      'loose',
+    )
+
+    expect(groups).toHaveLength(1)
+  })
 })
 
 describe('AuthorNormalizationService - choosing the canonical identity', () => {
+  // Which identity wins only matters once two rows are being merged, and under
+  // the default that happens when one address is written two ways -- which is
+  // what a repository with inconsistent capitalisation actually contains.
   it('prefers a readable name over encoded gibberish', async () => {
     const { canonicalDisplayNames } = await mergeGroups([
-      { name: 'R29ydmVrIFRoZUlyb25iYW5l', email: 'gorvek@ashendale.realm' },
-      { name: GORVEK, email: 'gorvek.ironbane@ashendale.realm' },
+      { name: 'R29ydmVrIFRoZUlyb25iYW5l', email: 'Gorvek@Ashendale.Realm' },
+      { name: GORVEK, email: 'gorvek@ashendale.realm' },
     ])
 
     expect(canonicalDisplayNames).toEqual([GORVEK])
@@ -141,8 +186,8 @@ describe('AuthorNormalizationService - choosing the canonical identity', () => {
     // camel-case name has the interior capitals but none of the digits or
     // padding, and must stay readable.
     const { canonicalDisplayNames } = await mergeGroups([
-      { name: 'GorvekTheIronbane', email: 'gorvek@ashendale.realm' },
-      { name: 'Gorvek', email: 'g.ironbane@ashendale.realm' },
+      { name: 'GorvekTheIronbane', email: 'Gorvek@Ashendale.Realm' },
+      { name: 'Gorvek', email: 'gorvek@ashendale.realm' },
     ])
 
     expect(canonicalDisplayNames).toEqual(['GorvekTheIronbane'])
@@ -150,8 +195,8 @@ describe('AuthorNormalizationService - choosing the canonical identity', () => {
 
   it('keeps a name with an apostrophe readable', async () => {
     const { canonicalDisplayNames } = await mergeGroups([
-      { name: "Gorvek O'Ironbane", email: 'gorvek@ashendale.realm' },
-      { name: 'Gorvek', email: 'g.ironbane@ashendale.realm' },
+      { name: "Gorvek O'Ironbane", email: 'Gorvek@Ashendale.Realm' },
+      { name: 'Gorvek', email: 'gorvek@ashendale.realm' },
     ])
 
     expect(canonicalDisplayNames).toEqual(["Gorvek O'Ironbane"])

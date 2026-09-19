@@ -20,7 +20,12 @@ import {
 import { AnalysisService } from './AnalysisService'
 import { AuthorNormalizationService } from './AuthorNormalizationService'
 import { AuthorRankingService } from './AuthorRankingService'
-import { computeFingerprint, decideCacheUse, HEAD_KEY } from './CacheService'
+import {
+  type AuthorPolicy,
+  computeFingerprint,
+  decideCacheUse,
+  HEAD_KEY,
+} from './CacheService'
 import {
   type AnalysisContext,
   type AnalysisFailure,
@@ -58,6 +63,12 @@ export interface LineLordOptions {
    * first thing anyone suspects.
    */
   refresh?: boolean
+  /**
+   * How identities are matched. `strict` compares email addresses and nothing
+   * else, which is the default; `loose` also guesses from names and addresses
+   * that merely resemble each other.
+   */
+  authorPolicy?: AuthorPolicy
 }
 
 export class LineLordService {
@@ -70,6 +81,7 @@ export class LineLordService {
   private currentRepoPath: string
   private useCache: boolean
   private refresh: boolean
+  private authorPolicy: AuthorPolicy
   private cacheLock: CacheLock | null = null
   private cacheStatus: CacheStatus = {
     mode: 'disabled',
@@ -85,6 +97,7 @@ export class LineLordService {
     this.currentRepoPath = repoPath
     this.useCache = options.useCache ?? false
     this.refresh = options.refresh ?? false
+    this.authorPolicy = options.authorPolicy ?? 'strict'
     this.db = createDatabase()
     this.gitService = new GitService(
       repoPath,
@@ -219,7 +232,7 @@ export class LineLordService {
       // Merging identities and ranking them are decisions about the whole
       // repository, so they cannot be updated in part: both run again after
       // any change, however small.
-      await this.normalizationService.normalizeAllAuthors()
+      await this.normalizationService.normalizeAllAuthors(this.authorPolicy)
 
       onProgress?.(80, 100, 'Calculating ranks and percentages...')
       await this.rankingService.calculateAndAssignRanksAndPercentages()
@@ -290,7 +303,7 @@ export class LineLordService {
           repositoryRoot: root,
           headSha,
           thresholdBytes: this.largeFileThresholdBytes,
-          authorPolicy: 'loose',
+          authorPolicy: this.authorPolicy,
         }),
       )
     } catch {
@@ -368,7 +381,7 @@ export class LineLordService {
       repositoryRoot: root,
       headSha,
       thresholdBytes: this.largeFileThresholdBytes,
-      authorPolicy: 'loose',
+      authorPolicy: this.authorPolicy,
     })
 
     const { [HEAD_KEY]: head, ...rest } = fingerprint

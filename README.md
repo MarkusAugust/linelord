@@ -19,7 +19,7 @@ LineLord is a mighty CLI tool forged in the fires of the Ashen Vale, wielding th
 ### 🏰 Features Fit for a Galdane Warrior
 
 - **🗡️ Native Git Power**: Uses git commands and an in-memory SQLite index — works anywhere git draws breath
-- **🧠 Intelligent Author Merging**: Automatically unites "zygofer.whisperer@alderstone.realm" with "Zygofer the Defiler" using the wisdom of ancient fuzzy matching
+- **🧠 Honest Author Identity**: One person is one email address, and `.mailmap` is how you say otherwise — no guessing who is who
 - **📊 Comprehensive Battle Reports**: File-level ownership, project statistics, and developer rankings
 - **⚡ Lightning-Fast Analysis**: Parallel processing that would make Horn's volcanic forge proud
 - **🎯 Smart Filtering**: Analyses tracked files only, and sets aside binaries, generated files and anything over the size threshold
@@ -236,6 +236,30 @@ LineLord uses **current line ownership** (via `git blame`), not historical commi
 
 - 🔴 **Red** - For the mightiest contributor
 - **Top 10 limit** - Only the worthiest warriors are displayed
+
+### Who counts as one person
+
+An email address is an identity. Two commits belong to the same warrior when
+git says they do, and nothing is inferred from names.
+
+If one person has committed under several addresses, say so in `.mailmap` — the
+file git itself reads, and which `git blame` applies before LineLord sees a
+single line:
+
+```
+Gorvek the Ironbane <gorvek@ashendale.realm> <old-laptop@example.com>
+```
+
+That makes the merging explicit, reviewable, and the same identity git uses
+everywhere else.
+
+`--fuzzy-authors` brings back the old behaviour, which guessed from names and
+from addresses that resembled each other. It is not the default because it is
+wrong often enough to matter: it merged `mk@firma.no` with `ml@firma.no`,
+`john@corp.com` with `joan@corp.com`, and `erik.hansen@` with `erika.hansen@`.
+Different people, and one of each pair then vanished from the ranking while the
+other was credited with their work. Use it to find candidates for a `.mailmap`,
+not to trust the output.
 
 ### Understanding Merged Authors
 
