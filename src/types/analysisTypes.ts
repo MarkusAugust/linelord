@@ -35,3 +35,40 @@ export interface BaseAnalysisState {
   totalFiles?: number
   error: string | null
 }
+
+// Gorvek's brutal barbarian warrior metrics.
+//
+// Every field counts lines that are still alive in HEAD. None of them counts
+// commits, and none of them says anything about when in the day or week the
+// work happened -- see the note on honesty in BarbarianAnalysisService.
+export interface BarbarianWarriorMetrics {
+  /** Lines this warrior owns in HEAD. Zero means they hold no ground at all. */
+  survivingLines: number
+  /** Surviving lines that sit in large or legacy-looking files. */
+  battleScars: number
+  /** Files where this warrior owns more than half the surviving lines. */
+  territoryConquered: number
+  /** Files where every surviving line is theirs. */
+  soloQuestVictories: number
+  /** Distinct file extensions they have surviving lines in. */
+  weaponMastery: number
+  /** Surviving lines last touched more than a year ago. */
+  ancientCodeSurvival: number
+  /** Days on which more than 100 of their surviving lines were last touched. */
+  massiveBattles: number
+  /** Distinct days on which any of their surviving lines were last touched. */
+  totalCampaigns: number
+}
+
+export interface BarbarianRanking {
+  authorId: number
+  name: string
+  email: string
+  displayName: string
+  metrics: BarbarianWarriorMetrics
+  gorvekScore: number
+  barbarianTitle: string
+  specialAchievements: string[]
+  /** Zero-based position in the ranking. */
+  rank: number
+}

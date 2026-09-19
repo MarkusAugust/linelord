@@ -7,6 +7,7 @@ export const menuOptions: MenuOption[] = [
     label: 'Single Developer Repository Statistics',
     value: 'singledevrepostats',
   },
+  { label: 'Brutal Barbarian Rankings', value: 'barbarianrankings' },
   { label: 'Change Repository', value: 'change-repo' },
   { label: 'About', value: 'about' },
   { label: 'Exit', value: 'exit' },

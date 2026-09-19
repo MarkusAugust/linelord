@@ -1,0 +1,13 @@
+[test]
+# Bun applies these per file, not across the project, so the weakest covered
+# file sets the bar. They guard already-tested modules against losing coverage.
+#
+# Note the limit of what this can promise: Bun only reports on files a test
+# actually imports, so an entirely untested new module never appears here and
+# cannot fail the check. This catches regressions in covered code; it is not
+# evidence that new code is covered.
+coverageThreshold = { lines = 0.90, functions = 0.80 }
+
+# Schema and migration files declare tables rather than run logic; Bun counts
+# them as zero functions, which no meaningful threshold can survive.
+coveragePathIgnorePatterns = ["src/db/schema.ts"]

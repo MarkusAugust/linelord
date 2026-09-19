@@ -7,6 +7,7 @@ export type AppState =
   | 'repostats'
   | 'extendedrepostats'
   | 'singledevrepostats'
+  | 'barbarianrankings'
   | 'about'
   | 'exit'
 

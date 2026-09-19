@@ -14,15 +14,16 @@
 
 Know, O Prince, that between the years when repositories were young and the rise of the great codebases, there was an age undreamed of. And unto this, **LineLord**, destined to track every line of code and every developer who dared shape the digital realm!
 
-LineLord is a mighty CLI tool forged in the fires of the Ashen Vale, wielding the ancient powers of `git blame` to reveal the true warriors who have conquered your codebase. No sorcery, no external APIs, no mystical dependencies — only the raw strength of native git commands combined with intelligent caching, blessed by the flame-maned steeds of Horn!
+LineLord is a mighty CLI tool forged in the fires of the Ashen Vale, wielding the ancient powers of `git blame` to reveal the true warriors who have conquered your codebase. No sorcery, no external APIs, no mystical dependencies — only the raw strength of native git commands, blessed by the flame-maned steeds of Horn!
 
 ### 🏰 Features Fit for a Galdane Warrior
 
-- **🗡️ Native Git Power**: Uses git commands with intelligent SQLite caching — works anywhere git draws breath
+- **🗡️ Native Git Power**: Uses git commands and an in-memory SQLite index — works anywhere git draws breath
 - **🧠 Intelligent Author Merging**: Automatically unites "zygofer.whisperer@alderstone.realm" with "Zygofer the Defiler" using the wisdom of ancient fuzzy matching
 - **📊 Comprehensive Battle Reports**: File-level ownership, project statistics, and developer rankings
-- **⚡ Lightning-Fast Analysis**: Parallel processing with smart caching that would make Horn's volcanic forge proud
-- **🎯 Smart Filtering**: Respects .gitignore, excludes binaries and generated files like a seasoned Rust Brother
+- **⚡ Lightning-Fast Analysis**: Parallel processing that would make Horn's volcanic forge proud
+- **🎯 Smart Filtering**: Analyses tracked files only, and sets aside binaries, generated files and anything over the size threshold
+- **⚔️ Brutal Barbarian Rankings**: Ranks warriors by the ground they still hold — territory owned, solo-conquered files, and code that has outlived a year
 - **⚙️ Configurable Thresholds**: Control large file limits to suit your conquest needs
 - **🎨 Epic Forbidden Lands Theme**: Because code analysis should feel like surviving the Blood Mist!
 
@@ -136,9 +137,44 @@ _"What Galdane warrior has time for scrolls that weigh more than a war hammer? L
 - ❌ Binary files (auto-detected)
 - ❌ Generated files (package-lock.json, yarn.lock, etc.)
 - ❌ Build artifacts (dist/, build/, node_modules/)
-- ❌ Files usually ignored by .gitignore
+- ❌ Untracked files — only what git tracks is analysed, so whatever `.gitignore` keeps out of the repository is already out of scope
 - ❌ **Bloated files (configurable threshold, default: 50KB)**
 - ❌ **Blank lines (banished from the realm)**
+
+> **Known limitation:** the exclusion patterns are matched as substrings, so a
+> directory whose name merely ends with an excluded one is excluded too —
+> `rebuild/`, `checkout/` and `robin/` are all silently skipped by the `build/`,
+> `out/` and `bin/` rules. If your source lives in such a directory, its lines
+> are missing from the counts.
+- ❌ **Uncommitted changes** — analysis runs against `HEAD`, so unsaved edits in your working copy are never counted and never attributed to anyone
+
+## ⚔️ Brutal Barbarian Rankings
+
+A ranking of warriors by conquest rather than by volume. Every metric counts
+lines that are **still alive in `HEAD`**:
+
+| Metric | What it counts |
+| --- | --- |
+| Battle Scars | Surviving lines in large or legacy-looking files |
+| Territory Conquered | Files where the warrior owns more than half the lines |
+| Solo Quests | Files where every surviving line is theirs |
+| Weapon Mastery | Distinct file types they hold lines in |
+| Ancient Code | Surviving lines last touched more than a year ago |
+| Massive Battles | Days when over 100 of their surviving lines were last touched |
+| Campaigns | Distinct days their surviving lines were last touched |
+
+### How to read the numbers
+
+The theming is a joke about conquest. The numbers are not.
+
+- Nothing here counts commits, and nothing here looks at **when** anyone worked.
+  A late night costs you nothing and earns you nothing.
+- **Old code means stable code, not good code.** The code nobody dares touch
+  scores exactly as well as the code that earned its place.
+- Reformatting resets a line's age. A single `prettier` commit can hand one
+  warrior the whole codebase — use `.git-blame-ignore-revs` to keep it honest.
+- **These numbers are not a measure of anyone's productivity**, and LineLord
+  should not be used as one.
 
 ## 📊 Understanding the Battle Reports
 
@@ -187,7 +223,8 @@ LineLord automatically merges similar names:
 - **Small repos (< 100 files)**: Lightning fast as Ashwind's charge ⚡
 - **Medium repos (100-1000 files)**: Swift as Gorvek's blade 🗡️
 - **Large repos (1000+ files)**: Worthy of a Galdane warrior's patience 🏰
-- **Re-analysis**: Cached results make subsequent runs swift as wind
+- **Within one run**: The blame data is held in memory, so moving between screens is instant
+- **Between runs**: Nothing is kept. Every launch re-analyses the repository from scratch
 
 ## 🗡️ Contributing to the Saga
 

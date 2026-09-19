@@ -222,11 +222,46 @@ export class AuthorNormalizationService {
     return firstAuthor
   }
 
+  /**
+   * Whether a name looks like something other than a name a person wrote.
+   *
+   * The previous check stripped whitespace before testing the result against
+   * the base64 alphabet, so "Gorvek the Ironbane" collapsed to
+   * "GorvektheIronbane" and matched exactly as an encoded blob would. Every
+   * plain ASCII name was therefore classed as an artifact, chooseBestCanonical
+   * was left with no readable candidate, and it fell back to insertion order --
+   * crowning the gibberish it was written to avoid.
+   */
   private hasEncodingArtifacts(name: string): boolean {
-    const base64Pattern = /^[A-Za-z0-9+/=]+$/
-    const hasWeirdChars = /[^\w\s\u00C0-\u017F\u0100-\u024F.-]/.test(name)
+    const trimmed = name.trim()
+    if (trimmed === '') return false
 
-    return base64Pattern.test(name.replace(/\s/g, '')) || hasWeirdChars
+    // Characters that no name written in a Latin script should contain.
+    const hasWeirdChars = /[^\w\s\u00C0-\u017F\u0100-\u024F.\-']/.test(trimmed)
+
+    return hasWeirdChars || this.looksBase64Encoded(trimmed)
+  }
+
+  /**
+   * Git sometimes stores an author name as a base64 blob. Such a blob is a
+   * single unbroken token, long, and mixes digits with capitals inside the
+   * word -- none of which a written name does all at once.
+   */
+  private looksBase64Encoded(name: string): boolean {
+    // A written name may contain spaces; an encoded blob never does.
+    if (/\s/.test(name)) return false
+    // Too short to be anyone's name once decoded.
+    if (name.length < 16) return false
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(name)) return false
+
+    // Characters and padding that only appear in encoded data.
+    if (name.includes('+') || name.includes('/') || name.endsWith('=')) {
+      return true
+    }
+
+    // Otherwise demand both digits and an interior capital. A long single-word
+    // name such as "GorvekTheIronbane" has the capitals but not the digits.
+    return /\d/.test(name) && /[a-z][A-Z]/.test(name)
   }
 
   private async makeCanonical(author: Author): Promise<void> {
