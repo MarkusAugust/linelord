@@ -1,3 +1,5 @@
+import picomatch from 'picomatch'
+
 export const binaryExts = new Set([
   '.png',
   '.jpg',
@@ -138,6 +140,24 @@ export const ignoredFileExtensions = new Set([
   '.crt',
   '.p12',
   '.pfx',
+])
+
+/**
+ * Entries below that name a fragment of a filename rather than a whole name or
+ * a glob. `.min.js` is meant to catch `app.min.js`, not a file called
+ * `.min.js`, while `.envrc` and `.eslintcache` really are whole filenames.
+ * Nothing in the syntax distinguishes the two, so the fragments are listed.
+ */
+const FILENAME_FRAGMENTS = new Set([
+  '.lock',
+  '.snap',
+  '.min.js',
+  '.min.css',
+  '.bundle.js',
+  '.bundle.css',
+  '.generated.',
+  'auto-generated',
+  '_generated',
 ])
 
 export const ignoredFilePatterns = [
@@ -464,3 +484,55 @@ export const ignoredFilePatterns = [
   '*.schema.*',
   '*_schema.*',
 ]
+
+/**
+ * Translate one entry of `ignoredFilePatterns` into globs picomatch can match.
+ *
+ * The list grew as a mixture of exact filenames, directory markers, real
+ * globs and bare fragments, and the old matcher papered over the difference
+ * with `filePath.includes(pattern)`. That substring test is why `out/`
+ * swallowed `src/checkout/`, `bin/` swallowed `src/robin/`, and `*.test` --
+ * meant for a file literally named something.test -- excluded every
+ * `*.test.ts` in the repository. Each shape is now translated explicitly.
+ *
+ * Returns an array because a bare path such as `fastlane/screenshots` may name
+ * either a file or a directory, and both readings have to be covered.
+ */
+export const toGlobPatterns = (pattern: string): string[] => {
+  // Already written as a path glob; take it as given.
+  if (pattern.includes('**')) return [pattern]
+
+  // A trailing slash marks a directory: everything beneath it is excluded.
+  if (pattern.endsWith('/')) return [`**/${pattern.slice(0, -1)}/**`]
+
+  // A fragment of a filename, matched anywhere inside the name.
+  if (FILENAME_FRAGMENTS.has(pattern)) return [`**/*${pattern}*`]
+
+  // Any other wildcard applies to the filename, unless it spans directories.
+  if (/[*?[\]]/.test(pattern)) {
+    return pattern.includes('/') ? [pattern] : [`**/${pattern}`]
+  }
+
+  // Plain text naming a path: cover both the file and the directory reading.
+  if (pattern.includes('/')) return [`**/${pattern}`, `**/${pattern}/**`]
+
+  // Plain text naming a single file, wherever it appears.
+  return [`**/${pattern}`]
+}
+
+/** Every pattern above, compiled once. `dot` so `.vscode/` and friends match. */
+const matchesIgnoredPattern = picomatch(
+  ignoredFilePatterns.flatMap(toGlobPatterns),
+  { dot: true },
+)
+
+/**
+ * Whether a repository-relative path is excluded by the internal list.
+ *
+ * Note what this no longer does: anything `.gitignore` excludes is already
+ * out of scope, because the analysis enumerates the HEAD tree and therefore
+ * only ever sees tracked files. This list is for generated code that is
+ * checked in -- lock files, build output committed to the repository.
+ */
+export const isIgnoredByPattern = (filePath: string): boolean =>
+  matchesIgnoredPattern(filePath)

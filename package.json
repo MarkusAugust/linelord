@@ -34,12 +34,14 @@
     "ink-spinner": "^5.0.0",
     "meow": "^13.2.0",
     "picocolors": "^1.1.1",
+    "picomatch": "^4.0.7",
     "react": "^18.2.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.3",
     "@types/bun": "latest",
     "@types/ink-spinner": "^3.0.4",
+    "@types/picomatch": "^4.0.3",
     "@types/react": "^18.2.0",
     "react-devtools-core": "^6.1.2",
     "typescript": "^5.8.3"

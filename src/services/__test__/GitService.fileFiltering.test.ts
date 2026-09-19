@@ -145,34 +145,54 @@ describe('GitService - which files are analysed', () => {
     expect(byPath.get('src/filnavn med mellomrom.ts')?.totalLines).toBe(1)
   })
 
-  it.todo(
-    'BUG (B4): must not ignore a directory whose name merely ends with an ignored one',
-    async () => {
-      // matchesPattern falls back to `filePath.includes(pattern)`, so the
-      // 'build/' rule swallows 'rebuild/' and the 'out/' rule swallows
-      // 'checkout/'. Both are ordinary source directories that vanish from the
-      // analysis with no trace. Note that removing the fallback alone is not
-      // enough: the regex arm compiles 'build/' to /^build\/$/, which matches
-      // no real path, so directory rules rely on the fallback entirely. B4's
-      // move to real glob semantics has to replace both halves at once.
-      repo = await createTestRepo()
-      await repo.commit({
-        message: 'directories that merely look generated',
-        write: {
-          'rebuild/index.ts': 'const rebuilt = 1\n',
-          'src/checkout/cart.ts': 'const cart = 1\n',
-          'src/robin/hood.ts': 'const robin = 1\n',
-          'build/output.js': 'console.log(1)\n',
-        },
-      })
+  it('does not ignore a directory whose name merely ends with an ignored one', async () => {
+    // The old matcher fell back to `filePath.includes(pattern)`, so `build/`
+    // swallowed `rebuild/`, `out/` swallowed `checkout/` and `bin/` swallowed
+    // `robin/` -- ordinary source directories, gone from the analysis with no
+    // trace. Removing the fallback alone would not have been enough: the regex
+    // arm compiled `build/` to /^build\/$/, which matches no real path, so
+    // directory rules depended on the fallback entirely.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'directories that merely look generated',
+      write: {
+        'rebuild/index.ts': 'const rebuilt = 1\n',
+        'src/checkout/cart.ts': 'const cart = 1\n',
+        'src/robin/hood.ts': 'const robin = 1\n',
+        'src/layout/Layout.tsx': 'const layout = 1\n',
+        'build/output.js': 'console.log(1)\n',
+      },
+    })
 
-      const { byPath } = await analyse(repo.path)
+    const { byPath } = await analyse(repo.path)
 
-      expect(byPath.get('rebuild/index.ts')?.isIgnored).toBeFalsy()
-      expect(byPath.get('src/checkout/cart.ts')?.isIgnored).toBeFalsy()
-      expect(byPath.get('src/robin/hood.ts')?.isIgnored).toBeFalsy()
-      // The genuine build directory must still be excluded.
-      expect(byPath.get('build/output.js')?.isIgnored).toBe(true)
-    },
-  )
+    expect(byPath.get('rebuild/index.ts')?.isIgnored).toBeFalsy()
+    expect(byPath.get('src/checkout/cart.ts')?.isIgnored).toBeFalsy()
+    expect(byPath.get('src/robin/hood.ts')?.isIgnored).toBeFalsy()
+    expect(byPath.get('src/layout/Layout.tsx')?.isIgnored).toBeFalsy()
+    // The genuine build directory must still be excluded.
+    expect(byPath.get('build/output.js')?.isIgnored).toBe(true)
+  })
+
+  it('analyses test files, which the README has always promised to count', async () => {
+    // `*.test` is a Go pattern for a compiled test binary. Under the substring
+    // fallback it matched any path containing ".test", which excluded every
+    // `*.test.ts` in every JavaScript repository -- 15 of them in this one.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'tests are code too',
+      write: {
+        'src/thing.test.ts': 'const t = 1\n',
+        'src/thing.spec.ts': 'const s = 1\n',
+        'cmd/server.test': 'compiled test binary\n',
+      },
+    })
+
+    const { byPath } = await analyse(repo.path)
+
+    expect(byPath.get('src/thing.test.ts')?.isIgnored).toBeFalsy()
+    expect(byPath.get('src/thing.spec.ts')?.isIgnored).toBeFalsy()
+    // A file actually named `<something>.test` is what the pattern meant.
+    expect(byPath.get('cmd/server.test')?.isIgnored).toBe(true)
+  })
 })

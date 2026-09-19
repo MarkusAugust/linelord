@@ -129,23 +129,20 @@ _"These are the true scrolls of power! Written by mortal hands with sweat and bl
 - ✅ Configuration files
 - ✅ Documentation
 - ✅ Scripts and makefiles
+- ✅ Tests — they are code somebody wrote and owns, and they count
 
 ### The Unworthy (Excluded)
 
 _"What Galdane warrior has time for scrolls that weigh more than a war hammer? LineLord casts aside these digital beasts, for they are likely the work of Zytera's corruption and code generation, not true craftsmanship!"_
 
 - ❌ Binary files (auto-detected)
-- ❌ Generated files (package-lock.json, yarn.lock, etc.)
+- ❌ Generated files (package-lock.json, yarn.lock, etc.) — matched as proper
+  globs, so a directory is excluded only when a whole path segment matches;
+  `checkout/` is not `out/`
 - ❌ Build artifacts (dist/, build/, node_modules/)
 - ❌ Untracked files — only what git tracks is analysed, so whatever `.gitignore` keeps out of the repository is already out of scope
 - ❌ **Bloated files (configurable threshold, default: 50KB)**
 - ❌ **Blank lines (banished from the realm)**
-
-> **Known limitation:** the exclusion patterns are matched as substrings, so a
-> directory whose name merely ends with an excluded one is excluded too —
-> `rebuild/`, `checkout/` and `robin/` are all silently skipped by the `build/`,
-> `out/` and `bin/` rules. If your source lives in such a directory, its lines
-> are missing from the counts.
 - ❌ **Uncommitted changes** — analysis runs against `HEAD`, so unsaved edits in your working copy are never counted and never attributed to anyone
 
 ## ⚔️ Brutal Barbarian Rankings
