@@ -78,6 +78,20 @@ linelord --path=~/enterprise-codebase --threshold=200
 linelord -p ~/code/project -t 75
 ```
 
+```bash
+# Cache control
+linelord --no-cache          # do not read or write the stored analysis
+linelord --refresh           # ignore what is stored and read everything again
+linelord --clear-cache       # forget this repository's stored analysis
+linelord --clear-all-caches  # forget every repository's
+```
+
+The analysis is kept in `$XDG_CACHE_HOME/linelord` (or `~/.cache/linelord`),
+one file per repository. It holds file paths, commit hashes and dates, and
+contributor names and email addresses — not file contents. Caches nobody has
+opened for fifteen days are removed, and once the directory passes 500 MB the
+least recently used caches are deleted until it is back under. If it cannot be written, the analysis runs anyway.
+
 Run it anywhere inside a repository and it analyses the whole repository, not
 just the directory you happen to be standing in. Point it somewhere that is not
 a repository, or give a threshold that is zero, negative or not a number, and it

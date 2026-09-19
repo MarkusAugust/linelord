@@ -5,6 +5,8 @@ import { render } from 'ink'
 import meow from 'meow'
 import React from 'react'
 import App from './App'
+import { resolveCachePath } from './db/cacheLocation'
+import { removeAllCaches, removeCacheFor } from './db/cacheMaintenance'
 import { CLI_HELP } from './resources/cliHelp'
 import { expandTilde, validateThresholdKB } from './utility/cliValidation'
 import { findRepositoryRoot } from './utility/gitRepository'
@@ -26,6 +28,22 @@ const cli = meow(CLI_HELP, {
       default: 50,
       shortFlag: 't',
     },
+    noCache: {
+      type: 'boolean',
+      default: false,
+    },
+    refresh: {
+      type: 'boolean',
+      default: false,
+    },
+    clearCache: {
+      type: 'boolean',
+      default: false,
+    },
+    clearAllCaches: {
+      type: 'boolean',
+      default: false,
+    },
   },
 })
 
@@ -46,6 +64,20 @@ function exitWithError(message: string, ...hints: string[]): never {
     console.error(`💡 ${hint}`)
   }
   process.exit(1)
+}
+
+// Clearing every cache has nothing to do with any particular repository, so
+// it runs before the repository is resolved at all. Behind that check it was
+// unreachable from an ordinary directory: someone tidying up from their home
+// folder was told their home folder is not a git repository.
+if (cli.flags.clearAllCaches) {
+  const forgotten = removeAllCaches()
+  console.log(
+    forgotten === 0
+      ? '⚔️  No repositories were cached.'
+      : `⚔️  Forgot the stored analysis of ${forgotten} repositor${forgotten === 1 ? 'y' : 'ies'}.`,
+  )
+  process.exit(0)
 }
 
 // Priority: CLI argument > --path flag > current directory
@@ -98,10 +130,24 @@ if (!thresholdCheck.ok) {
 
 const thresholdKB = thresholdCheck.thresholdKB
 
+// This one does concern a particular repository, so it stays behind the
+// resolution that establishes which.
+if (cli.flags.clearCache) {
+  const had = removeCacheFor(resolveCachePath(repoPath))
+  console.log(
+    had
+      ? `⚔️  Forgot the stored analysis of ${repoPath}.`
+      : `⚔️  Nothing was stored for ${repoPath}.`,
+  )
+  process.exit(0)
+}
+
 // Pass repoPath to your existing App component
 const element = React.createElement(App, {
   repoPath: repoPath,
   thresholdKB: thresholdKB,
+  useCache: !cli.flags.noCache,
+  refresh: cli.flags.refresh,
 })
 
 const app = render(element)

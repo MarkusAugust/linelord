@@ -88,3 +88,28 @@ describe('release workflow', () => {
     expect(workflow).toMatch(/if \[ -z "\$TAP_TOKEN" \]/)
   })
 })
+
+describe('cli argument handling', () => {
+  const cli = readFileSync(join(import.meta.dir, '..', 'cli.ts'), 'utf8')
+
+  it('clears every cache before deciding which repository is meant', () => {
+    // --clear-all-caches concerns no repository in particular. Behind the
+    // repository checks it was unreachable from an ordinary directory:
+    // someone tidying up from their home folder was told their home folder is
+    // not a git repository. A shape guard, because cli.ts runs its work at the
+    // top level where the test runner cannot reach it.
+    const clearAll = cli.indexOf('cli.flags.clearAllCaches')
+    const resolvesRepository = cli.indexOf('findRepositoryRoot(resolvedPath)')
+
+    expect(clearAll).toBeGreaterThan(-1)
+    expect(resolvesRepository).toBeGreaterThan(-1)
+    expect(clearAll).toBeLessThan(resolvesRepository)
+  })
+
+  it('clears one repository only after establishing which', () => {
+    const clearOne = cli.indexOf('cli.flags.clearCache')
+    const resolvesRepository = cli.indexOf('findRepositoryRoot(resolvedPath)')
+
+    expect(clearOne).toBeGreaterThan(resolvesRepository)
+  })
+})

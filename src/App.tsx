@@ -22,11 +22,17 @@ import { useLineLordService } from './utility/useLineLordService'
 type AppProps = {
   repoPath?: string
   thresholdKB?: number
+  /** Whether the analysis may be stored and reused between runs. */
+  useCache?: boolean
+  /** Ignore what is stored and read the repository again. */
+  refresh?: boolean
 }
 
 export default function App({
   repoPath: initialRepoPath,
   thresholdKB,
+  useCache = true,
+  refresh = false,
 }: AppProps) {
   const { state, setState, repoPath, setRepoPath, farewell } =
     useAppState(initialRepoPath)
@@ -42,7 +48,10 @@ export default function App({
     initializingMessage,
     initError,
     initProgress,
-  } = useLineLordService(repoPath, largeFileThresholdBytes)
+  } = useLineLordService(repoPath, largeFileThresholdBytes, {
+    useCache,
+    refresh,
+  })
 
   const handleClearError = () => {
     setRepoPath('')

@@ -8,7 +8,12 @@ interface InitProgress {
   message: string
 }
 
-export function useLineLordService(repoPath: string, thresholdBytes: number) {
+export function useLineLordService(
+  repoPath: string,
+  thresholdBytes: number,
+  options: { useCache?: boolean; refresh?: boolean } = {},
+) {
+  const { useCache = true, refresh = false } = options
   const [lineLordService, setLineLordService] =
     useState<LineLordService | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
@@ -65,13 +70,14 @@ export function useLineLordService(repoPath: string, thresholdBytes: number) {
       // The one place that turns the cache on. Everywhere else -- tests
       // included -- gets an analysis that leaves nothing behind.
       const service = new LineLordService(repoPath, thresholdBytes, {
-        useCache: true,
+        useCache,
+        refresh,
       })
       setLineLordService(service)
 
       service.initialize(handleProgress).then(handleSuccess).catch(handleError)
     }
-  }, [repoPath, lineLordService, thresholdBytes])
+  }, [repoPath, lineLordService, thresholdBytes, useCache, refresh])
 
   return {
     lineLordService,

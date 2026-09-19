@@ -11,6 +11,10 @@ export const CLI_HELP = `
 ║   --path, -p       Path to repository (supports ~ )          ║
 ║   --threshold, -t  File size threshold in KB (default: 50)   ║
 ║   --version, -v    Display version information               ║
+║   --no-cache       Do not read or write the stored analysis  ║
+║   --refresh        Ignore what is stored and read everything ║
+║   --clear-cache    Forget this repository's stored analysis  ║
+║   --clear-all-caches  Forget every repository's              ║
 ║   --help           Show this help                            ║
 ║                                                              ║
 ║ EXAMPLES:                                                    ║

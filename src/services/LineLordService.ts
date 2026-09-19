@@ -1,5 +1,11 @@
 import { resolveCachePath } from '../db/cacheLocation'
 import {
+  acquireCacheLock,
+  type CacheLock,
+  markCacheUsed,
+  tidyCacheDirectory,
+} from '../db/cacheMaintenance'
+import {
   clearDatabase,
   createDatabase,
   type LineLordDatabase,
@@ -46,6 +52,12 @@ export interface LineLordOptions {
    * scattering databases through ~/.cache.
    */
   useCache?: boolean
+  /**
+   * Ignore whatever is stored and analyse from the beginning, writing a fresh
+   * cache afterwards. For when the numbers look wrong and the cache is the
+   * first thing anyone suspects.
+   */
+  refresh?: boolean
 }
 
 export class LineLordService {
@@ -57,6 +69,8 @@ export class LineLordService {
   private initialized = false
   private currentRepoPath: string
   private useCache: boolean
+  private refresh: boolean
+  private cacheLock: CacheLock | null = null
   private cacheStatus: CacheStatus = {
     mode: 'disabled',
     filesBlamed: 0,
@@ -70,6 +84,7 @@ export class LineLordService {
   ) {
     this.currentRepoPath = repoPath
     this.useCache = options.useCache ?? false
+    this.refresh = options.refresh ?? false
     this.db = createDatabase()
     this.gitService = new GitService(
       repoPath,
@@ -107,13 +122,55 @@ export class LineLordService {
     if (!this.useCache) return undefined
 
     const path = resolveCachePath(repositoryRoot)
-    try {
-      this.attachDatabase(createDatabase({ path }), repositoryRoot)
-      return path
-    } catch {
+
+    // Somebody else is already writing this one. SQLite would keep the file
+    // intact, but two analyses interleaving would leave a fingerprint that
+    // describes neither, so this run goes to memory and writes nothing.
+    this.cacheLock = acquireCacheLock(path)
+    if (!this.cacheLock) {
       this.attachDatabase(createDatabase(), repositoryRoot)
       return undefined
     }
+
+    try {
+      this.attachDatabase(createDatabase({ path }), repositoryRoot)
+    } catch {
+      this.releaseCacheLock()
+      this.attachDatabase(createDatabase(), repositoryRoot)
+      return undefined
+    }
+
+    // Age and eviction order come from the file's modification time, and a
+    // run that reuses its cache writes nothing at all. Saying so explicitly
+    // is what keeps a repository opened daily, but unchanged, from being
+    // evicted for looking untouched.
+    markCacheUsed(path)
+
+    // Other repositories' caches are tidied here rather than on a timer,
+    // because this is the only moment the program is reliably running. The
+    // one about to be used is never a candidate.
+    try {
+      tidyCacheDirectory(path)
+    } catch {
+      // A directory that will not tidy is not a reason to stop.
+    }
+
+    return path
+  }
+
+  private releaseCacheLock(): void {
+    this.cacheLock?.release()
+    this.cacheLock = null
+  }
+
+  /**
+   * Let go of anything still held.
+   *
+   * The lock is released as soon as an analysis finishes writing, so this is
+   * only needed by a caller that abandons a run part-way.
+   */
+  close(): void {
+    this.releaseCacheLock()
   }
 
   async initialize(
@@ -176,6 +233,12 @@ export class LineLordService {
     } catch (error) {
       this.initialized = false
       throw error
+    } finally {
+      // The lock covers writing the cache, which is over by now. Holding it
+      // for the life of the interface would mean a user browsing menus keeps
+      // every other LineLord out of that repository, and a process that exits
+      // without unwinding leaves the file behind for ten minutes.
+      this.releaseCacheLock()
     }
   }
 
@@ -214,6 +277,10 @@ export class LineLordService {
     })
 
     if (!this.useCache || !headSha) return full()
+
+    if (this.refresh) {
+      return full('you asked for a fresh analysis')
+    }
 
     let decision: ReturnType<typeof decideCacheUse>
     try {
@@ -305,7 +372,7 @@ export class LineLordService {
     })
 
     const { [HEAD_KEY]: head, ...rest } = fingerprint
-    writeMeta(this.db, rest)
+    writeMeta(this.db, { ...rest, analyzed_at: String(Date.now()) })
     writeMeta(this.db, { [HEAD_KEY]: head ?? headSha })
   }
 
@@ -330,6 +397,7 @@ export class LineLordService {
     // A different repository has a different cache. Pointing the services at
     // the new path while still holding the old database would analyse one
     // repository into another's file.
+    this.releaseCacheLock()
     this.attachDatabase(createDatabase(), newRepoPath)
 
     // Mark as uninitialized
