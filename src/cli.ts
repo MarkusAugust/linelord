@@ -1,12 +1,13 @@
 #!/usr/bin/env bun
 import { existsSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 import { render } from 'ink'
 import meow from 'meow'
 import React from 'react'
 import App from './App'
 import { CLI_HELP } from './resources/cliHelp'
+import { expandTilde, validateThresholdKB } from './utility/cliValidation'
+import { findRepositoryRoot } from './utility/gitRepository'
 
 const cli = meow(CLI_HELP, {
   importMeta: import.meta,
@@ -35,43 +36,55 @@ if (cli.flags.version) {
   process.exit(0)
 }
 
-// 🔧 Function to expand tilde (~) to home directory
-function expandTilde(filepath: string): string {
-  if (filepath.startsWith('~/') || filepath === '~') {
-    return filepath.replace('~', homedir())
+/**
+ * Everything below runs before Ink is rendered, so writing to stderr here is
+ * safe -- it is the only place in the program where that is true.
+ */
+function exitWithError(message: string, ...hints: string[]): never {
+  console.error(`❌ ${message}`)
+  for (const hint of hints) {
+    console.error(`💡 ${hint}`)
   }
-  return filepath
+  process.exit(1)
 }
 
-// 🔧 Smart repository path resolution with tilde expansion
-function getRepositoryPath(): string {
-  // Priority: CLI argument > --path flag > current directory
-  const argPath = cli.input[0]
-  const flagPath = cli.flags.path
-  const defaultPath = process.cwd()
+// Priority: CLI argument > --path flag > current directory
+const candidatePath = cli.input[0] || cli.flags.path || process.cwd()
+const expandedPath = expandTilde(candidatePath)
+const resolvedPath = resolve(expandedPath)
 
-  const candidatePath = argPath || flagPath || defaultPath
-
-  // 🔧 Expand tilde before resolving path
-  const expandedPath = expandTilde(candidatePath)
-
-  // Resolve to absolute path
-  const resolvedPath = resolve(expandedPath)
-
-  // Validate that path exists
-  if (!existsSync(resolvedPath)) {
-    console.error(`❌ Error: Repository path does not exist: ${resolvedPath}`)
-    console.error(`💡 Original path: ${candidatePath}`)
-    console.error(`💡 Expanded path: ${expandedPath}`)
-    process.exit(1)
-  }
-
-  return resolvedPath
+if (!existsSync(resolvedPath)) {
+  exitWithError(
+    `Repository path does not exist: ${resolvedPath}`,
+    `Original path: ${candidatePath}`,
+    `Expanded path: ${expandedPath}`,
+  )
 }
 
-// Normal operation - get repo path from argument or flag, with tilde expansion
-const repoPath = getRepositoryPath()
-const thresholdKB = cli.flags.threshold
+// Resolve to the repository root. Analysing the given path directly meant a
+// directory that was not a repository produced an empty analysis rather than
+// an error, and a subdirectory produced a partial one labelled as the whole
+// repository.
+const repoPath = await findRepositoryRoot(resolvedPath)
+
+if (!repoPath) {
+  exitWithError(
+    `Not a git repository: ${resolvedPath}`,
+    'LineLord reads history with git blame, so it needs a repository to read.',
+    'Run it inside one, or pass a path: linelord /path/to/repo',
+  )
+}
+
+const thresholdCheck = validateThresholdKB(cli.flags.threshold)
+
+if (!thresholdCheck.ok) {
+  exitWithError(
+    thresholdCheck.message,
+    'Example: linelord --threshold 200  (analyse files up to 200 KB)',
+  )
+}
+
+const thresholdKB = thresholdCheck.thresholdKB
 
 // Pass repoPath to your existing App component
 const element = React.createElement(App, {
