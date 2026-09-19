@@ -70,7 +70,8 @@ export async function writeMailmap(
     // read, which on most systems can still be appended to -- is not the same
     // thing at all: carrying on would append lines the file may already have,
     // duplicating the entries this promises to leave alone. Better to say so.
-    if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') throw error
+    const code = (error as NodeJS.ErrnoException)?.code
+    if (code !== 'ENOENT' && code !== 'ENOTDIR') throw error
   }
 
   const present = new Set(
