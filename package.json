@@ -4,6 +4,29 @@
   "module": "cli.ts",
   "type": "module",
   "description": "Analyze git blame data with developer contribution statistics",
+  "license": "GPL-3.0-only",
+  "author": "MarkusAugust",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MarkusAugust/linelord.git"
+  },
+  "homepage": "https://github.com/MarkusAugust/linelord#readme",
+  "bugs": {
+    "url": "https://github.com/MarkusAugust/linelord/issues"
+  },
+  "keywords": [
+    "git",
+    "git-blame",
+    "code-ownership",
+    "cli",
+    "tui",
+    "ink",
+    "repository-analysis",
+    "developer-statistics"
+  ],
+  "bin": {
+    "linelord": "./dist/cli.js"
+  },
   "dependencies": {
     "drizzle-orm": "^0.44.1",
     "fastest-levenshtein": "^1.0.16",
@@ -23,9 +46,11 @@
   },
   "scripts": {
     "dev": "bun run --hot src/cli.ts",
+    "typecheck": "tsc --noEmit",
     "lint": "biome check --write",
     "test": "bun test",
     "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
     "build": "bun build src/cli.ts --outdir dist --target bun",
     "compile:macos": "npm run compile:macos-intel && npm run compile:macos-arm",
     "compile:linux": "bun build src/cli.ts --compile --target bun-linux-x64 --outfile dist/linelord-linux-x64",

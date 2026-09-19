@@ -17,15 +17,41 @@ jobs:
           fetch-tags: true
 
       - name: Setup Bun
+        # Pinned, and deliberately the same version CI verifies against: the
+        # binaries published from here are compiled by this runtime, so
+        # tracking `latest` would ship artifacts built by a version nothing
+        # had tested. Bump it together with the pin in ci.yml.
         uses: oven-sh/setup-bun@v1
         with:
-          bun-version: latest
+          bun-version: 1.3.14
 
       - name: Install dependencies
         run: bun install
 
+      - name: Run tests
+        run: bun test
+
       - name: Build binaries
         run: bun run release
+
+      # The tarballs are what users get. Unpack the one this runner can
+      # execute and confirm it starts, and check the architecture of the rest
+      # so a cross-compile that silently produced the wrong target is caught
+      # before it is published rather than by whoever installs it.
+      - name: Smoke-test the built binaries
+        run: |
+          set -euo pipefail
+          cd release
+          for archive in linelord-*.tar.gz; do
+            tar -xzf "$archive"
+          done
+          ./linelord-macos-arm64 --version
+          file linelord-macos-arm64 | grep -q 'arm64'
+          file linelord-macos-intel | grep -q 'x86_64'
+          file linelord-linux-x64   | grep -q 'x86-64'
+          file linelord-linux-arm64 | grep -q 'ARM aarch64'
+          rm -f linelord-macos-arm64 linelord-macos-intel \
+                linelord-linux-x64 linelord-linux-arm64
 
       - name: Create checksums
         run: |
@@ -43,3 +69,54 @@ jobs:
           tag_name: ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Without this, the tap has to be edited by hand after every release: a
+  # version bump plus four checksums, with nothing checking the result. That
+  # is how v0.7.2 came to ship a formula nobody could install for months.
+  update-homebrew-tap:
+    name: Update the Homebrew tap
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - name: Check the tap token is configured
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then
+            echo "::error::HOMEBREW_TAP_TOKEN is not set. The release is published, but the Homebrew tap still points at the previous version. Add a fine-grained token with Contents: write on MarkusAugust/homebrew-linelord, then re-run this job."
+            exit 1
+          fi
+
+      - name: Checkout the tap
+        uses: actions/checkout@v4
+        with:
+          repository: MarkusAugust/homebrew-linelord
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      # Version and checksums are written from one source, so they cannot
+      # drift apart the way they did before.
+      - name: Rewrite the formula from the published release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 tap/scripts/update_formula.py "$TAG" tap/Formula/linelord.rb
+
+      - name: Verify the formula against the release it now names
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 tap/scripts/verify_formula.py tap/Formula/linelord.rb
+
+      - name: Commit and push
+        working-directory: tap
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "Formula already matches $TAG; nothing to do."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Update formula to $TAG"
+          git push

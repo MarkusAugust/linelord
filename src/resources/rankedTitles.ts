@@ -74,32 +74,6 @@ export const getTitleRange = (startRank: number, endRank: number): string[] => {
   return rankedTitles.slice(startRank, endRank + 1)
 }
 
-// Helper function to get random titles from a range
-const _getRandomTitlesFromRange = (
-  startIndex: number,
-  endIndex: number,
-  count: number,
-): string[] => {
-  const rangeSize = endIndex - startIndex + 1
-  const availableTitles = rankedTitles.slice(startIndex, endIndex + 1)
-
-  if (count >= rangeSize) {
-    // If we need more titles than available, return all and fill the rest randomly
-    const allTitles = [...availableTitles]
-    const remaining = count - rangeSize
-    for (let i = 0; i < remaining; i++) {
-      allTitles.push(
-        availableTitles[Math.floor(Math.random() * rangeSize)] ?? 'unknown',
-      )
-    }
-    return allTitles
-  }
-
-  // Randomly select without duplicates
-  const shuffled = [...availableTitles].sort(() => Math.random() - 0.5)
-  return shuffled.slice(0, count)
-}
-
 // Function to get evenly distributed titles based on number of developers
 // Replace the getDistributedTitles function with this:
 export const getDistributedTitles = (numDevs: number): string[] => {

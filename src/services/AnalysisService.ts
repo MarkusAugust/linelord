@@ -72,9 +72,15 @@ export class AnalysisService {
         sql`${files.isBinary} = false AND ${files.isIgnored} = false AND ${files.isLargerThanThreshold} = false`,
       )
 
+    // Canonical authors who actually hold lines: the same population the
+    // contributor list shows. A plain count over the authors table counted
+    // every merged-away identity as a separate developer, so the two numbers
+    // contradicted each other on the same screen.
     const [totalAuthorsResult] = await this.db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: sql<number>`count(DISTINCT ${authors.id})` })
       .from(authors)
+      .innerJoin(blameLines, eq(authors.id, blameLines.authorId))
+      .where(eq(authors.isCanonical, true))
 
     return {
       totalFiles: totalFilesResult?.count || 0,

@@ -13,9 +13,23 @@ import {
 
 const execAsync = promisify(exec)
 
+/** A commit hash of all zeroes is git's marker for a line that is not committed. */
+const UNCOMMITTED_SHA = /^0+$/
+
+export interface AnalysisContext {
+  /** The revision the analysis was run against, or null in a repository with no commits. */
+  headSha: string | null
+  /** Tracked files whose working-copy content differs from HEAD and is therefore not counted. */
+  uncommittedFileCount: number
+}
+
 export class GitService {
   private authorCache = new Map<string, number>() // email -> id
   private fileIdCache = new Map<string, number>() // filepath -> id
+  private analysisContext: AnalysisContext = {
+    headSha: null,
+    uncommittedFileCount: 0,
+  }
 
   constructor(
     private repoPath: string,
@@ -28,6 +42,8 @@ export class GitService {
     onProgress?: (current: number, total: number, message: string) => void,
   ) {
     onProgress?.(0, 100, 'Getting repository files...')
+
+    this.analysisContext = await this.resolveAnalysisContext()
 
     // Get all tracked files
     const { stdout } = await execAsync('git ls-files', {
@@ -262,6 +278,11 @@ export class GitService {
           const content = line.substring(1)
           if (content.trim() === '') continue
 
+          // Defensive: blaming HEAD should never produce uncommitted lines, but
+          // a null sha must never be allowed to create a "Not Committed Yet"
+          // author row if one ever slips through.
+          if (UNCOMMITTED_SHA.test(currentCommitHash)) continue
+
           lineNumber++
           const authorId = await this.getOrCreateAuthor(
             currentAuthor,
@@ -287,15 +308,62 @@ export class GitService {
           .where(eq(files.id, fileId))
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      // A tracked file that has been staged but never committed has no content
+      // in HEAD. Excluding it is the correct outcome of a HEAD analysis, not a
+      // failure worth reporting.
+      if (message.includes('no such path')) return
+
       console.warn(`Failed to process blame for ${filePath}:`, error)
     }
+  }
+
+  /**
+   * Records which revision the analysis describes, and how much of the working
+   * copy it deliberately leaves out, so the UI can say so rather than present
+   * HEAD's numbers as if they covered unsaved work.
+   */
+  private async resolveAnalysisContext(): Promise<AnalysisContext> {
+    let headSha: string | null = null
+    try {
+      const { stdout } = await execAsync('git rev-parse HEAD', {
+        cwd: this.repoPath,
+      })
+      headSha = stdout.trim() || null
+    } catch {
+      // A repository with no commits yet has no HEAD to resolve.
+      return { headSha: null, uncommittedFileCount: 0 }
+    }
+
+    let uncommittedFileCount = 0
+    try {
+      const { stdout } = await execAsync(
+        'git status --porcelain -z --untracked-files=no',
+        {
+          cwd: this.repoPath,
+          maxBuffer: 50 * 1024 * 1024,
+        },
+      )
+      uncommittedFileCount = stdout.split('\0').filter(Boolean).length
+    } catch {
+      // Status is advisory only; failing to read it must not fail the analysis.
+    }
+
+    return { headSha, uncommittedFileCount }
+  }
+
+  getAnalysisContext(): AnalysisContext {
+    return { ...this.analysisContext }
   }
 
   private async execGitBlame(filePath: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const child = spawn(
         'git',
-        ['blame', '-w', '--line-porcelain', filePath],
+        // HEAD, not the working copy: blaming the working copy attributes
+        // unsaved edits to the pseudo-author "Not Committed Yet". `--` keeps a
+        // path that starts with a dash from being read as an option.
+        ['blame', '-w', '--line-porcelain', 'HEAD', '--', filePath],
         {
           cwd: this.repoPath,
           stdio: ['pipe', 'pipe', 'pipe'],

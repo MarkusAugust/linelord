@@ -1,6 +1,7 @@
 import { Box, Text } from 'ink'
 import About from './components/About'
 import { AuthorsList } from './components/AuthorList'
+import BarbarianRankingBox from './components/BarbarianRankingBox'
 import ErrorScreen from './components/ErrorScreen'
 import ExitScreen from './components/ExitScreen'
 import Layout from './components/Layout'
@@ -52,6 +53,10 @@ export default function App({
 
   const analysisService = lineLordService?.isInitialized()
     ? lineLordService.getAnalysisService()
+    : undefined
+
+  const analysisContext = lineLordService?.isInitialized()
+    ? lineLordService.getAnalysisContext()
     : undefined
 
   const handleMenuSelect = (option: MenuOption) => {
@@ -119,13 +124,23 @@ export default function App({
 
       {state === 'menu' && (
         <Box flexDirection="column">
-          <Box marginBottom={1}>
+          <Box marginBottom={1} flexDirection="column">
             <Text>
               Repository:{' '}
               <Text color="green" bold>
                 {repoPath}
               </Text>
             </Text>
+
+            {analysisContext?.headSha && (
+              <Text color="gray">
+                Analysing HEAD ({analysisContext.headSha.slice(0, 7)})
+                {analysisContext.uncommittedFileCount > 0 &&
+                  ` · ${analysisContext.uncommittedFileCount} file${
+                    analysisContext.uncommittedFileCount === 1 ? '' : 's'
+                  } have uncommitted changes that are not counted`}
+              </Text>
+            )}
           </Box>
 
           {analysisService && <AuthorsList analysisService={analysisService} />}
@@ -165,6 +180,13 @@ export default function App({
       )}
 
       {state === 'about' && <About onBack={returnToMenu} />}
+
+      {state === 'barbarianrankings' && (
+        <BarbarianRankingBox
+          onBack={returnToMenu}
+          lineLordService={lineLordService}
+        />
+      )}
     </Layout>
   )
 }
