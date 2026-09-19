@@ -86,6 +86,11 @@ linelord --clear-cache       # forget this repository's stored analysis
 linelord --clear-all-caches  # forget every repository's
 ```
 
+```bash
+# Reformatting commits
+linelord --ignore-rev 1a2b3c4   # look past this commit as well
+```
+
 The analysis is kept in `$XDG_CACHE_HOME/linelord` (or `~/.cache/linelord`),
 one file per repository. It holds file paths, commit hashes and dates, and
 contributor names and email addresses — not file contents. Caches nobody has
@@ -238,6 +243,47 @@ LineLord uses **current line ownership** (via `git blame`), not historical commi
 
 - 🔴 **Red** - For the mightiest contributor
 - **Top 10 limit** - Only the worthiest warriors are displayed
+
+### When a reformatting rewrote everything
+
+One commit that runs a formatter over the whole repository changes every line
+without changing what any of them mean. Left alone, `git blame` credits the
+entire codebase to whoever ran it, dated to the afternoon they ran it — so the
+formatter tops the ranking, everyone else vanishes, and the code all looks a
+week old.
+
+Write those commits down in `.git-blame-ignore-revs`, one hash per line:
+
+```
+# Switched to double quotes. Not authorship.
+b7d3f1a9c2e45608d1f37b2a9c4e6d80f5a1b3c7
+```
+
+LineLord reads it and tells blame to look past them, so the lines go back to
+whoever wrote them, with the date they were written. The same file works with
+`git blame --ignore-revs-file` and is what GitHub reads, so it is worth having
+regardless.
+
+For a commit not written down yet, `--ignore-rev <sha>` does the same for one
+run, and can be given more than once.
+
+When either is in use the menu screen says so, because the ownership shown is
+deliberately not what plain `git blame` would report:
+
+```
+Looking past 1 commit named in .git-blame-ignore-revs, so their lines are
+credited to whoever wrote them
+```
+
+An entry that names no commit in this repository is left out and reported
+rather than passed on, saying which source named it. Handed to git, a single
+bad line makes it refuse the blame — for every file — and the repository comes
+back unreadable over a typo.
+
+A `.git-blame-ignore-revs` that exists but cannot be read stops the analysis
+with an explanation, rather than quietly analysing without it. Carrying on
+would hand the reformatting back to whoever ran it, on every screen, and store
+that in the cache as though it were right.
 
 ### Who counts as one person
 

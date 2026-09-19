@@ -15,9 +15,13 @@ export function useLineLordService(
     useCache?: boolean
     refresh?: boolean
     authorPolicy?: 'strict' | 'loose'
+    ignoreRevisions?: string[]
   } = {},
 ) {
   const { useCache = true, refresh = false, authorPolicy = 'strict' } = options
+  // Joined for the dependency list below: a new array each render would
+  // otherwise re-create the service on every one of them.
+  const ignoreRevisions = (options.ignoreRevisions ?? []).join(' ')
   const [lineLordService, setLineLordService] =
     useState<LineLordService | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
@@ -77,6 +81,7 @@ export function useLineLordService(
         useCache,
         refresh,
         authorPolicy,
+        ignoreRevisions: ignoreRevisions ? ignoreRevisions.split(' ') : [],
       })
       setLineLordService(service)
 
@@ -89,6 +94,7 @@ export function useLineLordService(
     useCache,
     refresh,
     authorPolicy,
+    ignoreRevisions,
   ])
 
   return {

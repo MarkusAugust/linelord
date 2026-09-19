@@ -424,3 +424,54 @@ describe('LineLordService - incremental and full agree, whatever the history', (
     expect(incremental).toBe(await ownership(scratch))
   })
 })
+
+describe('what a reused run knows about itself', () => {
+  let repo: TestRepo | undefined
+  let cacheHome: string
+
+  beforeEach(async () => {
+    cacheHome = await mkdtemp(join(tmpdir(), 'linelord-context-'))
+    process.env.XDG_CACHE_HOME = cacheHome
+  })
+
+  afterEach(async () => {
+    await repo?.cleanup()
+    repo = undefined
+    delete process.env.XDG_CACHE_HOME
+    await rm(cacheHome, { force: true, recursive: true })
+  })
+
+  it('still says which revision the numbers describe', async () => {
+    // The revision line exists so nobody has to guess what they are looking
+    // at. A reused run skips the analysis that used to establish it, so the
+    // line disappeared on exactly the runs that happen most often -- and the
+    // faster the cache made LineLord, the less it said about its own answer.
+    repo = await createTestRepo()
+    await repo.commit({ message: 'one', write: { 'a.ts': 'const a = 1\n' } })
+    const head = await repo.head()
+
+    const first = new LineLordService(repo.path, 50 * 1024, { useCache: true })
+    await first.initialize()
+
+    const second = new LineLordService(repo.path, 50 * 1024, { useCache: true })
+    await second.initialize()
+
+    expect(second.getCacheStatus()?.mode).toBe('reused')
+    expect(second.getAnalysisContext().headSha).toBe(head)
+  })
+
+  it('still counts the work that is not in those numbers', async () => {
+    repo = await createTestRepo()
+    await repo.commit({ message: 'one', write: { 'a.ts': 'const a = 1\n' } })
+
+    const first = new LineLordService(repo.path, 50 * 1024, { useCache: true })
+    await first.initialize()
+
+    await repo.writeFiles({ 'a.ts': 'const a = 2\n' })
+
+    const second = new LineLordService(repo.path, 50 * 1024, { useCache: true })
+    await second.initialize()
+
+    expect(second.getAnalysisContext().uncommittedFileCount).toBe(1)
+  })
+})

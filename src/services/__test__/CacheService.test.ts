@@ -20,6 +20,7 @@ const INPUTS = {
   headSha: 'a'.repeat(40),
   thresholdBytes: 51200,
   authorPolicy: 'loose' as const,
+  ignoredRevisions: [] as string[],
 }
 
 describe('computeFingerprint', () => {
@@ -38,6 +39,7 @@ describe('computeFingerprint', () => {
       'author_policy',
       'blame_options',
       'head_sha',
+      'ignore_revs',
       'ignore_rules',
       'mailmap',
       'schema_version',
@@ -87,21 +89,33 @@ describe('computeFingerprint', () => {
     expect(edited.mailmap).not.toBe(present.mailmap)
   })
 
-  it('ignores .git-blame-ignore-revs, which the analysis never reads', async () => {
-    // blame is not given --ignore-revs-file, so the file is not an input.
-    // Hashing it would throw away caches for an edit that cannot change a
-    // single number. N3 wires the flag in and has to add the key back.
-    repo = await createTestRepo()
-    await repo.commit({ message: 'first', write: { 'a.ts': 'const a = 1\n' } })
-    const inputs = { ...INPUTS, repositoryRoot: repo.path }
+  it('is a different analysis once blame is told to look past a commit', async () => {
+    // Ignoring a reformatting moves every line it touched to a different
+    // author and a different date. A stored analysis from before that answers
+    // a question nobody is asking any more.
+    const before = await computeFingerprint(INPUTS)
 
-    const before = await computeFingerprint(inputs)
-    await writeFile(
-      join(repo.path, '.git-blame-ignore-revs'),
-      `${'b'.repeat(40)}\n`,
-    )
+    const after = await computeFingerprint({
+      ...INPUTS,
+      ignoredRevisions: ['b'.repeat(40)],
+    })
 
-    expect(await computeFingerprint(inputs)).toEqual(before)
+    expect(after.ignore_revs).not.toBe(before.ignore_revs)
+  })
+
+  it('does not care what order the commits were listed in', async () => {
+    // The set is what matters. Throwing away a cache because two lines of
+    // .git-blame-ignore-revs were swapped would be a cache wasted.
+    const one = await computeFingerprint({
+      ...INPUTS,
+      ignoredRevisions: ['b'.repeat(40), 'c'.repeat(40)],
+    })
+    const other = await computeFingerprint({
+      ...INPUTS,
+      ignoredRevisions: ['c'.repeat(40), 'b'.repeat(40)],
+    })
+
+    expect(other.ignore_revs).toBe(one.ignore_revs ?? '')
   })
 
   it('refuses to guess when a file exists but cannot be read', async () => {

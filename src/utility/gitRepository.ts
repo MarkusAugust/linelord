@@ -8,7 +8,7 @@ export type RepositoryLookup =
   | { found: false; reason: 'git-unavailable' }
 
 /** Run a git command and report whether it ran, separately from how it exited. */
-function runGit(
+export function runGit(
   args: string[],
   cwd?: string,
 ): Promise<{ spawned: boolean; code: number | null; stdout: string }> {

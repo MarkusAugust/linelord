@@ -10,7 +10,40 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **A reformatting no longer steals the whole codebase.** One commit that runs
+  a formatter over every file changes every line without changing what any of
+  them mean, and blame credits the lot to whoever ran it, dated to the
+  afternoon they ran it: the formatter tops the ranking, everyone else
+  disappears, and the code all looks a week old. LineLord now reads
+  `.git-blame-ignore-revs` — the file git itself takes with
+  `--ignore-revs-file`, and the one GitHub reads — and tells blame to look
+  past the commits it names. `--ignore-rev <sha>`, repeatable, does the same
+  for a commit nobody has written down yet.
+
+  An entry that names no commit here is left out and reported rather than
+  passed on, saying which source named it. Given it, git refuses the blame —
+  once per file — so a single typo would otherwise turn into every file in the
+  repository coming back unreadable, with nothing on screen connecting the two.
+  A file that exists but cannot be read stops the analysis with an explanation
+  instead: carrying on would hand the reformatting back to whoever ran it and
+  store that in the cache as though it were right.
+
+  The menu screen says when commits are being looked past, because the
+  ownership shown is then deliberately not what plain `git blame` reports. The
+  commits are part of what decides whether a stored analysis may be reused;
+  they are compared as resolved hashes, so the same commit written short, long
+  or as a tag is one entry, and rewording a comment in the file changes
+  nothing.
+
+### Fixed
+
+- **A reused analysis says which revision it describes.** The revision line
+  and the count of uncommitted work were established by the analysis, which a
+  cache hit skips — so they vanished on exactly the runs that happen most
+  often. The faster the cache made LineLord, the less it said about its own
+  answer.
 
 ## [0.8.0] — 2026-09-19
 

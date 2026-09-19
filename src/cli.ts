@@ -59,6 +59,12 @@ const cli = meow(CLI_HELP, {
       type: 'boolean',
       default: false,
     },
+    ignoreRev: {
+      type: 'string',
+      // Repeatable: a repository may have been reformatted more than once,
+      // and naming them one run at a time would mean choosing between them.
+      isMultiple: true,
+    },
   },
 })
 
@@ -167,6 +173,7 @@ if (cli.flags.writeMailmap) {
   const service = new LineLordService(repoPath, thresholdBytes, {
     useCache: !cli.flags.noCache,
     refresh: cli.flags.refresh,
+    ignoreRevisions: cli.flags.ignoreRev,
   })
   await service.initialize()
 
@@ -198,6 +205,7 @@ const element = React.createElement(App, {
   useCache: !cli.flags.noCache,
   refresh: cli.flags.refresh,
   authorPolicy: cli.flags.fuzzyAuthors ? 'loose' : 'strict',
+  ignoreRevisions: cli.flags.ignoreRev,
 })
 
 const app = render(element)

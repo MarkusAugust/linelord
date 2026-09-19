@@ -8,6 +8,11 @@ import {
   ignoredFileExtensions,
   isIgnoredByPattern,
 } from '../resources/ignoreFiles'
+import {
+  type IgnoreRevs,
+  ignoreRevArguments,
+  type UnresolvedIgnoreRev,
+} from '../utility/ignoreRevs'
 import { parseBlamePorcelain } from './blamePorcelain'
 
 const execAsync = promisify(exec)
@@ -20,6 +25,15 @@ export interface AnalysisContext {
   headSha: string | null
   /** Tracked files whose working-copy content differs from HEAD and is therefore not counted. */
   uncommittedFileCount: number
+  /**
+   * Commits blame was told to look past, so their lines are credited to
+   * whoever wrote them rather than to whoever reformatted them.
+   */
+  ignoredRevisionCount: number
+  /** Which sources named them: the repository's file, `--ignore-rev`, or both. */
+  ignoreRevSources: { file: boolean; flag: boolean }
+  /** Entries that name no commit here, with where each was named. */
+  unresolvedIgnoreRevs: UnresolvedIgnoreRev[]
 }
 
 /** One blob in the HEAD tree: the path it is stored under, and its size there. */
@@ -86,7 +100,13 @@ export class GitService {
   private analysisContext: AnalysisContext = {
     headSha: null,
     uncommittedFileCount: 0,
+    ignoredRevisionCount: 0,
+    ignoreRevSources: { file: false, flag: false },
+    unresolvedIgnoreRevs: [],
   }
+
+  /** Full hashes of the commits blame is told to look past. */
+  private ignoredRevisions: string[] = []
   /**
    * Files that could not be read, collected rather than printed.
    *
@@ -105,6 +125,23 @@ export class GitService {
     private largeFileThresholdBytes: number = 50 * 1024,
     private concurrency = 25, // Increased concurrency
   ) {}
+
+  /**
+   * Tell blame which commits to look past, before anything is analysed.
+   *
+   * Resolved and checked by the caller rather than here: a name git cannot
+   * resolve makes it refuse the whole blame, once per file, so the set has to
+   * be known good before the first invocation.
+   */
+  lookPast(revisions: IgnoreRevs): void {
+    this.ignoredRevisions = revisions.revisions
+    this.analysisContext = {
+      ...this.analysisContext,
+      ignoredRevisionCount: revisions.revisions.length,
+      ignoreRevSources: revisions.sources,
+      unresolvedIgnoreRevs: revisions.unresolved,
+    }
+  }
 
   async initialize(
     onProgress?: (current: number, total: number, message: string) => void,
@@ -177,7 +214,10 @@ export class GitService {
     onProgress?: (current: number, total: number, message: string) => void,
   ): Promise<string[]> {
     this.failures = []
-    this.analysisContext = await this.resolveAnalysisContext()
+    this.analysisContext = {
+      ...this.analysisContext,
+      ...(await this.resolveAnalysisContext()),
+    }
 
     const headFiles = await this.listHeadFiles()
     onProgress?.(10, 100, `Found ${headFiles.length} files`)
@@ -669,7 +709,14 @@ export class GitService {
    * copy it deliberately leaves out, so the UI can say so rather than present
    * HEAD's numbers as if they covered unsaved work.
    */
-  private async resolveAnalysisContext(): Promise<AnalysisContext> {
+  /**
+   * What this run is looking at. The commits being looked past are not part of
+   * it: those are settled before the analysis begins and would be overwritten
+   * by a fresh object here.
+   */
+  private async resolveAnalysisContext(): Promise<
+    Pick<AnalysisContext, 'headSha' | 'uncommittedFileCount'>
+  > {
     let headSha: string | null = null
     try {
       const { stdout } = await execAsync('git rev-parse HEAD', {
@@ -698,6 +745,21 @@ export class GitService {
     return { headSha, uncommittedFileCount }
   }
 
+  /**
+   * Work out which revision is being described, without analysing anything.
+   *
+   * A reused run never calls initialize, so without this the interface loses
+   * the revision line and the count of uncommitted work on exactly the runs
+   * that happen most often -- the faster the cache made LineLord, the less it
+   * said about its own answer.
+   */
+  async describeAnalysisWithoutRunning(): Promise<void> {
+    this.analysisContext = {
+      ...this.analysisContext,
+      ...(await this.resolveAnalysisContext()),
+    }
+  }
+
   getAnalysisContext(): AnalysisContext {
     return { ...this.analysisContext }
   }
@@ -718,7 +780,14 @@ export class GitService {
         // runs once per file, so a symbolic ref could straddle revisions
         // within a single analysis. `--` keeps a path that starts with a dash
         // from being read as an option.
-        ['blame', ...BLAME_OPTIONS, this.analysedRevision(), '--', filePath],
+        [
+          'blame',
+          ...BLAME_OPTIONS,
+          ...ignoreRevArguments(this.ignoredRevisions),
+          this.analysedRevision(),
+          '--',
+          filePath,
+        ],
         {
           cwd: this.repoPath,
           stdio: ['pipe', 'pipe', 'pipe'],
