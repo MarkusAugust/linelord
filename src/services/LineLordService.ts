@@ -17,6 +17,7 @@ import {
   pathsTouchedBetween,
   resolveHead,
 } from '../utility/gitRepository'
+import { type IgnoreRevs, resolveIgnoreRevs } from '../utility/ignoreRevs'
 import { AnalysisService } from './AnalysisService'
 import {
   AuthorNormalizationService,
@@ -72,6 +73,12 @@ export interface LineLordOptions {
    * that merely resemble each other.
    */
   authorPolicy?: AuthorPolicy
+  /**
+   * Extra commits for blame to look past, on top of whatever
+   * `.git-blame-ignore-revs` names. For a reformatting nobody has written
+   * down yet.
+   */
+  ignoreRevisions?: string[]
 }
 
 export class LineLordService {
@@ -85,6 +92,12 @@ export class LineLordService {
   private useCache: boolean
   private refresh: boolean
   private authorPolicy: AuthorPolicy
+  private extraIgnoreRevisions: string[]
+  private ignoredRevisions: IgnoreRevs = {
+    revisions: [],
+    usedFile: false,
+    unresolved: [],
+  }
   private identityMerges: IdentityMerge[] = []
   private cacheLock: CacheLock | null = null
   private cacheStatus: CacheStatus = {
@@ -102,6 +115,7 @@ export class LineLordService {
     this.useCache = options.useCache ?? false
     this.refresh = options.refresh ?? false
     this.authorPolicy = options.authorPolicy ?? 'strict'
+    this.extraIgnoreRevisions = options.ignoreRevisions ?? []
     this.db = createDatabase()
     this.gitService = new GitService(
       repoPath,
@@ -203,11 +217,22 @@ export class LineLordService {
       const cachePath = this.openCache(root)
       const headSha = await resolveHead(root)
 
+      // Before the cache decision, because which commits are being looked
+      // past is part of what a stored analysis is an answer to; and before any
+      // blame, because an entry git cannot resolve would make it refuse every
+      // file rather than just that one.
+      this.ignoredRevisions = await resolveIgnoreRevs(
+        root,
+        this.extraIgnoreRevisions,
+      )
+      this.gitService.lookPast(this.ignoredRevisions)
+
       const decision = await this.decideWhatToDo(root, headSha)
       this.cacheStatus = { ...decision.status, path: cachePath }
 
       if (decision.plan === 'reuse') {
         onProgress?.(100, 100, 'Reusing the stored analysis')
+        await this.gitService.describeAnalysisWithoutRunning()
         this.identityMerges = await this.collectIdentityMerges()
         this.initialized = true
         return
@@ -310,6 +335,7 @@ export class LineLordService {
           headSha,
           thresholdBytes: this.largeFileThresholdBytes,
           authorPolicy: this.authorPolicy,
+          ignoredRevisions: this.ignoredRevisions.revisions,
         }),
       )
     } catch {
@@ -388,6 +414,7 @@ export class LineLordService {
       headSha,
       thresholdBytes: this.largeFileThresholdBytes,
       authorPolicy: this.authorPolicy,
+      ignoredRevisions: this.ignoredRevisions.revisions,
     })
 
     const { [HEAD_KEY]: head, ...rest } = fingerprint

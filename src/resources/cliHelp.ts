@@ -16,6 +16,8 @@ export const CLI_HELP = `
 ║   --clear-cache    Forget this repository's stored analysis  ║
 ║   --clear-all-caches  Forget every repository's              ║
 ║   --fuzzy-authors  Guess which identities are one person     ║
+║   --ignore-rev SHA Look past a commit, as .git-blame-ignore-  ║
+║                    revs does (repeatable)                    ║
 ║   --write-mailmap  Draft a .mailmap from the guesses         ║
 ║                    (also on the menu once LineLord starts)   ║
 ║   --help           Show this help                            ║

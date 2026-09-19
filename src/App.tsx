@@ -29,6 +29,8 @@ type AppProps = {
   refresh?: boolean
   /** How identities are matched: by address alone, or by guessing as well. */
   authorPolicy?: 'strict' | 'loose'
+  /** Commits for blame to look past, on top of `.git-blame-ignore-revs`. */
+  ignoreRevisions?: string[]
 }
 
 export default function App({
@@ -37,6 +39,7 @@ export default function App({
   useCache = true,
   refresh = false,
   authorPolicy = 'strict',
+  ignoreRevisions,
 }: AppProps) {
   const { state, setState, repoPath, setRepoPath, farewell } =
     useAppState(initialRepoPath)
@@ -56,6 +59,7 @@ export default function App({
     useCache,
     refresh,
     authorPolicy,
+    ignoreRevisions,
   })
 
   const handleClearError = () => {
@@ -184,6 +188,62 @@ export default function App({
                       : `Analysed ${cache.filesBlamed} file${cache.filesBlamed === 1 ? '' : 's'}`}
               </Text>
             )}
+
+            {/*
+              Blame was told to look past some commits, so the ownership on
+              every screen is deliberately not what plain `git blame` would
+              say. Nothing else on screen would explain the difference.
+            */}
+            {analysisContext && analysisContext.ignoredRevisionCount > 0 && (
+              <Text color="gray">
+                Looking past {analysisContext.ignoredRevisionCount} commit
+                {analysisContext.ignoredRevisionCount === 1 ? '' : 's'}
+                {analysisContext.usedIgnoreRevsFile
+                  ? ' named in .git-blame-ignore-revs'
+                  : ' named with --ignore-rev'}
+                , so their lines are credited to whoever wrote them
+              </Text>
+            )}
+
+            {/*
+              An entry git cannot resolve is left out rather than passed on:
+              handed over, it makes git refuse the blame for every file. Say
+              which, or the file looks like it is working.
+            */}
+            {analysisContext &&
+              analysisContext.unresolvedIgnoreRevs.length > 0 && (
+                <Box flexDirection="column" marginTop={1}>
+                  <Text color="yellow">
+                    ⚠ {analysisContext.unresolvedIgnoreRevs.length} entr
+                    {analysisContext.unresolvedIgnoreRevs.length === 1
+                      ? 'y'
+                      : 'ies'}{' '}
+                    in .git-blame-ignore-revs{' '}
+                    {analysisContext.unresolvedIgnoreRevs.length === 1
+                      ? 'names'
+                      : 'name'}{' '}
+                    no commit here and{' '}
+                    {analysisContext.unresolvedIgnoreRevs.length === 1
+                      ? 'was'
+                      : 'were'}{' '}
+                    left out:
+                  </Text>
+                  {analysisContext.unresolvedIgnoreRevs
+                    .slice(0, 3)
+                    .map((entry) => (
+                      <Text key={entry} color="gray">
+                        {'  '}
+                        {entry}
+                      </Text>
+                    ))}
+                  {analysisContext.unresolvedIgnoreRevs.length > 3 && (
+                    <Text color="gray">
+                      {'  '}… and{' '}
+                      {analysisContext.unresolvedIgnoreRevs.length - 3} more
+                    </Text>
+                  )}
+                </Box>
+              )}
 
             {/*
               Who the guessing would have taken to be one person. Under the

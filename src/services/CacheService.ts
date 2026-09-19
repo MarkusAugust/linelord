@@ -27,6 +27,13 @@ export interface FingerprintInputs {
   headSha: string
   thresholdBytes: number
   authorPolicy: AuthorPolicy
+  /**
+   * The commits blame is being told to look past, already resolved to full
+   * hashes. Resolved rather than as written: the same commit spelled as a
+   * short hash, a full one or a tag is one input, and a reworded comment in
+   * `.git-blame-ignore-revs` is not an input at all.
+   */
+  ignoredRevisions: string[]
 }
 
 /** Every key is a string, because that is what the meta table stores. */
@@ -42,6 +49,9 @@ export const HEAD_KEY = 'head_sha'
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex')
 }
+
+/** What `ignore_revs` hashes to when there is nothing to look past. */
+const EMPTY_IGNORE_REVS = sha256('')
 
 /**
  * Hash a file's contents, or the empty string when it is not there.
@@ -79,7 +89,13 @@ async function hashFileIfPresent(path: string): Promise<string> {
 export async function computeFingerprint(
   inputs: FingerprintInputs,
 ): Promise<Fingerprint> {
-  const { repositoryRoot, headSha, thresholdBytes, authorPolicy } = inputs
+  const {
+    repositoryRoot,
+    headSha,
+    thresholdBytes,
+    authorPolicy,
+    ignoredRevisions,
+  } = inputs
 
   const ignoreRules = JSON.stringify({
     patterns: [...ignoredFilePatterns].sort(),
@@ -94,12 +110,12 @@ export async function computeFingerprint(
     author_policy: authorPolicy,
     blame_options: sha256(BLAME_OPTIONS.join(' ')),
     mailmap: await hashFileIfPresent(join(repositoryRoot, '.mailmap')),
-    // No key for .git-blame-ignore-revs. blame is never given
-    // --ignore-revs-file, so that file is not an input to anything: hashing it
-    // would throw away caches for an edit that cannot change a single number.
-    // N3 wires the flag in, and has to add the key back at the same time --
-    // the flag alone is not enough, because BLAME_OPTIONS changing invalidates
-    // caches once, while editing the file has to keep invalidating them.
+    // The commits being looked past, not the file that names them. Adding one
+    // moves every line it touched to a different author and a different date,
+    // so a cache from before the change describes a question nobody asked --
+    // and the flag appearing in BLAME_OPTIONS would only catch that once,
+    // while the set has to keep being compared every run.
+    ignore_revs: sha256([...ignoredRevisions].sort().join(' ')),
     ignore_rules: sha256(ignoreRules),
   }
 }
@@ -147,6 +163,13 @@ function describeChange(
   }
   if (key === 'ignore_rules') {
     return 'the rules for which files are analysed changed'
+  }
+  if (key === 'ignore_revs') {
+    return stored === EMPTY_IGNORE_REVS
+      ? 'commits were added to .git-blame-ignore-revs'
+      : current === EMPTY_IGNORE_REVS
+        ? 'the commits blame was looking past are gone'
+        : 'the commits blame looks past changed'
   }
   if (key === 'blame_options') {
     return 'the options blame is run with changed'
