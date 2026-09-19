@@ -17,9 +17,13 @@ jobs:
           fetch-tags: true
 
       - name: Setup Bun
+        # Pinned, and deliberately the same version CI verifies against: the
+        # binaries published from here are compiled by this runtime, so
+        # tracking `latest` would ship artifacts built by a version nothing
+        # had tested. Bump it together with the pin in ci.yml.
         uses: oven-sh/setup-bun@v1
         with:
-          bun-version: latest
+          bun-version: 1.3.14
 
       - name: Install dependencies
         run: bun install
