@@ -308,6 +308,26 @@ export class GitService {
   }
 
   /**
+   * The exact commit every git command in this run must be told to read.
+   *
+   * Resolving HEAD once and then passing the symbolic ref to each command
+   * afterwards would let the analysis straddle two revisions: a commit or a
+   * branch switch in another terminal partway through -- and an analysis can
+   * take minutes on a large repository -- would leave the file list, the
+   * blame output and the SHA the UI reports describing different trees.
+   * Pinning to the resolved SHA makes the run atomic with respect to that.
+   */
+  private analysedRevision(): string {
+    const { headSha } = this.analysisContext
+    if (headSha === null) {
+      throw new Error(
+        'No revision was resolved for this analysis; the repository has no commits.',
+      )
+    }
+    return headSha
+  }
+
+  /**
    * Run git and return its stdout, streamed rather than buffered through a
    * shell. `ls-tree` on a large repository can exceed exec's buffer, and a
    * shell would mangle awkward paths on the way back regardless.
@@ -359,7 +379,13 @@ export class GitService {
   private async listHeadFiles(): Promise<HeadFile[]> {
     if (this.analysisContext.headSha === null) return []
 
-    const stdout = await this.runGit(['ls-tree', '-r', '-l', '-z', 'HEAD'])
+    const stdout = await this.runGit([
+      'ls-tree',
+      '-r',
+      '-l',
+      '-z',
+      this.analysedRevision(),
+    ])
     const entries: HeadFile[] = []
 
     for (const record of stdout.split('\0')) {
@@ -426,10 +452,21 @@ export class GitService {
     return new Promise((resolve, reject) => {
       const child = spawn(
         'git',
-        // HEAD, not the working copy: blaming the working copy attributes
-        // unsaved edits to the pseudo-author "Not Committed Yet". `--` keeps a
-        // path that starts with a dash from being read as an option.
-        ['blame', '-w', '--line-porcelain', 'HEAD', '--', filePath],
+        // A commit, not the working copy: blaming the working copy attributes
+        // unsaved edits to the pseudo-author "Not Committed Yet". The resolved
+        // SHA rather than the symbolic ref, so that every file in the run is
+        // blamed against the same tree even if HEAD moves meanwhile -- this
+        // runs once per file, so a symbolic ref could straddle revisions
+        // within a single analysis. `--` keeps a path that starts with a dash
+        // from being read as an option.
+        [
+          'blame',
+          '-w',
+          '--line-porcelain',
+          this.analysedRevision(),
+          '--',
+          filePath,
+        ],
         {
           cwd: this.repoPath,
           stdio: ['pipe', 'pipe', 'pipe'],

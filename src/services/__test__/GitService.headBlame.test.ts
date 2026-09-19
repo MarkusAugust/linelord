@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test'
+import { readFileSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
@@ -217,5 +218,58 @@ describe('GitService - the file list comes from HEAD, not the index', () => {
     const paths = await analysedPaths(repo.path)
 
     expect([...paths.keys()].sort()).toEqual([...awkward].sort())
+  })
+})
+
+describe('GitService - the whole run is pinned to one revision', () => {
+  let repo: TestRepo | undefined
+
+  afterEach(async () => {
+    await repo?.cleanup()
+    repo = undefined
+  })
+
+  it('analyses exactly the tree of the revision it reports', async () => {
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'first',
+      author: GORVEK,
+      write: { 'a.ts': 'const a = 1\n', 'src/b.ts': 'const b = 2\n' },
+    })
+
+    const db = createDatabase()
+    const gitService = new GitService(repo.path, db)
+    await gitService.initialize()
+
+    const reported = gitService.getAnalysisContext().headSha ?? ''
+    const inThatTree = (
+      await repo.git(['ls-tree', '-r', '--name-only', reported])
+    )
+      .trim()
+      .split('\n')
+      .sort()
+    const analysed = (await db.select({ path: files.path }).from(files))
+      .map((row) => row.path)
+      .sort()
+
+    expect(analysed).toEqual(inThatTree)
+  })
+
+  it('passes a resolved commit to git, never the symbolic ref', async () => {
+    // The race this guards against -- HEAD moving partway through a run that
+    // takes minutes on a large repository -- cannot be triggered
+    // deterministically from a test, so the guard is on the source instead.
+    // Blame runs once per file, so a symbolic ref could have straddled two
+    // revisions inside a single analysis.
+    const source = readFileSync(
+      join(import.meta.dir, '..', 'GitService.ts'),
+      'utf8',
+    )
+
+    // Resolving HEAD once is the point; passing it onward is not.
+    expect(source).toContain('git rev-parse HEAD')
+    expect(source).not.toMatch(/'ls-tree',[\s\S]{0,80}'HEAD'/)
+    expect(source).not.toMatch(/'blame',[\s\S]{0,80}'HEAD'/)
+    expect(source).toContain('this.analysedRevision()')
   })
 })
