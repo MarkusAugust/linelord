@@ -49,7 +49,6 @@ export function createDatabase() {
       file_id INTEGER NOT NULL REFERENCES files(id),
       author_id INTEGER NOT NULL REFERENCES authors(id),
       line_number INTEGER NOT NULL,
-      content TEXT,
       commit_hash TEXT,
       commit_date TEXT
     );
