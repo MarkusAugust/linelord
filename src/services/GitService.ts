@@ -1,5 +1,4 @@
 import { exec, spawn } from 'node:child_process'
-import { stat } from 'node:fs/promises'
 import path from 'node:path'
 import { promisify } from 'node:util'
 import { eq } from 'drizzle-orm'
@@ -21,6 +20,12 @@ export interface AnalysisContext {
   headSha: string | null
   /** Tracked files whose working-copy content differs from HEAD and is therefore not counted. */
   uncommittedFileCount: number
+}
+
+/** One blob in the HEAD tree: the path it is stored under, and its size there. */
+interface HeadFile {
+  path: string
+  size: number
 }
 
 export class GitService {
@@ -45,13 +50,7 @@ export class GitService {
 
     this.analysisContext = await this.resolveAnalysisContext()
 
-    // Get all tracked files
-    const { stdout } = await execAsync('git ls-files', {
-      cwd: this.repoPath,
-      maxBuffer: 50 * 1024 * 1024,
-    })
-
-    const allFiles = stdout.trim().split('\n').filter(Boolean)
+    const allFiles = await this.listHeadFiles()
     onProgress?.(10, 100, `Found ${allFiles.length} files`)
 
     // Process files in bigger batches
@@ -76,7 +75,7 @@ export class GitService {
   }
 
   private async processFilesInBatches(
-    allFiles: string[],
+    allFiles: HeadFile[],
     onProgress?: (current: number, total: number, message: string) => void,
   ): Promise<string[]> {
     const filesToAnalyze: string[] = []
@@ -97,36 +96,26 @@ export class GitService {
     for (let i = 0; i < allFiles.length; i += batchSize) {
       const batch = allFiles.slice(i, i + batchSize)
 
-      const batchResults = await Promise.allSettled(
-        batch.map(async (file) => {
-          const fileInfo = await this.getFileInfo(file)
-          const ext = path.extname(file).toLowerCase()
+      for (const file of batch) {
+        const classification = this.classifyFile(file)
+        const ext = path.extname(file.path).toLowerCase()
 
-          return {
-            file,
-            data: {
-              path: file,
-              extension: ext || null,
-              size: fileInfo.size,
-              isBinary: fileInfo.isBinary,
-              isLargerThanThreshold: fileInfo.isLargerThanThreshold,
-              isIgnored: fileInfo.isIgnored,
-              totalLines: 0,
-            },
-            shouldAnalyze:
-              !fileInfo.isBinary &&
-              !fileInfo.isIgnored &&
-              !fileInfo.isLargerThanThreshold,
-          }
-        }),
-      )
+        fileDataBatch.push({
+          path: file.path,
+          extension: ext || null,
+          size: classification.size,
+          isBinary: classification.isBinary,
+          isLargerThanThreshold: classification.isLargerThanThreshold,
+          isIgnored: classification.isIgnored,
+          totalLines: 0,
+        })
 
-      for (const result of batchResults) {
-        if (result.status === 'fulfilled') {
-          fileDataBatch.push(result.value.data)
-          if (result.value.shouldAnalyze) {
-            filesToAnalyze.push(result.value.file)
-          }
+        if (
+          !classification.isBinary &&
+          !classification.isIgnored &&
+          !classification.isLargerThanThreshold
+        ) {
+          filesToAnalyze.push(file.path)
         }
       }
 
@@ -197,47 +186,47 @@ export class GitService {
     }
   }
 
-  private async getFileInfo(filePath: string): Promise<{
+  /**
+   * Decide what to do with one file from HEAD.
+   *
+   * This used to stat the working copy, which was wrong in two ways once the
+   * analysis is defined as HEAD: a file staged for deletion is not on disk at
+   * all, and a modified file reports the size of content that is not being
+   * analysed. The size now comes from the HEAD blob, so there is nothing left
+   * that can fail -- and with it goes the old catch block, which reported an
+   * unreadable file as both binary and ignored, hiding it with no trace.
+   */
+  private classifyFile(file: HeadFile): {
     isBinary: boolean
     isIgnored: boolean
     isLargerThanThreshold: boolean
     size: number
-  }> {
-    const ext = path.extname(filePath).toLowerCase()
+  } {
+    const ext = path.extname(file.path).toLowerCase()
 
-    const isBinary = binaryExts.has(ext)
-    if (isBinary) {
+    if (binaryExts.has(ext)) {
       return {
         isBinary: true,
         isIgnored: false,
         isLargerThanThreshold: false,
-        size: 0,
+        size: file.size,
       }
     }
 
-    const isIgnored = this.isFileIgnored(filePath, ext)
-    if (isIgnored) {
+    if (this.isFileIgnored(file.path, ext)) {
       return {
         isBinary: false,
         isIgnored: true,
         isLargerThanThreshold: false,
-        size: 0,
+        size: file.size,
       }
     }
 
-    try {
-      const fullPath = path.join(this.repoPath, filePath)
-      const stats = await stat(fullPath)
-      const size = stats.size
-      const isLargerThanThreshold = size > this.largeFileThresholdBytes
-      return { isBinary, isIgnored, isLargerThanThreshold, size }
-    } catch {
-      return {
-        isBinary: true,
-        isIgnored: true,
-        isLargerThanThreshold: false,
-        size: 0,
-      }
+    return {
+      isBinary: false,
+      isIgnored: false,
+      isLargerThanThreshold: file.size > this.largeFileThresholdBytes,
+      size: file.size,
     }
   }
 
@@ -319,6 +308,109 @@ export class GitService {
   }
 
   /**
+   * The exact commit every git command in this run must be told to read.
+   *
+   * Resolving HEAD once and then passing the symbolic ref to each command
+   * afterwards would let the analysis straddle two revisions: a commit or a
+   * branch switch in another terminal partway through -- and an analysis can
+   * take minutes on a large repository -- would leave the file list, the
+   * blame output and the SHA the UI reports describing different trees.
+   * Pinning to the resolved SHA makes the run atomic with respect to that.
+   */
+  private analysedRevision(): string {
+    const { headSha } = this.analysisContext
+    if (headSha === null) {
+      throw new Error(
+        'No revision was resolved for this analysis; the repository has no commits.',
+      )
+    }
+    return headSha
+  }
+
+  /**
+   * Run git and return its stdout, streamed rather than buffered through a
+   * shell. `ls-tree` on a large repository can exceed exec's buffer, and a
+   * shell would mangle awkward paths on the way back regardless.
+   */
+  private runGit(args: string[]): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const child = spawn('git', args, {
+        cwd: this.repoPath,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+
+      const chunks: Buffer[] = []
+      let stderr = ''
+
+      child.stdout.on('data', (chunk) => chunks.push(chunk))
+      child.stderr.on('data', (chunk) => {
+        stderr += chunk.toString()
+      })
+      child.on('error', reject)
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve(Buffer.concat(chunks).toString())
+        } else {
+          reject(
+            new Error(
+              `git ${args.join(' ')} failed with code ${code}: ${stderr.trim()}`,
+            ),
+          )
+        }
+      })
+    })
+  }
+
+  /**
+   * The files in HEAD, each with the size its blob has there.
+   *
+   * `git ls-files` lists the index, which is a different set of files. A file
+   * staged for deletion leaves the index while remaining part of HEAD, so it
+   * vanished from an analysis that claims to describe HEAD; a newly staged
+   * file appears in the index with no content in HEAD to blame. Enumerating
+   * HEAD directly settles both.
+   *
+   * -z separates records with NUL, so paths containing spaces, non-ASCII
+   * characters or newlines arrive intact rather than quoted or split. -l
+   * carries the blob size, which replaces a stat() per file against the
+   * working copy -- the wrong content to measure, and absent entirely for a
+   * file staged for deletion.
+   */
+  private async listHeadFiles(): Promise<HeadFile[]> {
+    if (this.analysisContext.headSha === null) return []
+
+    const stdout = await this.runGit([
+      'ls-tree',
+      '-r',
+      '-l',
+      '-z',
+      this.analysedRevision(),
+    ])
+    const entries: HeadFile[] = []
+
+    for (const record of stdout.split('\0')) {
+      if (!record) continue
+
+      // "<mode> <type> <sha> <size>\t<path>", and the path may contain
+      // anything at all, so split on the first tab rather than on whitespace.
+      const tab = record.indexOf('\t')
+      if (tab === -1) continue
+
+      const [, type, , rawSize] = record.slice(0, tab).split(/\s+/)
+      // Submodules appear as commit entries with no size; they hold no lines.
+      if (type !== 'blob') continue
+
+      const size = Number.parseInt(rawSize ?? '', 10)
+      entries.push({
+        path: record.slice(tab + 1),
+        size: Number.isNaN(size) ? 0 : size,
+      })
+    }
+
+    return entries
+  }
+
+  /**
    * Records which revision the analysis describes, and how much of the working
    * copy it deliberately leaves out, so the UI can say so rather than present
    * HEAD's numbers as if they covered unsaved work.
@@ -360,10 +452,21 @@ export class GitService {
     return new Promise((resolve, reject) => {
       const child = spawn(
         'git',
-        // HEAD, not the working copy: blaming the working copy attributes
-        // unsaved edits to the pseudo-author "Not Committed Yet". `--` keeps a
-        // path that starts with a dash from being read as an option.
-        ['blame', '-w', '--line-porcelain', 'HEAD', '--', filePath],
+        // A commit, not the working copy: blaming the working copy attributes
+        // unsaved edits to the pseudo-author "Not Committed Yet". The resolved
+        // SHA rather than the symbolic ref, so that every file in the run is
+        // blamed against the same tree even if HEAD moves meanwhile -- this
+        // runs once per file, so a symbolic ref could straddle revisions
+        // within a single analysis. `--` keeps a path that starts with a dash
+        // from being read as an option.
+        [
+          'blame',
+          '-w',
+          '--line-porcelain',
+          this.analysedRevision(),
+          '--',
+          filePath,
+        ],
         {
           cwd: this.repoPath,
           stdio: ['pipe', 'pipe', 'pipe'],

@@ -24,9 +24,22 @@ import type {
  * - Gorvek the Ironbane
  */
 
+/**
+ * Where a file counts as big enough to leave a scar on whoever works in it.
+ *
+ * This is independent of `--threshold`, and the two interact. GitService never
+ * records blame lines for a file above the threshold, so this clause can only
+ * ever select files between the two numbers: larger than this, smaller than
+ * the threshold. With the default 50 KB threshold that is a wide band and most
+ * battle scars come from it. Set `--threshold` below this and the clause
+ * selects nothing at all, leaving only the extension and path rules -- scars
+ * drop sharply, and that is the analysis working as configured, not a fault.
+ */
+const LEGACY_FILE_SIZE_BYTES = 5000
+
 /** Files that look dangerous enough to leave a mark on whoever works in them. */
 const LEGACY_FILE_CONDITION = sql`(
-  f.size > 5000
+  f.size > ${LEGACY_FILE_SIZE_BYTES}
   OR f.extension IN ('.js', '.php', '.asp', '.jsp')
   OR f.path LIKE '%legacy%'
   OR f.path LIKE '%old%'

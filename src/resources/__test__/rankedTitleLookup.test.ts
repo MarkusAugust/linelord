@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import {
+  getDistributedTitles,
   getRankByTitle,
   getTitleByRank,
   getTitleRange,
@@ -45,5 +46,49 @@ describe('rankedTitles - lookup helpers', () => {
     expect(rankedTitles.every((title) => title === title.toLowerCase())).toBe(
       true,
     )
+  })
+})
+
+describe('rankedTitles - teams larger than the title table', () => {
+  // There are fifty titles. A repository with more contributors than that is
+  // ordinary, and used to be handed the literal string "unknown" as a rank:
+  // 30 of 100 contributors, 110 of 200. Both this and AuthorRankingService
+  // displayed it verbatim.
+  const SIZES = [1, 2, 3, 4, 10, 49, 50, 51, 60, 100, 200, 1000]
+
+  it('gives every contributor a real title, however many there are', () => {
+    const table = new Set(rankedTitles)
+
+    for (const size of SIZES) {
+      const titles = getDistributedTitles(size)
+      expect(titles).toHaveLength(size)
+      expect(titles.filter((title) => !table.has(title))).toEqual([])
+    }
+  })
+
+  it('never lets a better placement earn a worse title', () => {
+    // Titles may repeat once the table runs out, but the sequence must never
+    // move back up the ranking.
+    for (const size of SIZES) {
+      const ranks = getDistributedTitles(size).map(getRankByTitle)
+      const sorted = [...ranks].sort((a, b) => a - b)
+      expect(ranks).toEqual(sorted)
+    }
+  })
+
+  it('still gives the top contributor the best title in the table', () => {
+    for (const size of SIZES) {
+      expect(getDistributedTitles(size)[0]).toBe(rankedTitles[0] ?? '')
+    }
+  })
+
+  it('leaves the distribution unchanged for teams that fit', () => {
+    // The compression only engages once a tier is oversubscribed, so a team
+    // the table can seat must be distributed exactly as it was before.
+    expect(getDistributedTitles(10)).toEqual([
+      ...rankedTitles.slice(0, 2),
+      ...rankedTitles.slice(12, 18),
+      ...rankedTitles.slice(38, 40),
+    ])
   })
 })

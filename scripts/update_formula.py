@@ -29,6 +29,15 @@ URL_SHA = re.compile(
 )
 
 
+def platform_assets(digests):
+    """The published assets a formula is expected to offer.
+
+    checksums.txt is published alongside the binaries and is not a download
+    the formula installs, so it is the one name excluded.
+    """
+    return {name for name in digests if name != "checksums.txt"}
+
+
 def release_digests(tag):
     request = urllib.request.Request(
         f"https://api.github.com/repos/{REPO}/releases/tags/{tag}",
@@ -79,9 +88,11 @@ def main():
 
     missing = []
     changed = []
+    referenced = set()
 
     def substitute(match):
         asset = match.group("asset")
+        referenced.add(asset)
         published = digests.get(asset)
         if published is None:
             missing.append(asset)
@@ -98,6 +109,18 @@ def main():
         sys.exit(
             f"FAIL: {tag} does not publish: {', '.join(sorted(missing))}. "
             "The formula was left untouched."
+        )
+
+    # Counting matches is not enough. If one platform's url/sha pair were
+    # renamed or reshaped, the regex would simply skip it, the other three
+    # would update cleanly, and a formula silently missing a platform would be
+    # committed. Every platform the release publishes has to be accounted for.
+    unreferenced = platform_assets(digests) - referenced
+    if unreferenced:
+        sys.exit(
+            f"FAIL: {tag} publishes {', '.join(sorted(unreferenced))}, which "
+            f"{path} does not offer. Add the url/sha256 pair for it, or stop "
+            "publishing the asset. The formula was left untouched."
         )
 
     open(path, "w", encoding="utf-8").write(updated)

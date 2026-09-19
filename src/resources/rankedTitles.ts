@@ -74,8 +74,33 @@ export const getTitleRange = (startRank: number, endRank: number): string[] => {
   return rankedTitles.slice(startRank, endRank + 1)
 }
 
+/**
+ * Hand out `count` titles from one tier, in rank order.
+ *
+ * When the tier has room for everyone, each developer takes the next title,
+ * which is what this has always done. When there are more developers than
+ * titles, positions are compressed proportionally onto the tier instead.
+ * Walking off the end of the tier is not an option: it used to run past the
+ * table entirely, and every rank beyond title fifty came back as the literal
+ * string "unknown" -- 30 of 100 contributors, 110 of 200, displayed as their
+ * title. Repeating a title in a large team is a cosmetic compromise; telling
+ * someone their rank is "unknown" is a bug.
+ */
+const titlesFromTier = (
+  count: number,
+  start: number,
+  end: number,
+): string[] => {
+  const span = end - start + 1
+
+  return Array.from({ length: count }, (_, index) =>
+    getTitleByRank(
+      start + (count <= span ? index : Math.floor((index * span) / count)),
+    ),
+  )
+}
+
 // Function to get evenly distributed titles based on number of developers
-// Replace the getDistributedTitles function with this:
 export const getDistributedTitles = (numDevs: number): string[] => {
   if (numDevs <= 0) return []
 
@@ -103,24 +128,11 @@ export const getDistributedTitles = (numDevs: number): string[] => {
   const lowbornCount = Math.max(1, Math.floor(numDevs * 0.2))
   const middleCount = numDevs - highbornCount - lowbornCount
 
-  const titles: string[] = []
-
-  // Assign best titles first (in rank order)
-  for (let i = 0; i < highbornCount; i++) {
-    titles.push(getTitleByRank(highbornRange.start + i))
-  }
-
-  // Then middle tier titles
-  for (let i = 0; i < middleCount; i++) {
-    titles.push(getTitleByRank(middleRange.start + i))
-  }
-
-  // Finally lowborn titles
-  for (let i = 0; i < lowbornCount; i++) {
-    titles.push(getTitleByRank(lowbornRange.start + i))
-  }
-
-  return titles
+  return [
+    ...titlesFromTier(highbornCount, highbornRange.start, highbornRange.end),
+    ...titlesFromTier(middleCount, middleRange.start, middleRange.end),
+    ...titlesFromTier(lowbornCount, lowbornRange.start, lowbornRange.end),
+  ]
 }
 
 // Function to get distributed titles with names/assignments
