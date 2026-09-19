@@ -6,9 +6,19 @@ on:
   push:
     tags:
       - 'v*'
+  # Sync the tap to a release that already exists, without building or
+  # publishing anything. This is how you recover when the tap update fails on
+  # its own -- an expired token, most likely -- without re-tagging.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to sync the Homebrew tap to
+        required: true
 
 jobs:
   build-and-release:
+    # Nothing to build when we are only re-syncing the tap.
+    if: github.event_name == 'push'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -76,9 +86,16 @@ jobs:
   update-homebrew-tap:
     name: Update the Homebrew tap
     needs: build-and-release
+    # On a manual run the build is skipped, so `always()` is needed to reach
+    # this job at all -- but a failed build must still stop the tap from being
+    # pointed at a release that was never published.
+    if: >-
+      always()
+      && (github.event_name == 'workflow_dispatch'
+          || needs.build-and-release.result == 'success')
     runs-on: ubuntu-latest
     env:
-      TAG: ${{ github.ref_name }}
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - name: Check the tap token is configured
         env:
