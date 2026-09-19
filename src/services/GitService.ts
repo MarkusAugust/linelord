@@ -42,6 +42,16 @@ type BlameLineInsert = {
   commitDate: string | null
 }
 
+/**
+ * The options every blame invocation uses, apart from the revision and path.
+ *
+ * Exported so the cache fingerprint can hash what is actually run rather than
+ * a copy of it. Adding `-M` or `-C` here changes who owns which line, and a
+ * cache built before the change must not survive it -- which happens on its
+ * own as long as this stays the single source of the arguments.
+ */
+export const BLAME_OPTIONS = ['-w', '--line-porcelain'] as const
+
 /** A file whose blame could not be read, kept for the UI to report. */
 export interface AnalysisFailure {
   path: string
@@ -587,14 +597,7 @@ export class GitService {
         // runs once per file, so a symbolic ref could straddle revisions
         // within a single analysis. `--` keeps a path that starts with a dash
         // from being read as an option.
-        [
-          'blame',
-          '-w',
-          '--line-porcelain',
-          this.analysedRevision(),
-          '--',
-          filePath,
-        ],
+        ['blame', ...BLAME_OPTIONS, this.analysedRevision(), '--', filePath],
         {
           cwd: this.repoPath,
           stdio: ['pipe', 'pipe', 'pipe'],

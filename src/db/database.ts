@@ -6,6 +6,16 @@ import * as schema from './schema'
 
 export const IN_MEMORY = ':memory:'
 
+/**
+ * The shape of the database, as distinct from the analysis that fills it.
+ *
+ * Bump this when the tables or indexes change. An old cache is then unreadable
+ * rather than merely out of date, so the two are kept apart: a schema change
+ * need not mean the analysis would produce different answers, and an analysis
+ * change need not touch the tables.
+ */
+export const SCHEMA_VERSION = 1
+
 export interface CreateDatabaseOptions {
   /**
    * Where the database lives. `:memory:` keeps the current behaviour, in which
