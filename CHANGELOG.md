@@ -10,6 +10,20 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.8.0] — 2026-09-19
+
+The first release since this changelog began, and it carries the whole of the
+correctness work: a repository analysed with 0.7.2 and with this will not give
+the same answer. Where the numbers moved, they moved because the old ones were
+wrong. The entries below say which, and why.
+
+Two changes are worth knowing about before upgrading. Identities are no longer
+guessed, so a repository where the guessing was merging people will show more
+contributors than it did — that is the correction, not a regression. And the
+stored analysis is rebuilt once, because the database layout changed.
+
 ### Fixed — the numbers
 
 - **A line's number is the number it has in the file.** Blank lines belong to
@@ -223,5 +237,6 @@ because the earlier answer was wrong.
 Earlier releases predate this changelog. See the
 [releases page](https://github.com/MarkusAugust/linelord/releases).
 
-[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/MarkusAugust/linelord/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/MarkusAugust/linelord/releases/tag/v0.7.2
