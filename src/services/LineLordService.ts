@@ -18,7 +18,10 @@ import {
   resolveHead,
 } from '../utility/gitRepository'
 import { AnalysisService } from './AnalysisService'
-import { AuthorNormalizationService } from './AuthorNormalizationService'
+import {
+  AuthorNormalizationService,
+  type IdentityMerge,
+} from './AuthorNormalizationService'
 import { AuthorRankingService } from './AuthorRankingService'
 import {
   type AuthorPolicy,
@@ -464,5 +467,16 @@ export class LineLordService {
   /** Files the analysis could not read. Empty when everything was analysed. */
   getFailures(): AnalysisFailure[] {
     return this.gitService.getFailures()
+  }
+
+  /**
+   * Identities the run decided were one person, and why.
+   *
+   * Empty under the default policy, which merges only identical addresses.
+   * Under `--fuzzy-authors` this is the record of every assumption made, so
+   * the user can see them rather than take them.
+   */
+  getIdentityMerges(): IdentityMerge[] {
+    return this.normalizationService.getMerges()
   }
 }

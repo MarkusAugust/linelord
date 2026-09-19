@@ -80,6 +80,10 @@ export default function App({
     ? lineLordService.getCacheStatus()
     : undefined
 
+  const identityMerges = lineLordService?.isInitialized()
+    ? lineLordService.getIdentityMerges()
+    : []
+
   const handleMenuSelect = (option: MenuOption) => {
     if (option.value === 'exit') {
       clearTerminal()
@@ -178,6 +182,44 @@ export default function App({
                       ? `Analysed everything again: ${cache.reason}`
                       : `Analysed ${cache.filesBlamed} file${cache.filesBlamed === 1 ? '' : 's'}`}
               </Text>
+            )}
+
+            {/*
+              Every assumption --fuzzy-authors made, shown rather than taken.
+              A guess nobody can inspect is a guess nobody can correct, and
+              these decide whose work is whose.
+            */}
+            {identityMerges.length > 0 && (
+              <Box flexDirection="column" marginTop={1}>
+                <Text color="yellow">
+                  ⚠ Guessed that {identityMerges.length} contributor
+                  {identityMerges.length === 1 ? '' : 's'} committed under more
+                  than one address:
+                </Text>
+                {identityMerges.slice(0, 3).map((merge) => (
+                  <Box key={merge.canonical.email} flexDirection="column">
+                    <Text color="gray">
+                      {'  '}
+                      {merge.canonical.name} &lt;{merge.canonical.email}&gt;
+                    </Text>
+                    {merge.absorbed.map((absorbed) => (
+                      <Text key={absorbed.email} color="gray">
+                        {'    ← '}
+                        {absorbed.email} — {absorbed.reason}
+                      </Text>
+                    ))}
+                  </Box>
+                ))}
+                {identityMerges.length > 3 && (
+                  <Text color="gray">
+                    {'  '}… and {identityMerges.length - 3} more
+                  </Text>
+                )}
+                <Text color="gray">
+                  {'  '}Run with --write-mailmap to record the ones that are
+                  right.
+                </Text>
+              </Box>
             )}
 
             {/*

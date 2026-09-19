@@ -19,7 +19,7 @@ LineLord is a mighty CLI tool forged in the fires of the Ashen Vale, wielding th
 ### 🏰 Features Fit for a Galdane Warrior
 
 - **🗡️ Native Git Power**: Uses git commands and an in-memory SQLite index — works anywhere git draws breath
-- **🧠 Honest Author Identity**: One person is one email address, and `.mailmap` is how you say otherwise — no guessing who is who
+- **🧠 Honest Author Identity**: One person is one email address, and `.mailmap` is how you say otherwise — no guessing who is who, and `--write-mailmap` to draft the file for you
 - **📊 Comprehensive Battle Reports**: File-level ownership, project statistics, and developer rankings
 - **⚡ Lightning-Fast Analysis**: Parallel processing that would make Horn's volcanic forge proud
 - **🎯 Smart Filtering**: Analyses tracked files only, and sets aside binaries, generated files and anything over the size threshold
@@ -261,6 +261,49 @@ Different people, and one of each pair then vanished from the ranking while the
 other was credited with their work. Use it to find candidates for a `.mailmap`,
 not to trust the output.
 
+### Writing the `.mailmap` for you
+
+Finding the candidates by hand is tedious, so LineLord will do the tedious part:
+
+```bash
+linelord --write-mailmap
+```
+
+It runs the guessing, prints every line it is about to write, appends the new
+ones to the repository's `.mailmap`, and stops without opening the interface:
+
+```
+  + Gorvek the Ironbane <gorvek@firma.no> <gorvek@privat.no>
+  = Sister Nightshroud <night@alderstone.realm> <nightshroud@old.example>
+⚔️  Wrote 1 line to /home/gorvek/code/saga/.mailmap.
+💡 These are guesses. Read them, delete the wrong ones, and they will
+   never have to be guessed again.
+```
+
+`+` is a line that was added, `=` one the file already had. Nothing is ever
+overwritten or removed: entries you wrote by hand stay exactly as they are, and
+a wrong guess is a line to delete, not a decision to undo.
+
+Read what it wrote before committing it. The guessing that produced these lines
+is the same guessing that merges `erik.hansen@` with `erika.hansen@`, and the
+point of the file is that a person, not a heuristic, decided.
+
+Once a line is in `.mailmap`, `git blame` applies it and the guess is never
+made again — running `--write-mailmap` a second time says there is nothing left
+to write, because there genuinely is not.
+
+Even without the flag, the menu screen says when the default run *would* have
+merged someone, along with the reason for each guess:
+
+```
+⚠ Guessed that 1 contributor committed under more than one address:
+  Gorvek the Ironbane <gorvek@firma.no>
+    ← gorvek@privat.no — the names "Gorvek the Ironbane" and "Gorvek Ironbane" are alike
+  Run linelord --write-mailmap to record these in .mailmap.
+```
+
+Nothing is merged on the strength of that guess — it is shown so you can decide.
+
 ### When one warrior appears twice
 
 Someone who has committed from a work machine and a personal one, or before and
@@ -287,7 +330,9 @@ Gorvek the Ironbane <gorvek@firma.no> <4711+gorvek@users.noreply.github.com>
 - **Medium repos (100-1000 files)**: Swift as Gorvek's blade 🗡️
 - **Large repos (1000+ files)**: Worthy of a Galdane warrior's patience 🏰
 - **Within one run**: The blame data is held in memory, so moving between screens is instant
-- **Between runs**: Nothing is kept. Every launch re-analyses the repository from scratch
+- **Between runs**: The analysis is cached on disk, so a repository that has not
+  moved opens at once, and one that has moved re-reads only the files that
+  changed. `--no-cache` and `--refresh` turn that off; see [Cache control](#advanced-usage---master-the-battlefield)
 
 ## 🗡️ Contributing to the Saga
 

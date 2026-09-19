@@ -97,6 +97,27 @@ because the earlier answer was wrong.
 
 ### Added
 
+- **`--write-mailmap` writes down what the guessing found.** Turning
+  `--fuzzy-authors` off left a real chore behind: the honest answer to "one
+  person, several addresses" is a `.mailmap`, and working out what belongs in
+  it meant reading a contributor list and typing the lines by hand. The flag
+  runs the guessing, prints every line, appends the new ones to the
+  repository's `.mailmap`, and stops. Lines that were already there are shown
+  but not repeated, and nothing is ever overwritten or removed — a wrong guess
+  is a line to delete.
+
+  They are guesses, and the output says so. The point is that a person reads
+  them before they are committed. Once a line is in the file, `git blame`
+  applies it and the guess is never made again, so a second run has nothing
+  left to write.
+
+- **The menu screen says when a guess *would* have been made.** Under the
+  default nothing is merged, which is right but silent: two entries for the
+  same person look like two people and there is no hint that LineLord noticed.
+  It now lists the contributors a loose run would have merged, with the reason
+  for each — `the names "Gorvek the Ironbane" and "Gorvek Ironbane" are alike`
+  — and points at `--write-mailmap`. It still merges nothing.
+
 - **The analysis is kept between runs.** It used to be thrown away when the
   process exited, so every launch read the whole repository again. A run that
   finds nothing has changed now reuses what it stored; a run after a few

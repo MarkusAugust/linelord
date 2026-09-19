@@ -3,8 +3,31 @@ import { distance } from 'fastest-levenshtein'
 import type { LineLordDatabase } from '../db/database'
 import { type Author, authorAliases, authors, blameLines } from '../db/schema'
 
+/** One person the guessing decided several identities add up to. */
+export interface IdentityMerge {
+  canonical: { name: string; email: string }
+  absorbed: Array<{ name: string; email: string; reason: string }>
+}
+
 export class AuthorNormalizationService {
+  private merges: IdentityMerge[] = []
+
   constructor(private db: LineLordDatabase) {}
+
+  /**
+   * What the last run decided to merge, and why.
+   *
+   * Empty under the default policy, which merges only identical addresses and
+   * so has nothing to explain. Under guessing this is the whole record of what
+   * was assumed -- the material for a .mailmap, and the only way anyone can
+   * check whether the assumption was right.
+   */
+  getMerges(): IdentityMerge[] {
+    return this.merges.map((merge) => ({
+      canonical: { ...merge.canonical },
+      absorbed: merge.absorbed.map((one) => ({ ...one })),
+    }))
+  }
 
   /**
    * Group the identities in the database into people.
@@ -37,6 +60,7 @@ export class AuthorNormalizationService {
     // records every alias again, and the contributor list ends up reading
     // "also committed as gorvek, gorvek, gorvek".
     await this.db.delete(authorAliases)
+    this.merges = []
 
     const allAuthors = await this.db.select().from(authors)
 
@@ -80,28 +104,48 @@ export class AuthorNormalizationService {
       if (processed.has(author.id)) continue
 
       const similarAuthors = [author]
+      const reasons = new Map<number, string>()
       processed.add(author.id)
 
       for (const otherAuthor of allAuthors) {
         if (processed.has(otherAuthor.id)) continue
 
-        if (this.areAuthorsSimilar(author, otherAuthor)) {
+        const reason = this.whyAuthorsMatch(author, otherAuthor)
+        if (reason) {
           similarAuthors.push(otherAuthor)
+          reasons.set(otherAuthor.id, reason)
           processed.add(otherAuthor.id)
         }
       }
 
       if (similarAuthors.length > 1) {
-        await this.mergeAuthors(similarAuthors)
+        const canonical = await this.mergeAuthors(similarAuthors)
+        this.merges.push({
+          canonical: { name: canonical.displayName, email: canonical.email },
+          absorbed: similarAuthors
+            .filter((candidate) => candidate.id !== canonical.id)
+            .map((candidate) => ({
+              name: candidate.displayName,
+              email: candidate.email,
+              reason: reasons.get(candidate.id) ?? 'they were taken to be one',
+            })),
+        })
       } else {
         await this.makeCanonical(author)
       }
     }
   }
 
-  private areAuthorsSimilar(author1: Author, author2: Author): boolean {
+  /**
+   * Why two rows were taken to be one person, or null if they were not.
+   *
+   * The reason is returned rather than a yes, because a guess nobody can
+   * inspect is a guess nobody can correct. It is what the interface shows and
+   * what --write-mailmap turns into a file.
+   */
+  private whyAuthorsMatch(author1: Author, author2: Author): string | null {
     if (author1.email.toLowerCase() === author2.email.toLowerCase()) {
-      return true
+      return 'the same address, written differently'
     }
 
     const name1 = this.cleanName(author1.name)
@@ -118,7 +162,9 @@ export class AuthorNormalizationService {
 
     for (const [n1, n2] of namePairs) {
       if (n1 && n2 && this.areStringsSimilar(n1, n2, false)) {
-        return true
+        return n1 === n2
+          ? 'the same name'
+          : `the names "${n1}" and "${n2}" are alike`
       }
     }
 
@@ -133,11 +179,11 @@ export class AuthorNormalizationService {
       const email2Prefix = email2Parts[0]?.toLowerCase() || ''
 
       if (this.areStringsSimilar(email1Prefix, email2Prefix, true)) {
-        return true
+        return `the addresses "${email1Prefix}" and "${email2Prefix}" are alike at ${email1Domain}`
       }
     }
 
-    return false
+    return null
   }
 
   private areStringsSimilar(
@@ -189,7 +235,7 @@ export class AuthorNormalizationService {
       .toLowerCase()
   }
 
-  private async mergeAuthors(authorsToMerge: Author[]): Promise<void> {
+  private async mergeAuthors(authorsToMerge: Author[]): Promise<Author> {
     const canonical = this.chooseBestCanonical(authorsToMerge)
 
     await this.db
@@ -224,6 +270,8 @@ export class AuthorNormalizationService {
           .where(eq(blameLines.authorId, author.id))
       }
     }
+
+    return canonical
   }
 
   private chooseBestCanonical(authors: Author[]): Author {

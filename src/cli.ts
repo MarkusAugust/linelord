@@ -8,8 +8,10 @@ import App from './App'
 import { resolveCachePath } from './db/cacheLocation'
 import { removeAllCaches, removeCacheFor } from './db/cacheMaintenance'
 import { CLI_HELP } from './resources/cliHelp'
+import { LineLordService } from './services/LineLordService'
 import { expandTilde, validateThresholdKB } from './utility/cliValidation'
 import { findRepositoryRoot } from './utility/gitRepository'
+import { writeMailmap } from './utility/mailmap'
 
 const cli = meow(CLI_HELP, {
   importMeta: import.meta,
@@ -45,6 +47,10 @@ const cli = meow(CLI_HELP, {
       default: false,
     },
     fuzzyAuthors: {
+      type: 'boolean',
+      default: false,
+    },
+    writeMailmap: {
       type: 'boolean',
       default: false,
     },
@@ -133,6 +139,7 @@ if (!thresholdCheck.ok) {
 }
 
 const thresholdKB = thresholdCheck.thresholdKB
+const thresholdBytes = thresholdKB * 1024
 
 // This one does concern a particular repository, so it stays behind the
 // resolution that establishes which.
@@ -147,6 +154,37 @@ if (cli.flags.clearCache) {
 }
 
 // Pass repoPath to your existing App component
+// Writing a .mailmap is a job in itself, and it needs the guessing switched on
+// -- there is nothing to write down otherwise. Do it, say what was written,
+// and stop, rather than opening a screen that reports the state before it.
+if (cli.flags.writeMailmap) {
+  const service = new LineLordService(repoPath, thresholdBytes, {
+    authorPolicy: 'loose',
+  })
+  await service.initialize()
+
+  const merges = service.getIdentityMerges()
+  const result = await writeMailmap(repoPath, merges)
+
+  if (result.added.length === 0 && result.alreadyPresent.length === 0) {
+    console.log('⚔️  Nothing to write: every contributor has one address.')
+  } else {
+    for (const line of result.added) console.log(`  + ${line}`)
+    for (const line of result.alreadyPresent) console.log(`  = ${line}`)
+    console.log(
+      result.added.length === 0
+        ? `⚔️  ${result.path} already says all of this.`
+        : `⚔️  Wrote ${result.added.length} line${result.added.length === 1 ? '' : 's'} to ${result.path}.`,
+    )
+    console.log(
+      '💡 These are guesses. Read them, delete the wrong ones, and they will',
+    )
+    console.log('   never have to be guessed again.')
+  }
+
+  process.exit(0)
+}
+
 const element = React.createElement(App, {
   repoPath: repoPath,
   thresholdKB: thresholdKB,

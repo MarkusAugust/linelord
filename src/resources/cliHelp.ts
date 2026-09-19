@@ -16,6 +16,7 @@ export const CLI_HELP = `
 ║   --clear-cache    Forget this repository's stored analysis  ║
 ║   --clear-all-caches  Forget every repository's              ║
 ║   --fuzzy-authors  Guess which identities are one person     ║
+║   --write-mailmap  Write those guesses to .mailmap           ║
 ║   --help           Show this help                            ║
 ║                                                              ║
 ║ EXAMPLES:                                                    ║
