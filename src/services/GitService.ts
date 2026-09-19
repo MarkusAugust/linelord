@@ -5,7 +5,6 @@ import { eq } from 'drizzle-orm'
 import type { LineLordDatabase } from '../db/database'
 import { authors, blameLines, files } from '../db/schema'
 import {
-  binaryExts,
   ignoredFileExtensions,
   isIgnoredByPattern,
 } from '../resources/ignoreFiles'
@@ -87,9 +86,13 @@ export class GitService {
     const allFiles = await this.listHeadFiles()
     onProgress?.(10, 100, `Found ${allFiles.length} files`)
 
+    const textPaths =
+      allFiles.length > 0 ? await this.listTextFiles() : new Set<string>()
+
     // Process files in bigger batches
     const filesToAnalyze = await this.processFilesInBatches(
       allFiles,
+      textPaths,
       onProgress,
     )
 
@@ -110,6 +113,7 @@ export class GitService {
 
   private async processFilesInBatches(
     allFiles: HeadFile[],
+    textPaths: Set<string>,
     onProgress?: (current: number, total: number, message: string) => void,
   ): Promise<string[]> {
     const filesToAnalyze: string[] = []
@@ -131,7 +135,7 @@ export class GitService {
       const batch = allFiles.slice(i, i + batchSize)
 
       for (const file of batch) {
-        const classification = this.classifyFile(file)
+        const classification = this.classifyFile(file, textPaths)
         const ext = path.extname(file.path).toLowerCase()
 
         fileDataBatch.push({
@@ -230,7 +234,10 @@ export class GitService {
    * that can fail -- and with it goes the old catch block, which reported an
    * unreadable file as both binary and ignored, hiding it with no trace.
    */
-  private classifyFile(file: HeadFile): {
+  private classifyFile(
+    file: HeadFile,
+    textPaths: Set<string>,
+  ): {
     isBinary: boolean
     isIgnored: boolean
     isLargerThanThreshold: boolean
@@ -238,7 +245,10 @@ export class GitService {
   } {
     const ext = path.extname(file.path).toLowerCase()
 
-    if (binaryExts.has(ext)) {
+    // An empty file has no line for `git grep` to match, so it is absent from
+    // the text set without being binary. It has nothing to count either way,
+    // but calling it binary would be a lie told in the statistics.
+    if (file.size > 0 && !textPaths.has(file.path)) {
       return {
         isBinary: true,
         isIgnored: false,
@@ -450,6 +460,46 @@ export class GitService {
    * working copy -- the wrong content to measure, and absent entirely for a
    * file staged for deletion.
    */
+  /**
+   * The paths git itself considers text at the given revision.
+   *
+   * Binary detection used to be extension matching against a fixed list, and
+   * it was wrong in both directions. A binary file with an unknown extension,
+   * or no extension at all, was blamed as text and contributed invented lines
+   * to a real author: a 3 KB blob produced thirteen of them. Meanwhile .svg
+   * sat on the list, so every SVG -- which is XML somebody wrote -- was thrown
+   * out as binary.
+   *
+   * git already makes this judgement, using the same rule it applies when
+   * deciding whether to print a diff, and it honours any override in
+   * .gitattributes. Asking it costs one command; on this repository, nine
+   * milliseconds.
+   */
+  private async listTextFiles(): Promise<Set<string>> {
+    const revision = this.analysedRevision()
+    // -I drops what git calls binary, -e '' matches every line of what
+    // remains, and -z keeps awkward paths intact on the way back.
+    const stdout = await this.runGit([
+      'grep',
+      '-I',
+      '-z',
+      '--name-only',
+      '--full-name',
+      '-e',
+      '',
+      revision,
+    ])
+
+    const prefix = `${revision}:`
+    const paths = new Set<string>()
+    for (const record of stdout.split('\0')) {
+      if (record.startsWith(prefix)) {
+        paths.add(record.slice(prefix.length))
+      }
+    }
+    return paths
+  }
+
   private async listHeadFiles(): Promise<HeadFile[]> {
     if (this.analysisContext.headSha === null) return []
 

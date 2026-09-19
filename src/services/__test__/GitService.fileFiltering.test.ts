@@ -196,3 +196,90 @@ describe('GitService - which files are analysed', () => {
     expect(byPath.get('cmd/server.test')?.isIgnored).toBe(true)
   })
 })
+
+describe('GitService - git decides what is binary', () => {
+  let repo: TestRepo | undefined
+
+  afterEach(async () => {
+    await repo?.cleanup()
+    repo = undefined
+  })
+
+  /** 3 KB of every byte value, which git recognises as binary immediately. */
+  const BINARY = new Uint8Array(
+    Array.from({ length: 3000 }, (_, index) => index % 256),
+  )
+
+  it('excludes a binary file with an unknown extension, or none at all', async () => {
+    // Extension matching against a fixed list missed both of these, and each
+    // then contributed thirteen invented lines to a real author. Ownership and
+    // line counts were wrong by however much binary the repository carried.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'binaries the extension list never heard of',
+      write: {
+        data: BINARY,
+        'model.onnx': BINARY,
+        'src/a.ts': 'const a = 1\n',
+      },
+    })
+
+    const { byPath, blamedFileCount } = await analyse(repo.path)
+
+    expect(byPath.get('data')?.isBinary).toBe(true)
+    expect(byPath.get('model.onnx')?.isBinary).toBe(true)
+    expect(byPath.get('data')?.totalLines).toBe(0)
+    expect(blamedFileCount).toBe(1)
+  })
+
+  it('analyses an SVG, which is text somebody wrote', async () => {
+    // The other direction of the same mistake: .svg was on the binary list, so
+    // every SVG in every repository was discarded as though it were a blob.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'markup is not a blob',
+      write: {
+        'logo.svg':
+          '<svg xmlns="http://www.w3.org/2000/svg">\n  <rect/>\n</svg>\n',
+      },
+    })
+
+    const { byPath } = await analyse(repo.path)
+
+    expect(byPath.get('logo.svg')?.isBinary).toBeFalsy()
+    expect(byPath.get('logo.svg')?.totalLines).toBe(3)
+  })
+
+  it('does not call an empty file binary', async () => {
+    // An empty file has no line for git grep to match, so it is absent from
+    // the text set. It has nothing to count either way, but recording it as
+    // binary would be a lie told in the statistics.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'nothing at all',
+      write: { 'empty.txt': '', 'src/a.ts': 'const a = 1\n' },
+    })
+
+    const { byPath } = await analyse(repo.path)
+
+    expect(byPath.get('empty.txt')?.isBinary).toBeFalsy()
+    expect(byPath.get('empty.txt')?.totalLines).toBe(0)
+  })
+
+  it('still sees binary files whose paths are awkward', async () => {
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'awkward binary',
+      write: {
+        'assets/bilde uten endelse': BINARY,
+        'assets/åpen fil.bin': BINARY,
+        'src/a.ts': 'const a = 1\n',
+      },
+    })
+
+    const { byPath } = await analyse(repo.path)
+
+    expect(byPath.get('assets/bilde uten endelse')?.isBinary).toBe(true)
+    expect(byPath.get('assets/åpen fil.bin')?.isBinary).toBe(true)
+  })
+})
