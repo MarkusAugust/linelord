@@ -65,15 +65,27 @@ if (!existsSync(resolvedPath)) {
 // directory that was not a repository produced an empty analysis rather than
 // an error, and a subdirectory produced a partial one labelled as the whole
 // repository.
-const repoPath = await findRepositoryRoot(resolvedPath)
+const lookup = await findRepositoryRoot(resolvedPath)
 
-if (!repoPath) {
+if (!lookup.found) {
+  // Two different problems with two different fixes, so they get two
+  // different messages rather than one that hedges between them.
+  if (lookup.reason === 'git-unavailable') {
+    exitWithError(
+      'git could not be run.',
+      'LineLord reads history by running git, so git has to be installed and on your PATH.',
+      'Check with: git --version',
+    )
+  }
+
   exitWithError(
     `Not a git repository: ${resolvedPath}`,
     'LineLord reads history with git blame, so it needs a repository to read.',
     'Run it inside one, or pass a path: linelord /path/to/repo',
   )
 }
+
+const repoPath = lookup.root
 
 const thresholdCheck = validateThresholdKB(cli.flags.threshold)
 
