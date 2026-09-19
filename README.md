@@ -141,7 +141,10 @@ _"These are the true scrolls of power! Written by mortal hands with sweat and bl
 
 _"What Galdane warrior has time for scrolls that weigh more than a war hammer? LineLord casts aside these digital beasts, for they are likely the work of Zytera's corruption and code generation, not true craftsmanship!"_
 
-- ❌ Binary files (auto-detected)
+- ❌ Binary files — git decides, by the same rule it uses when choosing whether
+  to show you a diff. If `git diff` prints the contents, LineLord counts them;
+  if it says `Binary files differ`, it does not. That means SVG counts, being
+  markup somebody wrote, and a blob with an unfamiliar extension does not
 - ❌ Generated files (package-lock.json, yarn.lock, etc.) — matched as proper
   globs, so a directory is excluded only when a whole path segment matches;
   `checkout/` is not `out/`
@@ -149,6 +152,14 @@ _"What Galdane warrior has time for scrolls that weigh more than a war hammer? L
 - ❌ Untracked files — only what git tracks is analysed, so whatever `.gitignore` keeps out of the repository is already out of scope
 - ❌ **Bloated files (configurable threshold, default: 50KB)**
 - ❌ **Blank lines (banished from the realm)**
+
+Disagree with a verdict? `.gitattributes` settles it, for git and LineLord
+alike:
+
+```gitattributes
+generated.sql binary     # count it as a blob, though it is text
+weird.dat     diff       # count it as text, though git would guess otherwise
+```
 - ❌ **Uncommitted changes** — analysis runs against `HEAD`, so unsaved edits in your working copy are never counted and never attributed to anyone
 
 ## ⚔️ Brutal Barbarian Rankings
