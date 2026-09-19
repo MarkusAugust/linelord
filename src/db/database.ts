@@ -14,7 +14,7 @@ export const IN_MEMORY = ':memory:'
  * need not mean the analysis would produce different answers, and an analysis
  * change need not touch the tables.
  */
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 export interface CreateDatabaseOptions {
   /**
@@ -22,6 +22,40 @@ export interface CreateDatabaseOptions {
    * the analysis exists only for the life of the process.
    */
   path?: string
+}
+
+/**
+ * Throw away a cache file whose tables were laid out by a different version.
+ *
+ * The fingerprint already refuses to *reuse* such a cache, but refusing to
+ * reuse it is not the same as being able to write it: `CREATE TABLE IF NOT
+ * EXISTS` leaves a table that exists alone, missing columns and all, so the
+ * run that rebuilds the analysis inserts into the old layout and every file
+ * fails. Nothing of value is lost by dropping it -- a cache from another
+ * version was never going to be read again.
+ */
+function discardIfWrittenByAnotherVersion(sqlite: Database): void {
+  // SQLite keeps this number in the file header, for exactly this purpose. It
+  // is a property of the file rather than a row in it, so emptying the tables
+  // does not disturb it and a caller need not remember to write it.
+  const row = sqlite
+    .query<{ user_version: number }, []>('PRAGMA user_version')
+    .get()
+  const stored = row?.user_version ?? 0
+
+  if (stored === SCHEMA_VERSION) return
+
+  // Zero is both a brand-new file and one written before this stamp existed.
+  // Dropping is right for the second and a no-op for the first.
+
+  sqlite.exec(`
+    PRAGMA foreign_keys = OFF;
+    DROP TABLE IF EXISTS blame_lines;
+    DROP TABLE IF EXISTS author_aliases;
+    DROP TABLE IF EXISTS authors;
+    DROP TABLE IF EXISTS files;
+    DROP TABLE IF EXISTS meta;
+  `)
 }
 
 export function createDatabase(options: CreateDatabaseOptions = {}) {
@@ -48,6 +82,8 @@ export function createDatabase(options: CreateDatabaseOptions = {}) {
       PRAGMA busy_timeout = 5000;
     `)
   }
+
+  if (onDisk) discardIfWrittenByAnotherVersion(sqlite)
 
   // Create tables with foreign key handling
   sqlite.exec(`
@@ -92,7 +128,7 @@ export function createDatabase(options: CreateDatabaseOptions = {}) {
       author_id INTEGER NOT NULL REFERENCES authors(id),
       line_number INTEGER NOT NULL,
       commit_hash TEXT,
-      commit_date TEXT
+      commit_timestamp INTEGER
     );
     
     -- Everything the cache needs to decide whether it may be reused: the
@@ -111,6 +147,10 @@ export function createDatabase(options: CreateDatabaseOptions = {}) {
     CREATE INDEX IF NOT EXISTS idx_author_aliases_canonical ON author_aliases(canonical_author_id);
   `)
 
+  // Stamped after the tables exist, so a file that fails halfway through
+  // creation is not marked as though it had succeeded.
+  sqlite.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`)
+
   return db
 }
 
@@ -122,6 +162,9 @@ export function createDatabase(options: CreateDatabaseOptions = {}) {
  * leave a description of data that is no longer there. The caller that empties
  * the database to analyse a different repository would then be handed the
  * previous repository's fingerprint as though it were its own.
+ *
+ * The layout version is not in meta and so is not touched: it describes the
+ * shape of the tables, which emptying them does not change.
  */
 export function clearDatabase(db: LineLordDatabase) {
   db.delete(schema.blameLines).run()

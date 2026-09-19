@@ -47,9 +47,19 @@ export const blameLines = sqliteTable('blame_lines', {
   authorId: integer('author_id')
     .notNull()
     .references(() => authors.id),
+  /** Line number in the revision analysed, counting from 1. */
   lineNumber: integer('line_number').notNull(),
   commitHash: text('commit_hash'),
-  commitDate: text('commit_date'),
+  /**
+   * Author time of the commit, in whole seconds since the epoch.
+   *
+   * A number rather than the ISO string this used to be. Every question worth
+   * asking of it is arithmetic -- how old is this line, which half of the
+   * codebase is older than the other -- and string comparison only answers
+   * those by accident, for as long as every value keeps the same format and
+   * the same timezone.
+   */
+  commitTimestamp: integer('commit_timestamp'),
 })
 
 /**
