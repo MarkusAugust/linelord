@@ -3,8 +3,90 @@ import { distance } from 'fastest-levenshtein'
 import type { LineLordDatabase } from '../db/database'
 import { type Author, authorAliases, authors, blameLines } from '../db/schema'
 
+/** One person the guessing decided several identities add up to. */
+export interface IdentityMerge {
+  canonical: { name: string; email: string }
+  absorbed: Array<{ name: string; email: string; reason: string }>
+}
+
+/** The parts of an identity the matching actually looks at. */
+type IdentityRow = { name: string; displayName: string; email: string }
+
 export class AuthorNormalizationService {
   constructor(private db: LineLordDatabase) {}
+
+  /**
+   * What a guessing run would merge, without merging anything.
+   *
+   * This is a question asked of the stored authors rather than a record of
+   * what some earlier call happened to do, and that is the point: under the
+   * default policy nothing is merged, so there would otherwise be nothing to
+   * report -- and a run that reuses its cache never calls the normalisation at
+   * all. Both of those are exactly when a user is looking at two entries for
+   * one person and wondering why.
+   */
+  async findIdentityGuesses(): Promise<IdentityMerge[]> {
+    const canonicalAuthors = (await this.db.select().from(authors)).filter(
+      (author) => author.isCanonical,
+    )
+
+    const guesses: IdentityMerge[] = []
+    for (const group of this.groupByGuess(canonicalAuthors)) {
+      if (group.members.length < 2) continue
+      guesses.push(
+        this.describeGroup(
+          group.members,
+          this.chooseBestCanonical(group.members),
+          group.reasons,
+        ),
+      )
+    }
+    return guesses
+  }
+
+  /**
+   * Identities that were merged, read back from what the merging wrote down.
+   *
+   * The alias rows survive in the cache, so this answers the same question
+   * after a reused run as after the run that did the work. The reason is
+   * worked out again rather than stored, by the function that made the
+   * decision in the first place.
+   */
+  async describeExistingMerges(): Promise<IdentityMerge[]> {
+    const allAuthors = await this.db.select().from(authors)
+    const byId = new Map(allAuthors.map((author) => [author.id, author]))
+    const aliases = await this.db.select().from(authorAliases)
+
+    const merges = new Map<number, IdentityMerge>()
+    for (const alias of aliases) {
+      const canonical = byId.get(alias.canonicalAuthorId)
+      if (!canonical) continue
+
+      let merge = merges.get(canonical.id)
+      if (!merge) {
+        merge = {
+          canonical: { name: canonical.displayName, email: canonical.email },
+          absorbed: [],
+        }
+        merges.set(canonical.id, merge)
+      }
+
+      const absorbed: IdentityRow = {
+        name: alias.aliasName,
+        displayName: alias.aliasName,
+        email: alias.aliasEmail,
+      }
+      merge.absorbed.push({
+        name: alias.aliasName,
+        email: alias.aliasEmail,
+        reason:
+          this.whyAuthorsMatch(canonical, absorbed) ??
+          'they were taken to be one',
+      })
+    }
+
+    return [...merges.values()]
+  }
 
   /**
    * Group the identities in the database into people.
@@ -74,34 +156,100 @@ export class AuthorNormalizationService {
   }
 
   private async normalizeByFuzzyMatching(allAuthors: Author[]): Promise<void> {
+    for (const group of this.groupByGuess(allAuthors)) {
+      if (group.members.length > 1) {
+        await this.mergeAuthors(group.members)
+      } else if (group.members[0]) {
+        await this.makeCanonical(group.members[0])
+      }
+    }
+  }
+
+  /**
+   * Gather identities the guessing takes to be one person.
+   *
+   * Pulled out of the merging so that asking the question and acting on the
+   * answer are the same code: what the interface warns about and what
+   * --fuzzy-authors actually does can then not drift apart.
+   *
+   * Each group remembers why its members were drawn in, keyed by the author
+   * they were compared against -- the first of the group, which is not
+   * necessarily the identity later chosen to keep.
+   */
+  private groupByGuess(
+    allAuthors: Author[],
+  ): Array<{ members: Author[]; reasons: Map<number, string> }> {
     const processed = new Set<number>()
+    const groups: Array<{ members: Author[]; reasons: Map<number, string> }> =
+      []
 
     for (const author of allAuthors) {
       if (processed.has(author.id)) continue
 
-      const similarAuthors = [author]
+      const members = [author]
+      const reasons = new Map<number, string>()
       processed.add(author.id)
 
       for (const otherAuthor of allAuthors) {
         if (processed.has(otherAuthor.id)) continue
 
-        if (this.areAuthorsSimilar(author, otherAuthor)) {
-          similarAuthors.push(otherAuthor)
+        const reason = this.whyAuthorsMatch(author, otherAuthor)
+        if (reason) {
+          members.push(otherAuthor)
+          reasons.set(otherAuthor.id, reason)
           processed.add(otherAuthor.id)
         }
       }
 
-      if (similarAuthors.length > 1) {
-        await this.mergeAuthors(similarAuthors)
-      } else {
-        await this.makeCanonical(author)
-      }
+      groups.push({ members, reasons })
+    }
+
+    return groups
+  }
+
+  /**
+   * Say which identity a group keeps and what each of the others matched on.
+   *
+   * The reasons are recorded against the author the group formed around, and
+   * the identity kept is the longest readable name -- which need not be the
+   * same one. When it is not, the seed is itself absorbed, and the reason that
+   * applies to it is the one that drew in the identity now being kept.
+   */
+  private describeGroup(
+    members: Author[],
+    canonical: Author,
+    reasons: Map<number, string>,
+  ): IdentityMerge {
+    const seedReason = reasons.get(canonical.id)
+
+    return {
+      canonical: { name: canonical.displayName, email: canonical.email },
+      absorbed: members
+        .filter((candidate) => candidate.id !== canonical.id)
+        .map((candidate) => ({
+          name: candidate.displayName,
+          email: candidate.email,
+          reason:
+            reasons.get(candidate.id) ??
+            seedReason ??
+            'they were taken to be one',
+        })),
     }
   }
 
-  private areAuthorsSimilar(author1: Author, author2: Author): boolean {
+  /**
+   * Why two rows were taken to be one person, or null if they were not.
+   *
+   * The reason is returned rather than a yes, because a guess nobody can
+   * inspect is a guess nobody can correct. It is what the interface shows and
+   * what --write-mailmap turns into a file.
+   */
+  private whyAuthorsMatch(
+    author1: IdentityRow,
+    author2: IdentityRow,
+  ): string | null {
     if (author1.email.toLowerCase() === author2.email.toLowerCase()) {
-      return true
+      return 'the same address, written differently'
     }
 
     const name1 = this.cleanName(author1.name)
@@ -118,7 +266,9 @@ export class AuthorNormalizationService {
 
     for (const [n1, n2] of namePairs) {
       if (n1 && n2 && this.areStringsSimilar(n1, n2, false)) {
-        return true
+        return n1 === n2
+          ? 'the same name'
+          : `the names "${n1}" and "${n2}" are alike`
       }
     }
 
@@ -133,11 +283,11 @@ export class AuthorNormalizationService {
       const email2Prefix = email2Parts[0]?.toLowerCase() || ''
 
       if (this.areStringsSimilar(email1Prefix, email2Prefix, true)) {
-        return true
+        return `the addresses "${email1Prefix}" and "${email2Prefix}" are alike at ${email1Domain}`
       }
     }
 
-    return false
+    return null
   }
 
   private areStringsSimilar(
@@ -189,7 +339,7 @@ export class AuthorNormalizationService {
       .toLowerCase()
   }
 
-  private async mergeAuthors(authorsToMerge: Author[]): Promise<void> {
+  private async mergeAuthors(authorsToMerge: Author[]): Promise<Author> {
     const canonical = this.chooseBestCanonical(authorsToMerge)
 
     await this.db
@@ -224,6 +374,8 @@ export class AuthorNormalizationService {
           .where(eq(blameLines.authorId, author.id))
       }
     }
+
+    return canonical
   }
 
   private chooseBestCanonical(authors: Author[]): Author {

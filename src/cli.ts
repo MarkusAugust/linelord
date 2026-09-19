@@ -8,8 +8,10 @@ import App from './App'
 import { resolveCachePath } from './db/cacheLocation'
 import { removeAllCaches, removeCacheFor } from './db/cacheMaintenance'
 import { CLI_HELP } from './resources/cliHelp'
+import { LineLordService } from './services/LineLordService'
 import { expandTilde, validateThresholdKB } from './utility/cliValidation'
 import { findRepositoryRoot } from './utility/gitRepository'
+import { writeMailmap } from './utility/mailmap'
 
 const cli = meow(CLI_HELP, {
   importMeta: import.meta,
@@ -17,6 +19,11 @@ const cli = meow(CLI_HELP, {
   flags: {
     path: {
       type: 'string',
+      // The help text and the README have both promised -p since the first
+      // release. Without it meow drops the flag rather than rejecting it, and
+      // LineLord analyses the current directory while reporting the path it
+      // was handed -- or, with --clear-cache, forgets the wrong repository.
+      shortFlag: 'p',
     },
 
     version: {
@@ -45,6 +52,10 @@ const cli = meow(CLI_HELP, {
       default: false,
     },
     fuzzyAuthors: {
+      type: 'boolean',
+      default: false,
+    },
+    writeMailmap: {
       type: 'boolean',
       default: false,
     },
@@ -133,6 +144,7 @@ if (!thresholdCheck.ok) {
 }
 
 const thresholdKB = thresholdCheck.thresholdKB
+const thresholdBytes = thresholdKB * 1024
 
 // This one does concern a particular repository, so it stays behind the
 // resolution that establishes which.
@@ -146,7 +158,40 @@ if (cli.flags.clearCache) {
   process.exit(0)
 }
 
-// Pass repoPath to your existing App component
+// Writing a .mailmap without opening the interface, for a script or for
+// someone who already knows what they want. The same job is on the menu once
+// LineLord has started; both run the guessing as a question -- the analysis
+// itself stays strict, so this neither merges anybody nor disturbs the stored
+// analysis the next ordinary run will reuse.
+if (cli.flags.writeMailmap) {
+  const service = new LineLordService(repoPath, thresholdBytes, {
+    useCache: !cli.flags.noCache,
+    refresh: cli.flags.refresh,
+  })
+  await service.initialize()
+
+  const merges = service.getIdentityMerges()
+  const result = await writeMailmap(repoPath, merges)
+
+  if (result.added.length === 0 && result.alreadyPresent.length === 0) {
+    console.log('⚔️  Nothing to write: every contributor has one address.')
+  } else {
+    for (const line of result.added) console.log(`  + ${line}`)
+    for (const line of result.alreadyPresent) console.log(`  = ${line}`)
+    console.log(
+      result.added.length === 0
+        ? `⚔️  ${result.path} already says all of this.`
+        : `⚔️  Wrote ${result.added.length} line${result.added.length === 1 ? '' : 's'} to ${result.path}.`,
+    )
+    console.log(
+      '💡 These are guesses. Read them, delete the wrong ones, and they will',
+    )
+    console.log('   never have to be guessed again.')
+  }
+
+  process.exit(0)
+}
+
 const element = React.createElement(App, {
   repoPath: repoPath,
   thresholdKB: thresholdKB,

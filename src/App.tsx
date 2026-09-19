@@ -6,6 +6,7 @@ import ErrorScreen from './components/ErrorScreen'
 import ExitScreen from './components/ExitScreen'
 import Layout from './components/Layout'
 import LoadingScreen from './components/LoadingScreen'
+import MailmapDraft from './components/MailmapDraft'
 import Menu, { type MenuOption } from './components/Menu'
 import RepoPathInput from './components/RepoPathInput'
 import RepoStats from './components/RepoStats'
@@ -79,6 +80,10 @@ export default function App({
   const cache = lineLordService?.isInitialized()
     ? lineLordService.getCacheStatus()
     : undefined
+
+  const identityMerges = lineLordService?.isInitialized()
+    ? lineLordService.getIdentityMerges()
+    : []
 
   const handleMenuSelect = (option: MenuOption) => {
     if (option.value === 'exit') {
@@ -181,6 +186,45 @@ export default function App({
             )}
 
             {/*
+              Who the guessing would have taken to be one person. Under the
+              default nothing is merged, so this is shown rather than acted
+              on -- a guess nobody can inspect is a guess nobody can correct,
+              and these decide whose work is whose.
+            */}
+            {identityMerges.length > 0 && (
+              <Box flexDirection="column" marginTop={1}>
+                <Text color="yellow">
+                  ⚠ {identityMerges.length} contributor
+                  {identityMerges.length === 1 ? '' : 's'} may have committed
+                  under more than one address:
+                </Text>
+                {identityMerges.slice(0, 3).map((merge) => (
+                  <Box key={merge.canonical.email} flexDirection="column">
+                    <Text color="gray">
+                      {'  '}
+                      {merge.canonical.name} &lt;{merge.canonical.email}&gt;
+                    </Text>
+                    {merge.absorbed.map((absorbed) => (
+                      <Text key={absorbed.email} color="gray">
+                        {'    ← '}
+                        {absorbed.email} — {absorbed.reason}
+                      </Text>
+                    ))}
+                  </Box>
+                ))}
+                {identityMerges.length > 3 && (
+                  <Text color="gray">
+                    {'  '}… and {identityMerges.length - 3} more
+                  </Text>
+                )}
+                <Text color="gray">
+                  {'  '}Nothing was merged. Pick "Draft a .mailmap" below to
+                  record the ones that are right.
+                </Text>
+              </Box>
+            )}
+
+            {/*
               A file that could not be read is missing from every number on
               every screen. Saying so here is the whole point of collecting
               these rather than printing them into the middle of the UI.
@@ -216,6 +260,14 @@ export default function App({
             onSelect={handleMenuSelect}
           />
         </Box>
+      )}
+
+      {state === 'mailmap' && (
+        <MailmapDraft
+          repoPath={repoPath}
+          merges={identityMerges}
+          onBack={returnToMenu}
+        />
       )}
 
       {state === 'repostats' && (

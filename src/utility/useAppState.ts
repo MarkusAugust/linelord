@@ -8,6 +8,7 @@ export type AppState =
   | 'extendedrepostats'
   | 'singledevrepostats'
   | 'barbarianrankings'
+  | 'mailmap'
   | 'about'
   | 'exit'
 
