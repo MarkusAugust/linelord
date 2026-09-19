@@ -40,6 +40,7 @@ export function createDatabase() {
       is_larger_than_threshold INTEGER DEFAULT 0,
       is_binary INTEGER DEFAULT 0,
       is_ignored INTEGER DEFAULT 0,
+      analysis_failed INTEGER DEFAULT 0,
       total_lines INTEGER DEFAULT 0
     );
     

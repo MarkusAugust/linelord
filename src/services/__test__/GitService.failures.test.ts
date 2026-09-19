@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { rm } from 'node:fs/promises'
+import { readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { eq } from 'drizzle-orm'
 import {
@@ -8,6 +8,7 @@ import {
 } from '../../__test__/helpers/createTestRepo'
 import { createDatabase } from '../../db/database'
 import { blameLines, files } from '../../db/schema'
+import { AnalysisService } from '../AnalysisService'
 import { GitService } from '../GitService'
 
 /** A file long enough to have overrun SQLite's parameter limit in one insert. */
@@ -153,14 +154,77 @@ describe('GitService - failures are collected, not printed', () => {
   it('does not carry failures over from a previous run', async () => {
     repo = await createTestRepo()
     await repo.commit({
-      message: 'ordinary',
-      write: { 'src/a.ts': 'const a = 1\n' },
+      message: 'two files',
+      write: {
+        'src/fine.ts': 'const a = 1\n',
+        'src/broken.ts': 'const b = 2\n',
+      },
     })
+
+    // Break one file so the first run genuinely records a failure. Asserting
+    // an empty list after two clean runs would pass with or without the reset.
+    const blob = (await repo.git(['rev-parse', 'HEAD:src/broken.ts'])).trim()
+    const objectPath = join(
+      repo.path,
+      '.git',
+      'objects',
+      blob.slice(0, 2),
+      blob.slice(2),
+    )
+    const rescued = await readFile(objectPath)
+    await rm(objectPath)
 
     const gitService = new GitService(repo.path, createDatabase())
     await gitService.initialize()
+    expect(gitService.getFailures()).toHaveLength(1)
+
+    // Put the object back and run again: the earlier failure must not linger.
+    await writeFile(objectPath, rescued)
     await gitService.initialize()
 
     expect(gitService.getFailures()).toEqual([])
+  })
+})
+
+describe('GitService - a failed file is not counted as analysed', () => {
+  let repo: TestRepo | undefined
+
+  afterEach(async () => {
+    await repo?.cleanup()
+    repo = undefined
+  })
+
+  it('reports it as failed rather than analysed, so the two screens agree', async () => {
+    // A file whose blame failed is none of binary, ignored or oversized, so it
+    // satisfied the "analysed" query and was counted there -- while the menu
+    // screen was simultaneously reporting it as unread. The statistics and the
+    // warning contradicted each other about the same file.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'two files',
+      write: {
+        'src/fine.ts': 'const a = 1\n',
+        'src/broken.ts': 'const b = 2\n',
+      },
+    })
+    const blob = (await repo.git(['rev-parse', 'HEAD:src/broken.ts'])).trim()
+    await rm(
+      join(repo.path, '.git', 'objects', blob.slice(0, 2), blob.slice(2)),
+    )
+
+    const db = createDatabase()
+    const gitService = new GitService(repo.path, db)
+    await gitService.initialize()
+
+    const stats = await new AnalysisService(db).getRepositoryStats()
+
+    expect(stats.totalFiles).toBe(2)
+    expect(stats.totalAnalyzedFiles).toBe(1)
+    expect(stats.totalFailedFiles).toBe(1)
+    // The count the UI warns about and the count the statistics exclude are
+    // the same number.
+    expect(stats.totalFailedFiles).toBe(gitService.getFailures().length)
+    // And the unread file contributes no lines either.
+    expect(stats.totalLines).toBe(1)
   })
 })

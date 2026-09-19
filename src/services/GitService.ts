@@ -334,10 +334,20 @@ export class GitService {
       // instead was hide the real cause of that message -- an object missing
       // from the repository -- turning a corrupt blob into a file that quietly
       // contributed nothing.
-      this.failures.push({
-        path: filePath,
-        error: error instanceof Error ? error.message : String(error),
-      })
+      const message = error instanceof Error ? error.message : String(error)
+      this.failures.push({ path: filePath, error: message })
+
+      // Mark it in the database too. Without this the file still satisfies
+      // "not binary, not ignored, not oversized" and is counted as analysed,
+      // so the statistics would claim to have read a file the menu screen is
+      // simultaneously reporting as unread.
+      const fileId = this.fileIdCache.get(filePath)
+      if (fileId !== undefined) {
+        await this.db
+          .update(files)
+          .set({ analysisFailed: true })
+          .where(eq(files.id, fileId))
+      }
     }
   }
 

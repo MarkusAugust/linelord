@@ -32,6 +32,10 @@ export const files = sqliteTable('files', {
   }).default(false),
   isBinary: integer('is_binary', { mode: 'boolean' }).default(false),
   isIgnored: integer('is_ignored', { mode: 'boolean' }).default(false),
+  /** Blame could not be read for this file, so it contributed no lines. */
+  analysisFailed: integer('analysis_failed', { mode: 'boolean' }).default(
+    false,
+  ),
   totalLines: integer('total_lines').default(0),
 })
 
