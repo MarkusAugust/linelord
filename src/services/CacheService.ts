@@ -46,16 +46,24 @@ function sha256(value: string): string {
 /**
  * Hash a file's contents, or the empty string when it is not there.
  *
- * Absent and empty deliberately hash differently from any content, but the
- * same as each other: a repository that never had a .mailmap and one whose
- * .mailmap was deleted are in the same position, and both differ from one
- * that has one.
+ * Absent hashes differently from any content: a repository that never had a
+ * .mailmap and one whose .mailmap was deleted are in the same position, and
+ * both differ from one that has one.
+ *
+ * Only "not there" counts as absent. A file that exists but cannot be read --
+ * permissions, a failing disk -- is not the same thing, and treating it as
+ * absent would let a cache written while the file was genuinely missing be
+ * reused now that it exists and says something unknown. That is the one
+ * outcome this whole mechanism is for avoiding, so the error propagates and
+ * the caller falls back to a full analysis.
  */
 async function hashFileIfPresent(path: string): Promise<string> {
   try {
     return sha256(await readFile(path, 'utf8'))
-  } catch {
-    return ''
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code
+    if (code === 'ENOENT' || code === 'ENOTDIR') return ''
+    throw error
   }
 }
 
@@ -86,9 +94,12 @@ export async function computeFingerprint(
     author_policy: authorPolicy,
     blame_options: sha256(BLAME_OPTIONS.join(' ')),
     mailmap: await hashFileIfPresent(join(repositoryRoot, '.mailmap')),
-    ignore_revs: await hashFileIfPresent(
-      join(repositoryRoot, '.git-blame-ignore-revs'),
-    ),
+    // No key for .git-blame-ignore-revs. blame is never given
+    // --ignore-revs-file, so that file is not an input to anything: hashing it
+    // would throw away caches for an edit that cannot change a single number.
+    // N3 wires the flag in, and has to add the key back at the same time --
+    // the flag alone is not enough, because BLAME_OPTIONS changing invalidates
+    // caches once, while editing the file has to keep invalidating them.
     ignore_rules: sha256(ignoreRules),
   }
 }
@@ -133,13 +144,6 @@ function describeChange(
       : current === ''
         ? 'the .mailmap was removed'
         : 'the .mailmap changed'
-  }
-  if (key === 'ignore_revs') {
-    return stored === ''
-      ? 'a .git-blame-ignore-revs was added'
-      : current === ''
-        ? 'the .git-blame-ignore-revs was removed'
-        : 'the .git-blame-ignore-revs changed'
   }
   if (key === 'ignore_rules') {
     return 'the rules for which files are analysed changed'

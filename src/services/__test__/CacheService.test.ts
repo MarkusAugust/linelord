@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'bun:test'
 import { createHash } from 'node:crypto'
-import { writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
   createTestRepo,
@@ -38,7 +38,6 @@ describe('computeFingerprint', () => {
       'author_policy',
       'blame_options',
       'head_sha',
-      'ignore_revs',
       'ignore_rules',
       'mailmap',
       'schema_version',
@@ -88,19 +87,36 @@ describe('computeFingerprint', () => {
     expect(edited.mailmap).not.toBe(present.mailmap)
   })
 
-  it('notices a .git-blame-ignore-revs, which changes who owns what', async () => {
+  it('ignores .git-blame-ignore-revs, which the analysis never reads', async () => {
+    // blame is not given --ignore-revs-file, so the file is not an input.
+    // Hashing it would throw away caches for an edit that cannot change a
+    // single number. N3 wires the flag in and has to add the key back.
     repo = await createTestRepo()
     await repo.commit({ message: 'first', write: { 'a.ts': 'const a = 1\n' } })
     const inputs = { ...INPUTS, repositoryRoot: repo.path }
 
-    expect((await computeFingerprint(inputs)).ignore_revs).toBe('')
-
+    const before = await computeFingerprint(inputs)
     await writeFile(
       join(repo.path, '.git-blame-ignore-revs'),
       `${'b'.repeat(40)}\n`,
     )
 
-    expect((await computeFingerprint(inputs)).ignore_revs).not.toBe('')
+    expect(await computeFingerprint(inputs)).toEqual(before)
+  })
+
+  it('refuses to guess when a file exists but cannot be read', async () => {
+    // Unreadable is not the same as absent. Treating it as absent would let a
+    // cache written while the file was genuinely missing be reused now that it
+    // exists and says something unknown -- the one outcome the fingerprint is
+    // there to prevent. A directory in the file's place gives EISDIR, which is
+    // an error in every environment rather than only for an unprivileged user.
+    repo = await createTestRepo()
+    await repo.commit({ message: 'first', write: { 'a.ts': 'const a = 1\n' } })
+    await mkdir(join(repo.path, '.mailmap'))
+
+    await expect(
+      computeFingerprint({ ...INPUTS, repositoryRoot: repo.path }),
+    ).rejects.toThrow()
   })
 })
 
@@ -113,7 +129,6 @@ describe('decideCacheUse', () => {
     author_policy: 'loose',
     blame_options: 'options-hash',
     mailmap: '',
-    ignore_revs: '',
     ignore_rules: 'rules-hash',
   }
 
@@ -210,7 +225,6 @@ describe('decideCacheUse', () => {
         { schema_version: '0' },
         'the cache was written by a version with a different database layout',
       ],
-      [{ ignore_revs: 'hash' }, 'the .git-blame-ignore-revs was removed'],
       [
         { ignore_rules: 'other' },
         'the rules for which files are analysed changed',
@@ -229,17 +243,17 @@ describe('decideCacheUse', () => {
     }
   })
 
-  it('describes a .mailmap and an ignore-revs file that changed rather than moved', () => {
+  it('describes a .mailmap that changed rather than appeared or vanished', () => {
     const changed = decideCacheUse(
-      { ...current, mailmap: 'before', ignore_revs: 'before' },
-      { ...current, mailmap: 'after', ignore_revs: 'after' },
+      { ...current, mailmap: 'before' },
+      { ...current, mailmap: 'after' },
     )
 
     expect(
       changed.action === 'analyse' &&
         changed.reason === 'settings-changed' &&
         changed.explanation,
-    ).toBe('the .git-blame-ignore-revs changed; the .mailmap changed')
+    ).toBe('the .mailmap changed')
   })
 
   it('names an unfamiliar key rather than saying nothing about it', () => {

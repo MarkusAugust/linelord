@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { sql } from 'drizzle-orm'
-import { createDatabase } from '../database'
+import { clearDatabase, createDatabase } from '../database'
 import { readAllMeta, readMeta, writeMeta } from '../meta'
 import { authors } from '../schema'
 
@@ -79,6 +79,30 @@ describe('createDatabase on disk', () => {
     const [mode] = db.all<{ journal_mode: string }>(sql`PRAGMA journal_mode`)
 
     expect(mode?.journal_mode).toBe('memory')
+    expect(readAllMeta(db)).toEqual({})
+  })
+})
+
+describe('clearDatabase', () => {
+  it('clears the metadata along with the rows it describes', async () => {
+    // meta says which revision the rows came from and under which settings.
+    // Emptying the tables but keeping it would leave a description of data
+    // that is no longer there -- and the caller that empties the database to
+    // analyse a different repository would be handed the previous
+    // repository's fingerprint as though it were its own.
+    const db = createDatabase()
+    await db.insert(authors).values({
+      id: 1,
+      name: 'Gorvek the Ironbane',
+      email: 'gorvek@ashendale.realm',
+      displayName: 'Gorvek the Ironbane',
+      isCanonical: true,
+    })
+    writeMeta(db, { head_sha: 'abc123', threshold_bytes: '51200' })
+
+    clearDatabase(db)
+
+    expect(await db.select().from(authors)).toHaveLength(0)
     expect(readAllMeta(db)).toEqual({})
   })
 })

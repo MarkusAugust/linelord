@@ -114,12 +114,21 @@ export function createDatabase(options: CreateDatabaseOptions = {}) {
   return db
 }
 
+/**
+ * Empty every table, in an order the foreign keys allow.
+ *
+ * meta goes too. It describes the rows in the other tables -- which revision
+ * they were built from, under which settings -- so leaving it behind would
+ * leave a description of data that is no longer there. The caller that empties
+ * the database to analyse a different repository would then be handed the
+ * previous repository's fingerprint as though it were its own.
+ */
 export function clearDatabase(db: LineLordDatabase) {
-  // Clear all tables in the correct order (respecting foreign keys)
   db.delete(schema.blameLines).run()
   db.delete(schema.authorAliases).run()
   db.delete(schema.authors).run()
   db.delete(schema.files).run()
+  db.delete(schema.meta).run()
 }
 
 export type LineLordDatabase = ReturnType<typeof createDatabase>
