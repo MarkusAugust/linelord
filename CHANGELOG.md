@@ -81,6 +81,25 @@ because the earlier answer was wrong.
 
 ### Added
 
+- **The analysis is kept between runs.** It used to be thrown away when the
+  process exited, so every launch read the whole repository again. A run that
+  finds nothing has changed now reuses what it stored; a run after a few
+  commits re-reads only the files those commits touched. Measured on a
+  1,000-file repository: 12.2 s with no cache, 43 ms when nothing moved,
+  547 ms after one file changed.
+
+  What it will not do is guess. The revision, the size threshold, the
+  `.mailmap`, the ignore rules and the analysis code itself are all recorded,
+  and any of them differing means the whole repository is read again — with
+  the reason shown, rather than a silent slowdown. A rebase, a force-push or a
+  branch switch is a full re-read too: history that changed shape leaves no
+  way to tell what survived.
+
+  The cache lives in `$XDG_CACHE_HOME/linelord` (or `~/.cache/linelord`), one
+  file per repository, and holds file paths, commit hashes and dates, and
+  contributor names and email addresses — no file contents. If it cannot be
+  written, the analysis runs anyway.
+
 - **Brutal Barbarian Rankings**, a ranking by ground still held: territory
   owned, files conquered alone, and code that has outlived a year. Metrics
   counting weekend and night-time work were considered and cut; see the note on

@@ -34,6 +34,19 @@ interface HeadFile {
  */
 const BLAME_INSERT_CHUNK = 500
 
+/** Rows per file-table insert, for the same reason as BLAME_INSERT_CHUNK. */
+const FILE_WRITE_CHUNK = 200
+
+/** What a stored file row says about itself, for deciding whether it moved. */
+interface StoredFile {
+  id: number
+  path: string
+  size: number | null
+  isBinary: boolean | null
+  isIgnored: boolean | null
+  isLargerThanThreshold: boolean | null
+}
+
 type BlameLineInsert = {
   fileId: number
   authorId: number
@@ -51,6 +64,14 @@ type BlameLineInsert = {
  * own as long as this stays the single source of the arguments.
  */
 export const BLAME_OPTIONS = ['-w', '--line-porcelain'] as const
+
+/** How much of a run was done afresh, and how much came from the cache. */
+export interface AnalysisRun {
+  /** Files blamed during this run. */
+  blamed: number
+  /** Files whose stored blame was kept as it was. */
+  reused: number
+}
 
 /** A file whose blame could not be read, kept for the UI to report. */
 export interface AnalysisFailure {
@@ -86,106 +107,214 @@ export class GitService {
 
   async initialize(
     onProgress?: (current: number, total: number, message: string) => void,
-  ) {
+  ): Promise<AnalysisRun> {
     onProgress?.(0, 100, 'Getting repository files...')
 
-    this.failures = []
-    this.analysisContext = await this.resolveAnalysisContext()
-
-    const allFiles = await this.listHeadFiles()
-    onProgress?.(10, 100, `Found ${allFiles.length} files`)
-
-    const textPaths =
-      allFiles.length > 0 ? await this.listTextFiles() : new Set<string>()
-
-    // Process files in bigger batches
-    const filesToAnalyze = await this.processFilesInBatches(
-      allFiles,
-      textPaths,
-      onProgress,
-    )
+    const analysable = await this.discoverAndRecordFiles(onProgress)
 
     onProgress?.(
       70,
       100,
-      `Processing blame data for ${filesToAnalyze.length} files...`,
+      `Processing blame data for ${analysable.length} files...`,
     )
 
-    // Pre-populate caches for faster lookups
-    await this.populateCaches(filesToAnalyze)
-
-    // Process blame in batches
-    await this.processBlameInBatches(filesToAnalyze, onProgress)
+    await this.populateCaches(analysable)
+    await this.processBlameInBatches(analysable, onProgress)
 
     onProgress?.(100, 100, 'Git analysis complete!')
+    return { blamed: analysable.length, reused: 0 }
   }
 
-  private async processFilesInBatches(
-    allFiles: HeadFile[],
+  /**
+   * Bring a stored analysis up to date instead of rebuilding it.
+   *
+   * Discovery runs in full, because it is cheap -- measured at about a tenth
+   * of an analysis -- and doing it properly is what keeps files that were
+   * added, deleted or renamed correct without a second mechanism. What is
+   * skipped is blame, which is the other nine tenths.
+   *
+   * `touched` must be every path any commit in the interval touched, not the
+   * paths that differ between the endpoints. See pathsTouchedBetween.
+   */
+  async updateIncrementally(
+    touched: Set<string>,
+    onProgress?: (current: number, total: number, message: string) => void,
+  ): Promise<AnalysisRun> {
+    onProgress?.(0, 100, 'Checking what changed...')
+
+    const analysable = await this.discoverAndRecordFiles(onProgress)
+    const toBlame = analysable.filter((filePath) => touched.has(filePath))
+
+    onProgress?.(
+      70,
+      100,
+      `Re-reading ${toBlame.length} changed file${toBlame.length === 1 ? '' : 's'}...`,
+    )
+
+    await this.populateCaches(analysable)
+
+    // Whatever is about to be blamed again must lose its old lines first, or
+    // the file would end up owning both versions.
+    this.forgetBlameFor(toBlame)
+    await this.processBlameInBatches(toBlame, onProgress)
+
+    onProgress?.(100, 100, 'Git analysis complete!')
+    return {
+      blamed: toBlame.length,
+      reused: analysable.length - toBlame.length,
+    }
+  }
+
+  /**
+   * Work out the current state of every file in HEAD and record it.
+   *
+   * Rows are reconciled rather than replaced, because blame_lines reference
+   * files by id: deleting and reinserting would renumber them and orphan every
+   * line belonging to a file nobody touched.
+   */
+  private async discoverAndRecordFiles(
+    onProgress?: (current: number, total: number, message: string) => void,
+  ): Promise<string[]> {
+    this.failures = []
+    this.analysisContext = await this.resolveAnalysisContext()
+
+    const headFiles = await this.listHeadFiles()
+    onProgress?.(10, 100, `Found ${headFiles.length} files`)
+
+    const textPaths =
+      headFiles.length > 0 ? await this.listTextFiles() : new Set<string>()
+
+    return await this.reconcileFiles(headFiles, textPaths, onProgress)
+  }
+
+  /**
+   * Record what HEAD contains now, and return the paths worth blaming.
+   *
+   * Rows are reconciled rather than replaced. blame_lines reference files by
+   * id, so deleting and reinserting would renumber them and orphan every line
+   * belonging to a file nobody touched -- which is precisely the data an
+   * incremental update exists to keep.
+   */
+  private async reconcileFiles(
+    headFiles: HeadFile[],
     textPaths: Set<string>,
     onProgress?: (current: number, total: number, message: string) => void,
   ): Promise<string[]> {
-    const filesToAnalyze: string[] = []
-    const batchSize = Math.min(this.concurrency * 2, 100) // Larger batches
-    let processed = 0
+    const existing = new Map<string, StoredFile>()
+    for (const row of await this.db
+      .select({
+        id: files.id,
+        path: files.path,
+        size: files.size,
+        isBinary: files.isBinary,
+        isIgnored: files.isIgnored,
+        isLargerThanThreshold: files.isLargerThanThreshold,
+      })
+      .from(files)) {
+      existing.set(row.path, row)
+    }
 
-    // Collect all file data first
-    const fileDataBatch: Array<{
-      path: string
-      extension: string | null
-      size: number
-      isBinary: boolean
-      isLargerThanThreshold: boolean
-      isIgnored: boolean
-      totalLines: number
+    const analysable: string[] = []
+    const inHead = new Set<string>()
+    const inserts: Array<typeof files.$inferInsert> = []
+    const updates: Array<{
+      id: number
+      row: Partial<typeof files.$inferInsert>
     }> = []
 
-    for (let i = 0; i < allFiles.length; i += batchSize) {
-      const batch = allFiles.slice(i, i + batchSize)
-
-      for (const file of batch) {
-        const classification = this.classifyFile(file, textPaths)
-        const ext = path.extname(file.path).toLowerCase()
-
-        fileDataBatch.push({
-          path: file.path,
-          extension: ext || null,
-          size: classification.size,
-          isBinary: classification.isBinary,
-          isLargerThanThreshold: classification.isLargerThanThreshold,
-          isIgnored: classification.isIgnored,
-          totalLines: 0,
-        })
-
-        if (
-          !classification.isBinary &&
-          !classification.isIgnored &&
-          !classification.isLargerThanThreshold
-        ) {
-          filesToAnalyze.push(file.path)
-        }
+    for (const file of headFiles) {
+      inHead.add(file.path)
+      const classification = this.classifyFile(file, textPaths)
+      const row = {
+        path: file.path,
+        extension: path.extname(file.path).toLowerCase() || null,
+        size: classification.size,
+        isBinary: classification.isBinary,
+        isLargerThanThreshold: classification.isLargerThanThreshold,
+        isIgnored: classification.isIgnored,
       }
 
-      processed += batch.length
-      onProgress?.(
-        10 + (processed / allFiles.length) * 60,
-        100,
-        `Processing files: ${processed}/${allFiles.length}`,
-      )
+      const stored = existing.get(file.path)
+      if (stored === undefined) {
+        inserts.push({ ...row, totalLines: 0, analysisFailed: false })
+      } else if (
+        stored.size !== row.size ||
+        Boolean(stored.isBinary) !== row.isBinary ||
+        Boolean(stored.isIgnored) !== row.isIgnored ||
+        Boolean(stored.isLargerThanThreshold) !== row.isLargerThanThreshold
+      ) {
+        // Only rows whose classification actually moved are written. On an
+        // incremental run almost none have, and issuing an update for every
+        // file regardless cost 491 ms of a 650 ms update on a 1,000-file
+        // repository -- fifteen times what re-reading the changed file took.
+        //
+        // totalLines and analysisFailed are left alone here: both belong to
+        // the blame data, which is only rewritten for files this run re-reads.
+        updates.push({ id: stored.id, row })
+      }
 
-      // Insert in larger batches (every 500 files)
-      if (fileDataBatch.length >= 500) {
-        await this.db.insert(files).values(fileDataBatch).onConflictDoNothing()
-        fileDataBatch.length = 0
+      if (
+        !classification.isBinary &&
+        !classification.isIgnored &&
+        !classification.isLargerThanThreshold
+      ) {
+        analysable.push(file.path)
       }
     }
 
-    // Insert remaining files
-    if (fileDataBatch.length > 0) {
-      await this.db.insert(files).values(fileDataBatch).onConflictDoNothing()
-    }
+    const gone = [...existing.values()].filter(
+      (stored) => !inHead.has(stored.path),
+    )
 
-    return filesToAnalyze
+    this.db.transaction((tx) => {
+      for (let i = 0; i < inserts.length; i += FILE_WRITE_CHUNK) {
+        tx.insert(files)
+          .values(inserts.slice(i, i + FILE_WRITE_CHUNK))
+          .onConflictDoNothing()
+          .run()
+      }
+
+      for (const { id, row } of updates) {
+        tx.update(files).set(row).where(eq(files.id, id)).run()
+      }
+
+      // A file that has left HEAD takes its blame with it, or its lines would
+      // go on counting towards an author's total for a file that is not there.
+      for (const stored of gone) {
+        tx.delete(blameLines).where(eq(blameLines.fileId, stored.id)).run()
+        tx.delete(files).where(eq(files.id, stored.id)).run()
+      }
+    })
+
+    onProgress?.(70, 100, `Processing files: ${headFiles.length}`)
+
+    return analysable
+  }
+
+  /**
+   * Drop the stored blame for the given paths, so they can be read again.
+   *
+   * Without this an updated file would own both its old lines and its new
+   * ones, and every author who had ever touched it would keep credit for text
+   * that is no longer there.
+   */
+  private forgetBlameFor(paths: string[]): void {
+    if (paths.length === 0) return
+
+    const ids = paths
+      .map((filePath) => this.fileIdCache.get(filePath))
+      .filter((id): id is number => id !== undefined)
+
+    this.db.transaction((tx) => {
+      for (const id of ids) {
+        tx.delete(blameLines).where(eq(blameLines.fileId, id)).run()
+        // A file about to be read again carries no failure from last time.
+        tx.update(files)
+          .set({ totalLines: 0, analysisFailed: false })
+          .where(eq(files.id, id))
+          .run()
+      }
+    })
   }
 
   private async populateCaches(filesToAnalyze: string[]) {

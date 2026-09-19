@@ -1,16 +1,52 @@
+import { resolveCachePath } from '../db/cacheLocation'
 import {
   clearDatabase,
   createDatabase,
   type LineLordDatabase,
 } from '../db/database'
+import { readAllMeta, writeMeta } from '../db/meta'
+import {
+  findRepositoryRoot,
+  isAncestor,
+  pathsTouchedBetween,
+  resolveHead,
+} from '../utility/gitRepository'
 import { AnalysisService } from './AnalysisService'
 import { AuthorNormalizationService } from './AuthorNormalizationService'
 import { AuthorRankingService } from './AuthorRankingService'
+import { computeFingerprint, decideCacheUse, HEAD_KEY } from './CacheService'
 import {
   type AnalysisContext,
   type AnalysisFailure,
   GitService,
 } from './GitService'
+
+/** What the run did, and why, so the interface can say so rather than imply it. */
+export interface CacheStatus {
+  /**
+   * `reused` means nothing was blamed at all; `incremental` means only what
+   * changed was; `full` means everything; `disabled` means no cache was
+   * consulted or written.
+   */
+  mode: 'full' | 'incremental' | 'reused' | 'disabled'
+  filesBlamed: number
+  filesReused: number
+  /** Why a full analysis happened, when it was not simply the first run. */
+  reason?: string
+  /** Where the cache lives, when there is one. */
+  path?: string
+}
+
+export interface LineLordOptions {
+  /**
+   * Whether to read and write a cache on disk.
+   *
+   * Off by default so that constructing this service never touches the user's
+   * filesystem unless something asked it to -- which keeps the test suite from
+   * scattering databases through ~/.cache.
+   */
+  useCache?: boolean
+}
 
 export class LineLordService {
   private db: LineLordDatabase
@@ -20,12 +56,20 @@ export class LineLordService {
   private analysisService: AnalysisService
   private initialized = false
   private currentRepoPath: string
+  private useCache: boolean
+  private cacheStatus: CacheStatus = {
+    mode: 'disabled',
+    filesBlamed: 0,
+    filesReused: 0,
+  }
 
   constructor(
     repoPath: string,
     private largeFileThresholdBytes: number = 50 * 1024,
+    options: LineLordOptions = {},
   ) {
     this.currentRepoPath = repoPath
+    this.useCache = options.useCache ?? false
     this.db = createDatabase()
     this.gitService = new GitService(
       repoPath,
@@ -37,29 +81,95 @@ export class LineLordService {
     this.analysisService = new AnalysisService(this.db)
   }
 
+  /** What the last run did: how much it read, how much it kept, and why. */
+  getCacheStatus(): CacheStatus {
+    return { ...this.cacheStatus }
+  }
+
+  /** Point every service at a different database. */
+  private attachDatabase(db: LineLordDatabase, repoPath: string): void {
+    this.db = db
+    this.gitService = new GitService(repoPath, db, this.largeFileThresholdBytes)
+    this.normalizationService = new AuthorNormalizationService(db)
+    this.rankingService = new AuthorRankingService(db)
+    this.analysisService = new AnalysisService(db)
+  }
+
+  /**
+   * Open this repository's cache, or fall back to memory.
+   *
+   * Every failure here degrades rather than propagates. A cache is an
+   * optimisation; a full disk, a read-only cache directory or a file written
+   * by something else are all reasons to analyse from scratch, and none of
+   * them are reasons to refuse to analyse at all.
+   */
+  private openCache(repositoryRoot: string): string | undefined {
+    if (!this.useCache) return undefined
+
+    const path = resolveCachePath(repositoryRoot)
+    try {
+      this.attachDatabase(createDatabase({ path }), repositoryRoot)
+      return path
+    } catch {
+      this.attachDatabase(createDatabase(), repositoryRoot)
+      return undefined
+    }
+  }
+
   async initialize(
     onProgress?: (current: number, total: number, message: string) => void,
   ): Promise<void> {
     try {
       onProgress?.(0, 100, 'Initializing Git service...')
 
-      // Step 1: Initialize git service (this populates the database with raw data)
-      await this.gitService.initialize((current, total, message) => {
-        // Map git service progress to 0-60% of total progress
-        const adjustedCurrent = (current / total) * 60
-        onProgress?.(adjustedCurrent, 100, message)
-      })
+      const root =
+        (await findRepositoryRoot(this.currentRepoPath).then((lookup) =>
+          lookup.found ? lookup.root : null,
+        )) ?? this.currentRepoPath
+      const cachePath = this.openCache(root)
+      const headSha = await resolveHead(root)
+
+      const decision = await this.decideWhatToDo(root, headSha)
+      this.cacheStatus = { ...decision.status, path: cachePath }
+
+      if (decision.plan === 'reuse') {
+        onProgress?.(100, 100, 'Reusing the stored analysis')
+        this.initialized = true
+        return
+      }
+
+      const forwardProgress = (
+        current: number,
+        total: number,
+        message: string,
+      ) => onProgress?.((current / total) * 60, 100, message)
+
+      const run =
+        decision.plan === 'incremental'
+          ? await this.gitService.updateIncrementally(
+              decision.touched,
+              forwardProgress,
+            )
+          : await this.runFullAnalysis(forwardProgress)
+
+      this.cacheStatus = {
+        ...this.cacheStatus,
+        filesBlamed: run.blamed,
+        filesReused: run.reused,
+      }
 
       onProgress?.(60, 100, 'Normalizing authors...')
-
-      // Step 2: Normalize authors (merge duplicates, clean up data)
+      // Merging identities and ranking them are decisions about the whole
+      // repository, so they cannot be updated in part: both run again after
+      // any change, however small.
       await this.normalizationService.normalizeAllAuthors()
 
       onProgress?.(80, 100, 'Calculating ranks and percentages...')
-
-      // Step 3: Calculate and assign ranks, percentages, and titles
-      // This MUST happen AFTER normalization since it works with canonical authors
       await this.rankingService.calculateAndAssignRanksAndPercentages()
+
+      if (cachePath && headSha) {
+        await this.recordFingerprint(root, headSha)
+      }
 
       onProgress?.(100, 100, 'Initialization complete!')
       this.initialized = true
@@ -67,6 +177,127 @@ export class LineLordService {
       this.initialized = false
       throw error
     }
+  }
+
+  /** Empty whatever was stored and analyse the repository from the beginning. */
+  private async runFullAnalysis(
+    onProgress?: (current: number, total: number, message: string) => void,
+  ) {
+    clearDatabase(this.db)
+    return await this.gitService.initialize(onProgress)
+  }
+
+  /**
+   * Decide between reusing, updating and rebuilding.
+   *
+   * Every branch that cannot be reasoned about ends in a full analysis. That
+   * is not caution for its own sake: a needless rebuild costs seconds, while a
+   * cache reused when it should not have been puts numbers on screen that look
+   * exactly like correct ones.
+   */
+  private async decideWhatToDo(
+    root: string,
+    headSha: string | null,
+  ): Promise<
+    | { plan: 'reuse'; status: CacheStatus }
+    | { plan: 'full'; status: CacheStatus }
+    | { plan: 'incremental'; touched: Set<string>; status: CacheStatus }
+  > {
+    const full = (reason?: string): { plan: 'full'; status: CacheStatus } => ({
+      plan: 'full',
+      status: {
+        mode: this.useCache ? 'full' : 'disabled',
+        filesBlamed: 0,
+        filesReused: 0,
+        reason,
+      },
+    })
+
+    if (!this.useCache || !headSha) return full()
+
+    let decision: ReturnType<typeof decideCacheUse>
+    try {
+      decision = decideCacheUse(
+        readAllMeta(this.db),
+        await computeFingerprint({
+          repositoryRoot: root,
+          headSha,
+          thresholdBytes: this.largeFileThresholdBytes,
+          authorPolicy: 'loose',
+        }),
+      )
+    } catch {
+      // Something the fingerprint depends on could not be read. Not knowing
+      // whether the cache holds is the same as knowing it does not.
+      return full(
+        'the settings behind the stored analysis could not be checked',
+      )
+    }
+
+    if (decision.action === 'analyse') {
+      return full(
+        decision.reason === 'settings-changed'
+          ? decision.explanation
+          : undefined,
+      )
+    }
+
+    if (decision.action === 'reuse') {
+      const kept = await this.countStoredFiles()
+      return {
+        plan: 'reuse',
+        status: { mode: 'reused', filesBlamed: 0, filesReused: kept },
+      }
+    }
+
+    // The revision moved. Only forwards can be updated: a rebase, a force-push
+    // or a branch switch leaves no way to tell what survived.
+    if (!(await isAncestor(root, decision.storedHeadSha, headSha))) {
+      return full('the history was rewritten or a different branch checked out')
+    }
+
+    try {
+      const touched = await pathsTouchedBetween(
+        root,
+        decision.storedHeadSha,
+        headSha,
+      )
+      return {
+        plan: 'incremental',
+        touched: new Set(touched),
+        status: { mode: 'incremental', filesBlamed: 0, filesReused: 0 },
+      }
+    } catch {
+      return full('the commits since the stored analysis could not be listed')
+    }
+  }
+
+  private async countStoredFiles(): Promise<number> {
+    return (await this.analysisService.getRepositoryStats()).totalAnalyzedFiles
+  }
+
+  /**
+   * Record what this analysis was built from.
+   *
+   * The revision goes last and on its own. A run interrupted part-way leaves
+   * the cache still claiming the revision it held before, so the next run asks
+   * for the same interval again and repairs itself -- which works because
+   * re-reading a file discards its stored lines first.
+   */
+  private async recordFingerprint(
+    root: string,
+    headSha: string,
+  ): Promise<void> {
+    const fingerprint = await computeFingerprint({
+      repositoryRoot: root,
+      headSha,
+      thresholdBytes: this.largeFileThresholdBytes,
+      authorPolicy: 'loose',
+    })
+
+    const { [HEAD_KEY]: head, ...rest } = fingerprint
+    writeMeta(this.db, rest)
+    writeMeta(this.db, { [HEAD_KEY]: head ?? headSha })
   }
 
   async changeRepository(
@@ -85,15 +316,10 @@ export class LineLordService {
       this.largeFileThresholdBytes = newThresholdBytes
     }
 
-    // Recreate services with new path and threshold
-    this.gitService = new GitService(
-      newRepoPath,
-      this.db,
-      this.largeFileThresholdBytes,
-    )
-    this.normalizationService = new AuthorNormalizationService(this.db)
-    this.rankingService = new AuthorRankingService(this.db)
-    this.analysisService = new AnalysisService(this.db)
+    // A different repository has a different cache. Pointing the services at
+    // the new path while still holding the old database would analyse one
+    // repository into another's file.
+    this.attachDatabase(createDatabase(), newRepoPath)
 
     // Mark as uninitialized
     this.initialized = false
