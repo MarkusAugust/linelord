@@ -6,8 +6,30 @@ import { type Author, authorAliases, authors, blameLines } from '../db/schema'
 export class AuthorNormalizationService {
   constructor(private db: LineLordDatabase) {}
 
+  /**
+   * Group the identities in the database into people.
+   *
+   * `strict` is the default and compares email addresses, nothing else. Two
+   * commits are the same person when git says they are, and `.mailmap` -- which
+   * blame applies before LineLord sees a single line -- is how anyone says
+   * otherwise. That makes the merging explicit, reviewable, and the same
+   * identity git itself uses everywhere.
+   *
+   * `loose` additionally guesses, from names and from addresses that merely
+   * resemble each other, and it guesses badly. Measured on realistic pairs, it
+   * merged mk@ with ml@, john@ with joan@, and erik.hansen@ with erika.hansen@
+   * -- different people, one of whom then vanishes from the ranking while the
+   * other is credited with their work. The threshold for an address is one
+   * character in a prefix of six or fewer, which in a company where everyone
+   * shares a domain is not an edge case.
+   *
+   * It is kept, behind a flag, because a repository whose history genuinely
+   * contains one person under several spellings has to get out of that
+   * somehow, and seeing the guesses is how you learn what to write in a
+   * .mailmap. It is not a default.
+   */
   async normalizeAllAuthors(
-    policy: 'strict' | 'loose' = 'loose',
+    policy: 'strict' | 'loose' = 'strict',
   ): Promise<void> {
     // Aliases are derived entirely from the merges this run is about to make,
     // so they are rebuilt rather than added to. Without this a second run over

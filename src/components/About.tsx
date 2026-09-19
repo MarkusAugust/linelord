@@ -36,8 +36,8 @@ export default function About({ onBack }: AboutProps) {
             ownership
           </Text>
           <Text>
-            • {pc.cyan('Smart Author Merging')} - Unites similar warriors
-            automatically
+            • {pc.cyan('Honest Identity')} - One address is one warrior;
+            .mailmap says otherwise
           </Text>
           <Text>
             • {pc.cyan('Intelligent Filtering')} - Skips binaries and oversized

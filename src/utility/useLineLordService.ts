@@ -11,9 +11,13 @@ interface InitProgress {
 export function useLineLordService(
   repoPath: string,
   thresholdBytes: number,
-  options: { useCache?: boolean; refresh?: boolean } = {},
+  options: {
+    useCache?: boolean
+    refresh?: boolean
+    authorPolicy?: 'strict' | 'loose'
+  } = {},
 ) {
-  const { useCache = true, refresh = false } = options
+  const { useCache = true, refresh = false, authorPolicy = 'strict' } = options
   const [lineLordService, setLineLordService] =
     useState<LineLordService | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
@@ -72,12 +76,20 @@ export function useLineLordService(
       const service = new LineLordService(repoPath, thresholdBytes, {
         useCache,
         refresh,
+        authorPolicy,
       })
       setLineLordService(service)
 
       service.initialize(handleProgress).then(handleSuccess).catch(handleError)
     }
-  }, [repoPath, lineLordService, thresholdBytes, useCache, refresh])
+  }, [
+    repoPath,
+    lineLordService,
+    thresholdBytes,
+    useCache,
+    refresh,
+    authorPolicy,
+  ])
 
   return {
     lineLordService,

@@ -15,6 +15,7 @@ export const CLI_HELP = `
 ║   --refresh        Ignore what is stored and read everything ║
 ║   --clear-cache    Forget this repository's stored analysis  ║
 ║   --clear-all-caches  Forget every repository's              ║
+║   --fuzzy-authors  Guess which identities are one person     ║
 ║   --help           Show this help                            ║
 ║                                                              ║
 ║ EXAMPLES:                                                    ║
@@ -26,7 +27,7 @@ export const CLI_HELP = `
 ║                                                              ║
 ║ FEATURES:                                                    ║
 ║   🗡️  Native Git Power - Uses only git commands               ║
-║   🧠 Intelligent Author Merging on similar names             ║
+║   🧠 Honest Identity - one address is one warrior            ║
 ║   📊 Comprehensive Battle Reports - File ownership stats     ║
 ║   🎯 Smart Filtering - Excludes binaries & large files       ║
 ║   ⚙️  Configurable Thresholds - Control large file limits     ║

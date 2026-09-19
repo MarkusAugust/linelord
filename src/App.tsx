@@ -26,6 +26,8 @@ type AppProps = {
   useCache?: boolean
   /** Ignore what is stored and read the repository again. */
   refresh?: boolean
+  /** How identities are matched: by address alone, or by guessing as well. */
+  authorPolicy?: 'strict' | 'loose'
 }
 
 export default function App({
@@ -33,6 +35,7 @@ export default function App({
   thresholdKB,
   useCache = true,
   refresh = false,
+  authorPolicy = 'strict',
 }: AppProps) {
   const { state, setState, repoPath, setRepoPath, farewell } =
     useAppState(initialRepoPath)
@@ -51,6 +54,7 @@ export default function App({
   } = useLineLordService(repoPath, largeFileThresholdBytes, {
     useCache,
     refresh,
+    authorPolicy,
   })
 
   const handleClearError = () => {
