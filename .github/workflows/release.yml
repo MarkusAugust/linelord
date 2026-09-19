@@ -1,6 +1,9 @@
 name: Release
+
+# Least privilege by default; the one job that needs to write does so on its
+# own. Before, every job in this workflow held a write-capable GITHUB_TOKEN.
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:
@@ -20,6 +23,10 @@ jobs:
     # Nothing to build when we are only re-syncing the tap.
     if: github.event_name == 'push'
     runs-on: macos-latest
+    # Creating the release is the only write this workflow makes with
+    # GITHUB_TOKEN. The tap is written with its own token, not this one.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -94,6 +101,10 @@ jobs:
       && (github.event_name == 'workflow_dispatch'
           || needs.build-and-release.result == 'success')
     runs-on: ubuntu-latest
+    # Only reads this repository's release metadata. The write it performs is
+    # to the tap, authorised by HOMEBREW_TAP_TOKEN rather than by this token.
+    permissions:
+      contents: read
     env:
       TAG: ${{ inputs.tag || github.ref_name }}
     steps:
@@ -106,11 +117,24 @@ jobs:
             exit 1
           fi
 
+      # The scripts that run below come from this repository, not from the tap.
+      # Running the tap's own scripts meant this job executed code it does not
+      # control while holding a write token for that same repository.
+      - name: Checkout linelord, for the scripts this job runs
+        uses: actions/checkout@v4
+        with:
+          path: linelord
+          persist-credentials: false
+
+      # persist-credentials is off so the tap token is never written into
+      # tap/.git/config, where anything running in this job could read it.
+      # Pushing supplies it explicitly instead.
       - name: Checkout the tap
         uses: actions/checkout@v4
         with:
           repository: MarkusAugust/homebrew-linelord
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          persist-credentials: false
           path: tap
 
       # Version and checksums are written from one source, so they cannot
@@ -118,15 +142,17 @@ jobs:
       - name: Rewrite the formula from the published release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 tap/scripts/update_formula.py "$TAG" tap/Formula/linelord.rb
+        run: python3 linelord/scripts/update_formula.py "$TAG" tap/Formula/linelord.rb
 
       - name: Verify the formula against the release it now names
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 tap/scripts/verify_formula.py tap/Formula/linelord.rb
+        run: python3 linelord/scripts/verify_formula.py tap/Formula/linelord.rb
 
       - name: Commit and push
         working-directory: tap
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           set -euo pipefail
           if git diff --quiet; then
@@ -136,4 +162,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -am "Update formula to $TAG"
-          git push
+          git push \
+            "https://x-access-token:${TAP_TOKEN}@github.com/MarkusAugust/homebrew-linelord.git" \
+            HEAD:master
