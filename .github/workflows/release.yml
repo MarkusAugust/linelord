@@ -33,7 +33,7 @@ jobs:
       # followed by the build. Persisting would put a write-capable token in
       # .git/config while all of that third-party code runs. The release step
       # receives GITHUB_TOKEN explicitly, and nothing here pushes with git.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -44,7 +44,7 @@ jobs:
         # binaries published from here are compiled by this runtime, so
         # tracking `latest` would ship artifacts built by a version nothing
         # had tested. Bump it together with the pin in ci.yml.
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
 
@@ -82,7 +82,7 @@ jobs:
           shasum -a 256 *.tar.gz > checksums.txt
 
       - name: Create GitHub Release in Public Repo
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           repository: MarkusAugust/linelord
           files: |
@@ -106,7 +106,7 @@ jobs:
       always()
       && (github.event_name == 'workflow_dispatch'
           || needs.build-and-release.result == 'success')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Only reads this repository's release metadata. The write it performs is
     # to the tap, authorised by HOMEBREW_TAP_TOKEN rather than by this token.
     permissions:
@@ -127,7 +127,7 @@ jobs:
       # Running the tap's own scripts meant this job executed code it does not
       # control while holding a write token for that same repository.
       - name: Checkout linelord, for the scripts this job runs
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: linelord
           persist-credentials: false
@@ -136,7 +136,7 @@ jobs:
       # tap/.git/config, where anything running in this job could read it.
       # Pushing supplies it explicitly instead.
       - name: Checkout the tap
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: MarkusAugust/homebrew-linelord
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
