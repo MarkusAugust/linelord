@@ -32,6 +32,8 @@ type AppProps = {
   authorPolicy?: 'strict' | 'loose'
   /** Commits for blame to look past, on top of `.git-blame-ignore-revs`. */
   ignoreRevisions?: string[]
+  /** How many files may be blamed at once. */
+  concurrency?: number
 }
 
 /**
@@ -54,6 +56,7 @@ export default function App({
   refresh = false,
   authorPolicy = 'strict',
   ignoreRevisions,
+  concurrency,
 }: AppProps) {
   const { state, setState, repoPath, setRepoPath, farewell } =
     useAppState(initialRepoPath)
@@ -69,11 +72,13 @@ export default function App({
     initializingMessage,
     initError,
     initProgress,
+    isChangingRepo,
   } = useLineLordService(repoPath, largeFileThresholdBytes, {
     useCache,
     refresh,
     authorPolicy,
     ignoreRevisions,
+    concurrency,
   })
 
   const handleClearError = () => {
@@ -146,7 +151,6 @@ export default function App({
 
   // Show loading screen during initialization
   if (repoPath && lineLordService && !isInitialized && !initError) {
-    const isChangingRepo = lineLordService.getCurrentRepoPath() !== repoPath
     return (
       <LoadingScreen
         message={initializingMessage}

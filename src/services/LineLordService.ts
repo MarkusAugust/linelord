@@ -79,6 +79,8 @@ export interface LineLordOptions {
    * down yet.
    */
   ignoreRevisions?: string[]
+  /** How many files may be blamed at once. */
+  concurrency?: number
 }
 
 export class LineLordService {
@@ -93,6 +95,7 @@ export class LineLordService {
   private refresh: boolean
   private authorPolicy: AuthorPolicy
   private extraIgnoreRevisions: string[]
+  private concurrency: number | undefined
   private ignoredRevisions: IgnoreRevs = {
     revisions: [],
     sources: { file: false, flag: false },
@@ -116,11 +119,13 @@ export class LineLordService {
     this.refresh = options.refresh ?? false
     this.authorPolicy = options.authorPolicy ?? 'strict'
     this.extraIgnoreRevisions = options.ignoreRevisions ?? []
+    this.concurrency = options.concurrency
     this.db = createDatabase()
     this.gitService = new GitService(
       repoPath,
       this.db,
       this.largeFileThresholdBytes,
+      options.concurrency,
     )
     this.normalizationService = new AuthorNormalizationService(this.db)
     this.rankingService = new AuthorRankingService(this.db)
@@ -135,7 +140,12 @@ export class LineLordService {
   /** Point every service at a different database. */
   private attachDatabase(db: LineLordDatabase, repoPath: string): void {
     this.db = db
-    this.gitService = new GitService(repoPath, db, this.largeFileThresholdBytes)
+    this.gitService = new GitService(
+      repoPath,
+      db,
+      this.largeFileThresholdBytes,
+      this.concurrency,
+    )
     this.normalizationService = new AuthorNormalizationService(db)
     this.rankingService = new AuthorRankingService(db)
     this.analysisService = new AnalysisService(db)
@@ -420,43 +430,6 @@ export class LineLordService {
     const { [HEAD_KEY]: head, ...rest } = fingerprint
     writeMeta(this.db, { ...rest, analyzed_at: String(Date.now()) })
     writeMeta(this.db, { [HEAD_KEY]: head ?? headSha })
-  }
-
-  async changeRepository(
-    newRepoPath: string,
-    onProgress?: (current: number, total: number, message: string) => void,
-    newThresholdBytes?: number,
-  ): Promise<void> {
-    onProgress?.(0, 100, 'Switching repositories...')
-
-    // The database being left behind is the previous repository's cache, and
-    // emptying it would throw away an analysis the user paid for and may come
-    // back to. Detaching is enough: initialize opens whichever database the
-    // new repository should use.
-
-    // Update the repository path and threshold if provided
-    this.currentRepoPath = newRepoPath
-    if (newThresholdBytes) {
-      this.largeFileThresholdBytes = newThresholdBytes
-    }
-
-    // A different repository has a different cache. Pointing the services at
-    // the new path while still holding the old database would analyse one
-    // repository into another's file.
-    this.releaseCacheLock()
-    this.attachDatabase(createDatabase(), newRepoPath)
-
-    // Mark as uninitialized
-    this.initialized = false
-
-    onProgress?.(10, 100, 'Initializing new repository...')
-
-    // Initialize with the new repository
-    await this.initialize((current, total, message) => {
-      // Map initialization progress to 10-100% of total progress
-      const adjustedCurrent = 10 + (current / total) * 90
-      onProgress?.(adjustedCurrent, 100, message)
-    })
   }
 
   getCurrentRepoPath(): string {

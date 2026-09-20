@@ -1,7 +1,7 @@
 import { exec, spawn } from 'node:child_process'
 import path from 'node:path'
 import { promisify } from 'node:util'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import type { LineLordDatabase } from '../db/database'
 import { authors, blameLines, files } from '../db/schema'
 import {
@@ -77,8 +77,48 @@ type BlameLineInsert = {
  * a copy of it. Adding `-M` or `-C` here changes who owns which line, and a
  * cache built before the change must not survive it -- which happens on its
  * own as long as this stays the single source of the arguments.
+ *
+ * `--porcelain` rather than `--line-porcelain`: the compact form writes the
+ * commit header once per commit instead of once per line, which is about
+ * three quarters less output to read and parse on this repository. The two
+ * are the same answer, and there is a test over real git output that says so.
  */
-export const BLAME_OPTIONS = ['-w', '--line-porcelain'] as const
+export const BLAME_OPTIONS = ['-w', '--porcelain'] as const
+
+/**
+ * Files blamed at once by default.
+ *
+ * One git process per file, so this is bounded by how fast the machine can
+ * spawn and reap them rather than by anything in LineLord. Twelve was the
+ * hard-coded ceiling before it could be asked for.
+ */
+export const DEFAULT_CONCURRENCY = 12
+
+/**
+ * The ceiling, shared with the flag that advertises it.
+ *
+ * Past this the time goes into spawning and reaping git processes rather than
+ * into reading blame.
+ */
+export const MAX_CONCURRENCY = 64
+
+/**
+ * Make a usable batch size out of whatever a caller passed.
+ *
+ * The CLI validates the flag and says why when it refuses, but the services
+ * take the number directly and are not entitled to assume it came from there.
+ * A NaN is the one that matters: the batching loop advances by this value, so
+ * a NaN never advances it and initialization sits forever, looking exactly
+ * like a repository that is simply large.
+ */
+export function normaliseConcurrency(value: number | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return DEFAULT_CONCURRENCY
+  }
+  const whole = Math.floor(value)
+  if (whole < 1) return DEFAULT_CONCURRENCY
+  return Math.min(whole, MAX_CONCURRENCY)
+}
 
 /** How much of a run was done afresh, and how much came from the cache. */
 export interface AnalysisRun {
@@ -123,8 +163,12 @@ export class GitService {
     private repoPath: string,
     private db: LineLordDatabase,
     private largeFileThresholdBytes: number = 50 * 1024,
-    private concurrency = 25, // Increased concurrency
-  ) {}
+    concurrency: number = DEFAULT_CONCURRENCY,
+  ) {
+    this.concurrency = normaliseConcurrency(concurrency)
+  }
+
+  private concurrency: number
 
   /**
    * Tell blame which commits to look past, before anything is analysed.
@@ -394,7 +438,8 @@ export class GitService {
     filesToAnalyze: string[],
     onProgress?: (current: number, total: number, message: string) => void,
   ) {
-    const batchSize = Math.min(this.concurrency, 12) // Don't overwhelm git
+    // Settled in the constructor, so this is a number whatever was passed.
+    const batchSize = this.concurrency
     let processed = 0
 
     for (let i = 0; i < filesToAnalyze.length; i += batchSize) {
@@ -833,6 +878,16 @@ export class GitService {
       return existing.id
     }
 
+    // Idempotent, because looking an author up and then inserting them is two
+    // steps with an await between: a second caller in that window finds
+    // nobody either and inserts the same address. The conflict clause is a
+    // no-op update rather than DO NOTHING, so RETURNING still yields the row
+    // -- whichever of the two callers put it there.
+    //
+    // The blame pipeline does not currently reach that window, because each
+    // file's output arrives as its own I/O event and the microtask queue
+    // drains between them. That is an accident of event ordering rather than
+    // a guarantee, and it is not one to build --concurrency on top of.
     const [newAuthor] = await this.db
       .insert(authors)
       .values({
@@ -840,6 +895,10 @@ export class GitService {
         email,
         displayName: this.normalizeDisplayName(name),
         isCanonical: true,
+      })
+      .onConflictDoUpdate({
+        target: authors.email,
+        set: { email: sql`excluded.email` },
       })
       .returning()
 

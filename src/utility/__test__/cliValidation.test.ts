@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 import { homedir } from 'node:os'
-import { expandTilde, validateThresholdKB } from '../cliValidation'
+import {
+  expandTilde,
+  validateConcurrency,
+  validateThresholdKB,
+} from '../cliValidation'
 
 describe('expandTilde', () => {
   it('expands a bare tilde to the home directory', () => {
@@ -58,5 +62,31 @@ describe('validateThresholdKB', () => {
     expect(validateThresholdKB('200').ok).toBe(false)
     expect(validateThresholdKB(undefined).ok).toBe(false)
     expect(validateThresholdKB(null).ok).toBe(false)
+  })
+})
+
+describe('validateConcurrency', () => {
+  it('accepts a sensible number of files at once', () => {
+    expect(validateConcurrency(8)).toEqual({ ok: true, concurrency: 8 })
+  })
+
+  it('refuses zero, which would blame nothing while looking busy', () => {
+    expect(validateConcurrency(0).ok).toBe(false)
+  })
+
+  it('refuses a negative number', () => {
+    expect(validateConcurrency(-4).ok).toBe(false)
+  })
+
+  it('refuses a fraction, which is not a number of processes', () => {
+    expect(validateConcurrency(2.5).ok).toBe(false)
+  })
+
+  it('refuses something that is not a number at all', () => {
+    expect(validateConcurrency('lots').ok).toBe(false)
+  })
+
+  it('caps it, because past a point the machine only spawns processes', () => {
+    expect(validateConcurrency(500).ok).toBe(false)
   })
 })

@@ -29,8 +29,34 @@ because the earlier answer was wrong.
   resets it, old code is stable rather than good, new code usually means
   working where the work is — and none of it measures a person.
 
+- **`--concurrency`**, for how many files are blamed at once. LineLord runs one
+  `git blame` per file; twelve at a time was hard-coded and is now the default.
+  Capped at 64, because past a point the time goes into spawning processes
+  rather than reading blame.
+
+### Changed
+
+- **Blame is read in the compact porcelain format.** `--line-porcelain` repeats
+  the whole commit header for every line; `--porcelain` writes it once per
+  commit. About three quarters less output to read and parse — measured on this
+  repository, a full analysis went from roughly 550 ms to 445 ms. The two forms
+  are the same answer, and there is a test over real git output that says so.
+  Every stored analysis is rebuilt once, because the options blame is run with
+  are part of what decides whether one may be reused.
+
 ### Fixed
 
+- **Creating the same contributor twice at once no longer loses a file.**
+  Looking an author up and then inserting them is two steps with an await
+  between, and two callers in that window both find nobody and both insert —
+  the second failing on the address, and taking its whole file's blame with it.
+  The insert is idempotent now. The blame pipeline does not currently reach
+  that window, but it was safe by an accident of event ordering rather than by
+  design, which is not something to put `--concurrency` on top of.
+- **An abandoned analysis no longer reports back.** Changing repository while
+  one was still running left the first run to finish and announce success, so
+  the screen presented the previous repository's analysis as ready under the
+  new repository's name.
 - **`--no-cache` now does something.** The flag has been in the help text and
   the README since caching landed, and it was never read: the option was
   declared under the negated name, and `--no-cache` is parsed as the negation
