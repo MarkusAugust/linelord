@@ -426,6 +426,50 @@ median, mean and line count. Enter opens one warrior: the full histogram with
 numbers, the oldest and newest line they still hold with file and line number,
 and the files where their oldest code sits.
 
+#### How long code actually lasts
+
+The figures above measure the age of what survives. They say nothing about the
+code that is *gone* — and a person whose every line has been rewritten looks,
+to them, like a person who never wrote any.
+
+```bash
+linelord --history                      # also read the past
+linelord --history --snapshot-interval=quarter
+linelord --history --max-snapshots=24
+```
+
+`--history` reads the repository as it stood at points in the past — the last
+commit of each month by default — and follows each month's work forward. That
+gives three things the present cannot: how many lines somebody ever had
+standing, how much of it is left, and how long half of a month's work lasts
+before it is rewritten.
+
+It is opt-in because it costs. Every sampled revision is a pass over the
+repository, so sixty of them on a large codebase is minutes rather than
+seconds. LineLord re-reads only the files some commit touched since the
+previous sample and carries the rest across, which is the difference between
+minutes and an afternoon, but it is still the slow path.
+
+The dashboard then fills in a **Half-life** column, `h` and `s` sort by it and
+by survival rate, and the detail view draws the curve:
+
+```
+What became of it
+  10 lines written in all, 2 still standing — 20%
+  Half of a month's work is gone after 2m
+  ██▄▄▄▂
+  new                older → 5m
+```
+
+Three things the column can say. A number is a measured half-life. `> 3m` means
+the work outlasted everything the history watched. A dash means the history saw
+that code only once and so knows nothing either way — which is not the same as
+saying it is short-lived, and is why it is not a number.
+
+A stored history outlives the analysis that made it. If the repository has
+moved on since, the screen says which revision the history describes and leaves
+the columns out rather than drawing a curve about a repository that has changed.
+
 #### What these numbers mean, and what they do not
 
 This matters more than the numbers themselves, so it is on the screen as well

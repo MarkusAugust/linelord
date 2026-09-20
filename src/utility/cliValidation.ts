@@ -87,3 +87,67 @@ export function validateConcurrency(value: unknown): ConcurrencyResult {
 
   return { ok: true, concurrency: value }
 }
+
+/** How far apart the sampled revisions are. */
+export type SnapshotIntervalResult =
+  | { ok: true; interval: 'week' | 'month' | 'quarter' }
+  | { ok: false; message: string }
+
+const INTERVALS = ['week', 'month', 'quarter'] as const
+
+export function validateSnapshotInterval(
+  value: unknown,
+): SnapshotIntervalResult {
+  if (typeof value !== 'string') {
+    return {
+      ok: false,
+      message: `--snapshot-interval must be one of ${INTERVALS.join(', ')}.`,
+    }
+  }
+  const interval = INTERVALS.find((one) => one === value.toLowerCase())
+  if (!interval) {
+    return {
+      ok: false,
+      message: `--snapshot-interval must be one of ${INTERVALS.join(
+        ', ',
+      )}, but got "${value}".`,
+    }
+  }
+  return { ok: true, interval }
+}
+
+/** How many revisions the history may read. */
+export type MaxSnapshotsResult =
+  | { ok: true; maxSnapshots: number }
+  | { ok: false; message: string }
+
+/**
+ * Check --max-snapshots before the walk starts.
+ *
+ * Each snapshot is a pass over the repository, so this is the one number
+ * standing between a run of seconds and a run of hours. Zero would walk
+ * nothing while looking like it had worked.
+ */
+export function validateMaxSnapshots(value: unknown): MaxSnapshotsResult {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return {
+      ok: false,
+      message: `--max-snapshots must be a whole number of revisions, but got "${String(
+        value,
+      )}".`,
+    }
+  }
+  if (!Number.isInteger(value) || value <= 0) {
+    return {
+      ok: false,
+      message: `--max-snapshots must be a whole number greater than zero, but got ${value}.`,
+    }
+  }
+  if (value > 500) {
+    return {
+      ok: false,
+      message: `--max-snapshots is capped at 500, but got ${value}. Each one is a pass over the repository, and past this the wait is measured in hours.`,
+    }
+  }
+  return { ok: true, maxSnapshots: value }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
 import { LineLordService } from '../services/LineLordService'
+import type { SnapshotInterval } from '../services/snapshotSelection'
 
 interface InitProgress {
   current: number
@@ -17,6 +18,7 @@ export function useLineLordService(
     authorPolicy?: 'strict' | 'loose'
     ignoreRevisions?: string[]
     concurrency?: number
+    history?: { interval: SnapshotInterval; maxSnapshots: number }
   } = {},
 ) {
   const {
@@ -24,6 +26,7 @@ export function useLineLordService(
     refresh = false,
     authorPolicy = 'strict',
     concurrency,
+    history,
   } = options
   // Joined for the dependency list below: a new array each render would
   // otherwise re-create the service on every one of them.
@@ -54,6 +57,22 @@ export function useLineLordService(
     ) => {
       if (cancelled) return
       setInitProgress({ current, total, message })
+    }
+
+    // A pass over the repository per snapshot, so the count is the honest
+    // warning: somebody who asked for sixty of them should be able to see
+    // that before deciding to wait.
+    const handleHistoryProgress = (
+      current: number,
+      total: number,
+      message: string,
+    ) => {
+      if (cancelled) return
+      setInitProgress({
+        current,
+        total,
+        message: `${message} — reading the history takes a pass over the repository each time`,
+      })
     }
 
     const handleSuccess = () => {
@@ -90,9 +109,18 @@ export function useLineLordService(
       authorPolicy,
       ignoreRevisions: ignoreRevisions ? ignoreRevisions.split(' ') : [],
       concurrency,
+      history,
     })
     setLineLordService(service)
-    service.initialize(handleProgress).then(handleSuccess).catch(handleError)
+
+    // The history is walked after the present, not instead of it: the screens
+    // that only need HEAD are ready either way, and the walk is the part that
+    // can take minutes.
+    service
+      .initialize(handleProgress)
+      .then(() => service.gatherHistory(handleHistoryProgress))
+      .then(handleSuccess)
+      .catch(handleError)
 
     return () => {
       cancelled = true

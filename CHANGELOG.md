@@ -10,7 +10,27 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **`--history`: how long code actually lasts.** The longevity screen measures
+  the age of what survives, which says nothing about the code that is gone —
+  and somebody whose every line has been rewritten looks, to it, like somebody
+  who never wrote any. With `--history`, LineLord reads the repository as it
+  stood at points in the past, follows each month's work forward, and reports
+  how much anyone ever had standing, how much is left, and how long half of a
+  month's work lasts. `--snapshot-interval` and `--max-snapshots` control the
+  sampling.
+
+  It is opt-in because it costs: every sampled revision is a pass over the
+  repository. Only the files some commit touched since the previous sample are
+  read again and the rest are carried across, which is the difference between
+  minutes and an afternoon, but it is still the slow path.
+
+  The dashboard gains a half-life column and two sort keys, and the detail view
+  draws the survival curve. A number is a measured half-life; `> 3m` means the
+  work outlasted everything watched; a dash means the history saw that code
+  only once and knows nothing either way. A history describing a revision the
+  repository has since moved past is reported as such rather than drawn.
 
 ## [0.9.0] — 2026-09-20
 

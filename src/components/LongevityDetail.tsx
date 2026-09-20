@@ -5,14 +5,18 @@ import type { LineLordService } from '../services/LineLordService'
 import {
   type AuthorFileLongevity,
   type AuthorLongevity,
+  type AuthorSurvivalWithIdentity,
   LongevityService,
 } from '../services/LongevityService'
 import { formatAge, HISTOGRAM_BUCKETS } from '../utility/ageFormatting'
 import { renderSimplePercentageBar } from '../utility/simplePercentageBar'
+import { curveSpanDays, renderSurvivalCurve } from '../utility/survivalCurve'
 
 type LongevityDetailProps = {
   lineLordService: LineLordService
   warrior: AuthorLongevity
+  /** What the history walk found about them, if it has been walked. */
+  survival?: AuthorSurvivalWithIdentity
   onBack: () => void
 }
 
@@ -23,9 +27,31 @@ type LongevityDetailProps = {
  * the part anyone can act on: a median age with no path attached is a number
  * nobody can check or do anything about.
  */
+/**
+ * What is known about how long their work lasts, in a sentence.
+ *
+ * A history that only ever saw somebody once knows nothing about their
+ * half-life, which is a different thing from having watched their code hold.
+ */
+function halfLifeSentence(survival: AuthorSurvivalWithIdentity): string {
+  if (survival.halfLifeDays !== null) {
+    return `Half of a month's work is gone after ${formatAge(
+      survival.halfLifeDays,
+    )}`
+  }
+  const watched = survival.survivalCurve.at(-1)?.ageDays ?? 0
+  if (watched <= 0) {
+    return 'The history saw this work only once, so it says nothing about how long it lasts'
+  }
+  return `Half of it is still there after ${formatAge(
+    watched,
+  )}, which is as far as this history reaches`
+}
+
 export default function LongevityDetail({
   lineLordService,
   warrior,
+  survival,
   onBack,
 }: LongevityDetailProps) {
   const [files, setFiles] = useState<AuthorFileLongevity[]>([])
@@ -114,6 +140,33 @@ export default function LongevityDetail({
           <Text color="gray">{'  newest  —'}</Text>
         )}
       </Box>
+
+      {survival && (
+        <>
+          <Text bold>What became of it</Text>
+          <Box flexDirection="column" marginBottom={1}>
+            <Text color="gray">
+              {'  '}
+              {survival.linesEverWritten.toLocaleString('en-GB')} lines written
+              in all, {survival.survivingLines.toLocaleString('en-GB')} still
+              standing — {Math.round(survival.survivalRate * 100)}%
+            </Text>
+            <Text color="gray">
+              {'  '}
+              {halfLifeSentence(survival)}
+            </Text>
+            <Text>
+              {'  '}
+              {renderSurvivalCurve(survival.survivalCurve)}
+            </Text>
+            <Text color="gray">
+              {'  new'}
+              {' '.repeat(Math.max(1, 24 - 'new'.length - 'older'.length))}
+              older → {formatAge(curveSpanDays(survival.survivalCurve))}
+            </Text>
+          </Box>
+        </>
+      )}
 
       {files.length > 0 && (
         <>

@@ -14,6 +14,7 @@ import RepoStats from './components/RepoStats'
 import SimpleRepoStats from './components/SimpleRepoStats'
 import SingleDevRepoStats from './components/SingleDevRepoStats'
 
+import type { SnapshotInterval } from './services/snapshotSelection'
 import { menuOptions } from './utility/menuOptions'
 import { clearTerminal } from './utility/terminal'
 import { convertThresholdKBToBytes } from './utility/thresholdConverter'
@@ -34,6 +35,8 @@ type AppProps = {
   ignoreRevisions?: string[]
   /** How many files may be blamed at once. */
   concurrency?: number
+  /** Walk the history as well, and how. */
+  history?: { interval: SnapshotInterval; maxSnapshots: number }
 }
 
 /**
@@ -57,6 +60,7 @@ export default function App({
   authorPolicy = 'strict',
   ignoreRevisions,
   concurrency,
+  history,
 }: AppProps) {
   const { state, setState, repoPath, setRepoPath, farewell } =
     useAppState(initialRepoPath)
@@ -79,6 +83,7 @@ export default function App({
     authorPolicy,
     ignoreRevisions,
     concurrency,
+    history,
   })
 
   const handleClearError = () => {

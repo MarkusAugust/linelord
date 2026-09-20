@@ -3,6 +3,8 @@ import { homedir } from 'node:os'
 import {
   expandTilde,
   validateConcurrency,
+  validateMaxSnapshots,
+  validateSnapshotInterval,
   validateThresholdKB,
 } from '../cliValidation'
 
@@ -88,5 +90,48 @@ describe('validateConcurrency', () => {
 
   it('caps it, because past a point the machine only spawns processes', () => {
     expect(validateConcurrency(500).ok).toBe(false)
+  })
+})
+
+describe('validateSnapshotInterval', () => {
+  it('accepts the three the sampling knows', () => {
+    for (const interval of ['week', 'month', 'quarter'] as const) {
+      expect(validateSnapshotInterval(interval)).toEqual({ ok: true, interval })
+    }
+  })
+
+  it('does not mind how it was capitalised', () => {
+    expect(validateSnapshotInterval('Month')).toEqual({
+      ok: true,
+      interval: 'month',
+    })
+  })
+
+  it('refuses one it does not know rather than quietly using a default', () => {
+    expect(validateSnapshotInterval('fortnight').ok).toBe(false)
+    expect(validateSnapshotInterval(7).ok).toBe(false)
+  })
+})
+
+describe('validateMaxSnapshots', () => {
+  it('accepts a sensible number of revisions', () => {
+    expect(validateMaxSnapshots(24)).toEqual({ ok: true, maxSnapshots: 24 })
+  })
+
+  it('refuses zero, which would walk nothing while looking busy', () => {
+    expect(validateMaxSnapshots(0).ok).toBe(false)
+  })
+
+  it('refuses a fraction and a negative', () => {
+    expect(validateMaxSnapshots(2.5).ok).toBe(false)
+    expect(validateMaxSnapshots(-1).ok).toBe(false)
+  })
+
+  it('refuses something that is not a number', () => {
+    expect(validateMaxSnapshots('all of them').ok).toBe(false)
+  })
+
+  it('caps it, because each one is a pass over the repository', () => {
+    expect(validateMaxSnapshots(5000).ok).toBe(false)
   })
 })

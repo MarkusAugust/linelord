@@ -35,6 +35,8 @@ import {
   type AnalysisFailure,
   GitService,
 } from './GitService'
+import { type HistoryRun, HistoryService } from './HistoryService'
+import type { SnapshotInterval } from './snapshotSelection'
 
 /** What the run did, and why, so the interface can say so rather than imply it. */
 export interface CacheStatus {
@@ -81,6 +83,15 @@ export interface LineLordOptions {
   ignoreRevisions?: string[]
   /** How many files may be blamed at once. */
   concurrency?: number
+  /**
+   * Walk the history as well, and how.
+   *
+   * Absent means the ordinary analysis of HEAD and nothing more. Present
+   * means reading the repository as it stood at points in the past, which
+   * takes minutes on anything substantial -- so it is only ever here because
+   * somebody asked for it.
+   */
+  history?: { interval: SnapshotInterval; maxSnapshots: number }
 }
 
 export class LineLordService {
@@ -96,6 +107,7 @@ export class LineLordService {
   private authorPolicy: AuthorPolicy
   private extraIgnoreRevisions: string[]
   private concurrency: number | undefined
+  private history: LineLordOptions['history']
   private ignoredRevisions: IgnoreRevs = {
     revisions: [],
     sources: { file: false, flag: false },
@@ -120,6 +132,7 @@ export class LineLordService {
     this.authorPolicy = options.authorPolicy ?? 'strict'
     this.extraIgnoreRevisions = options.ignoreRevisions ?? []
     this.concurrency = options.concurrency
+    this.history = options.history
     this.db = createDatabase()
     this.gitService = new GitService(
       repoPath,
@@ -470,6 +483,39 @@ export class LineLordService {
   /** Files the analysis could not read. Empty when everything was analysed. */
   getFailures(): AnalysisFailure[] {
     return this.gitService.getFailures()
+  }
+
+  /** Whether this run was asked to walk the history. */
+  wantsHistory(): boolean {
+    return this.history !== undefined
+  }
+
+  /**
+   * Walk the history, under exactly the settings the present was read with.
+   *
+   * Constructed here rather than by the caller so that the threshold, the
+   * commits being looked past and the batch size cannot drift apart from the
+   * ones the analysis of HEAD used. A history measured under different rules
+   * than the present it is drawn beside would be two answers to two
+   * questions, presented as one.
+   */
+  async gatherHistory(
+    onProgress?: (current: number, total: number, message: string) => void,
+  ): Promise<HistoryRun | null> {
+    if (!this.history) return null
+
+    const root =
+      (await findRepositoryRoot(this.currentRepoPath).then((lookup) =>
+        lookup.found ? lookup.root : null,
+      )) ?? this.currentRepoPath
+
+    return new HistoryService(root, this.db, {
+      thresholdBytes: this.largeFileThresholdBytes,
+      ignoredRevisions: this.ignoredRevisions.revisions,
+      concurrency: this.concurrency,
+      interval: this.history.interval,
+      maxSnapshots: this.history.maxSnapshots,
+    }).analyse(onProgress)
   }
 
   /**
