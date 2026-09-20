@@ -118,8 +118,9 @@ Once in LineLord's realm:
 2. **📈 Extended Repository Statistics** - Detailed battle reports with file breakdowns
 3. **👤 Single Developer Statistics** - Focus on one warrior's contributions
 4. **🪓 Brutal Barbarian Rankings** - Who holds ground: territory, sole conquests, code that outlived a year
-5. **🧾 Draft a .mailmap** - Show which warriors may be one person, and write it down if they are
-6. **ℹ️ About** - Learn the ways of LineLord
+5. **⏳ Code Longevity** - How old the code each warrior still holds is
+6. **🧾 Draft a .mailmap** - Show which warriors may be one person, and write it down if they are
+7. **ℹ️ About** - Learn the ways of LineLord
 
 ## 🔄 Updating Your Weapon - Stay Sharp for Battle
 
@@ -392,6 +393,49 @@ point of the file is that a person, not a heuristic, decided.
 Once a line is in `.mailmap`, `git blame` applies it and the guess is never
 made again — asking a second time says there is nothing left to write, because
 there genuinely is not.
+
+### How old is the code, and whose
+
+**⏳ Code Longevity** on the menu measures the age of the code that is still
+standing. For every surviving line, how long ago was the commit that last
+touched it — aggregated per warrior, and for the codebase as a whole.
+
+```
+The codebase is 3y 8m old at the middle, 21% of it last touched within ninety days.
+Oldest line still standing: old.ts:1 — 3y 8m old
+
+  # Warrior                   Lines   Median    Spread (p10–p90)  New → old
+›  1 Gorvek the Ironbane          10    3y 8m          6m – 3y 8m     ▂ █
+   2 Zygofer the Defiler           1    1y 4m       1y 4m – 1y 4m      █
+   3 Sister Nightshroud            3       2d             2d – 2d  █
+```
+
+Sorted by the **median**, not the mean: one ancient file somebody still owns
+drags a mean across years and the median not at all. The last column is the
+age histogram — newest code on the left, oldest on the right — so the shape of
+someone's remaining code is readable at a glance. `m`, `a` and `l` re-sort by
+median, mean and line count. Enter opens one warrior: the full histogram with
+numbers, the oldest and newest line they still hold with file and line number,
+and the files where their oldest code sits.
+
+#### What these numbers mean, and what they do not
+
+This matters more than the numbers themselves, so it is on the screen as well
+as here.
+
+- **Age is when a line was last changed, not when it was written.** A
+  reformatting, a linter sweep or a mass rename resets it for everything it
+  touches. That is what [`.git-blame-ignore-revs`](#when-a-reformatting-rewrote-everything)
+  is for, and without it these figures measure the formatter's calendar.
+- **Old code is stable code, which is not the same as good code.** Untouched
+  code may simply be code nobody dares to move.
+- **New code usually means working where the work is.** A low median says
+  somebody has been in an area under active development, not that they write
+  badly.
+- **None of it measures a person's worth or productivity, and it must not be
+  used that way.** LineLord counts lines and dates. It knows nothing about what
+  the lines do, how hard they were to write, or what else the person did that
+  week.
 
 ### Performance Notes
 

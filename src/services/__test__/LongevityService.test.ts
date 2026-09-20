@@ -16,7 +16,7 @@ const NOW = new Date('2026-09-20T00:00:00Z')
 const DAY = 24 * 60 * 60
 const nowSeconds = Math.floor(NOW.getTime() / 1000)
 /** A commit timestamp this many days before `NOW`. */
-const daysAgo = (days: number) => nowSeconds - days * DAY
+const daysAgo = (days: number) => Math.round(nowSeconds - days * DAY)
 
 const GORVEK = 1
 const NIGHTSHROUD = 2
@@ -118,6 +118,10 @@ describe('LongevityService, per author', () => {
     expect(gorvek?.oldestLine?.path).toBe('src/old.ts')
     expect(gorvek?.newestLine?.path).toBe('src/new.ts')
     expect(gorvek?.oldestLine?.lineNumber).toBe(1)
+    // The age travels with the line, so nothing on screen has to work it out
+    // against a clock of its own.
+    expect(gorvek?.oldestLine?.ageDays).toBe(400)
+    expect(gorvek?.newestLine?.ageDays).toBe(2)
   })
 
   it('measures how far apart the oldest and newest are', async () => {
@@ -149,6 +153,35 @@ describe('LongevityService, per author', () => {
       oneToTwoYears: 1,
       overTwoYears: 1,
     })
+  })
+
+  it('puts an age that lands exactly on an edge in the older bucket', async () => {
+    // A line exactly seven days old is not "under a week". Every edge was
+    // inclusive on the young side, so each boundary value fell one bucket
+    // short of where its own label says it belongs.
+    await give(db, GORVEK, [7, 30, 90, 365, 730])
+
+    const [gorvek] = await new LongevityService(db, NOW).forAuthors()
+
+    expect(gorvek?.ageHistogram).toEqual({
+      underAWeek: 0,
+      weekToMonth: 1,
+      oneToThreeMonths: 1,
+      threeToTwelveMonths: 1,
+      oneToTwoYears: 1,
+      overTwoYears: 1,
+    })
+  })
+
+  it('keeps an age just inside an edge in the younger bucket', async () => {
+    // The other side of the same line, so a fix that simply moved the
+    // inclusive edge across would not pass.
+    await give(db, GORVEK, [6.9, 29.9])
+
+    const [gorvek] = await new LongevityService(db, NOW).forAuthors()
+
+    expect(gorvek?.ageHistogram.underAWeek).toBe(1)
+    expect(gorvek?.ageHistogram.weekToMonth).toBe(1)
   })
 
   it('sorts the oldest code first, which is the question being asked', async () => {
@@ -189,6 +222,52 @@ describe('LongevityService, per author', () => {
   })
 })
 
+describe('LongevityService, the files behind one author', () => {
+  let db: Db
+
+  beforeEach(async () => {
+    db = createDatabase()
+    await seedAuthors(db)
+  })
+
+  it('names the files where an author holds the oldest code', async () => {
+    // Equal ages within each file, so this test is about which file ranks
+    // first and not about which of two middles a median picks.
+    await give(db, GORVEK, [900, 900], 1)
+    await give(db, GORVEK, [3, 3], 2)
+
+    const files = await new LongevityService(db, NOW).filesForAuthor(GORVEK)
+
+    expect(files.map((one) => one.path)).toEqual(['src/old.ts', 'src/new.ts'])
+    expect(files[0]?.lines).toBe(2)
+    expect(files[0]?.medianAgeDays).toBe(900)
+  })
+
+  it("counts only that author's lines in each file", async () => {
+    await give(db, GORVEK, [500], 1)
+    await give(db, NIGHTSHROUD, [500, 500, 500], 1)
+
+    const files = await new LongevityService(db, NOW).filesForAuthor(GORVEK)
+
+    expect(files[0]?.lines).toBe(1)
+  })
+
+  it('keeps the list short enough to read', async () => {
+    await give(db, GORVEK, [1, 2], 1)
+    await give(db, GORVEK, [3, 4], 2)
+
+    const files = await new LongevityService(db, NOW).filesForAuthor(GORVEK, 1)
+
+    expect(files).toHaveLength(1)
+  })
+
+  it('has nothing to show for an author who owns nothing', async () => {
+    expect(await new LongevityService(db, NOW).filesForAuthor(GHOST)).toEqual(
+      [],
+    )
+  })
+})
+
 describe('LongevityService, for the whole repository', () => {
   let db: Db
 
@@ -223,6 +302,7 @@ describe('LongevityService, for the whole repository', () => {
     const repository = await new LongevityService(db, NOW).forRepository()
 
     expect(repository.oldestLine?.path).toBe('src/old.ts')
+    expect(repository.oldestLine?.ageDays).toBe(400)
   })
 
   it('takes the middle the same way the per-author figures do', async () => {

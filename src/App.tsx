@@ -6,6 +6,7 @@ import ErrorScreen from './components/ErrorScreen'
 import ExitScreen from './components/ExitScreen'
 import Layout from './components/Layout'
 import LoadingScreen from './components/LoadingScreen'
+import LongevityDashboard from './components/LongevityDashboard'
 import MailmapDraft from './components/MailmapDraft'
 import Menu, { type MenuOption } from './components/Menu'
 import RepoPathInput from './components/RepoPathInput'
@@ -330,6 +331,13 @@ export default function App({
             onSelect={handleMenuSelect}
           />
         </Box>
+      )}
+
+      {state === 'longevity' && (
+        <LongevityDashboard
+          lineLordService={lineLordService}
+          onBack={returnToMenu}
+        />
       )}
 
       {state === 'mailmap' && (

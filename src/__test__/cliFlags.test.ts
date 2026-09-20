@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test'
+import { existsSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -30,6 +31,45 @@ async function runCli(args: string[], cacheHome: string): Promise<string> {
   await child.exited
   return out + err
 }
+
+describe('--no-cache', () => {
+  let repo: TestRepo | undefined
+  let cacheHome: string | undefined
+
+  afterEach(async () => {
+    await repo?.cleanup()
+    repo = undefined
+    if (cacheHome) await rm(cacheHome, { force: true, recursive: true })
+    cacheHome = undefined
+  })
+
+  it('actually stops the analysis being stored', async () => {
+    // meow reads --no-cache as the negation of a flag called `cache`, so a
+    // flag declared as `noCache` is never set by it and never rejected
+    // either: the run goes on caching, and the only sign is a cache file
+    // nobody asked for.
+    repo = await createTestRepo()
+    await repo.commit({ message: 'only commit', write: { 'a.ts': 'a\n' } })
+    cacheHome = await mkdtemp(join(tmpdir(), 'linelord-nocache-'))
+
+    await runCli(['--write-mailmap', '--no-cache', '-p', repo.path], cacheHome)
+
+    expect(existsSync(join(cacheHome, 'linelord'))).toBe(false)
+  }, 30000)
+
+  it('stores it when nobody says otherwise', async () => {
+    // The other half: without the flag a cache is written, so the test above
+    // is measuring the flag and not some unrelated reason for an empty
+    // directory.
+    repo = await createTestRepo()
+    await repo.commit({ message: 'only commit', write: { 'a.ts': 'a\n' } })
+    cacheHome = await mkdtemp(join(tmpdir(), 'linelord-cache-'))
+
+    await runCli(['--write-mailmap', '-p', repo.path], cacheHome)
+
+    expect(existsSync(join(cacheHome, 'linelord'))).toBe(true)
+  }, 30000)
+})
 
 describe('the short form of --path', () => {
   let repo: TestRepo | undefined

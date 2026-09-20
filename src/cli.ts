@@ -35,9 +35,14 @@ const cli = meow(CLI_HELP, {
       default: 50,
       shortFlag: 't',
     },
-    noCache: {
+    // Declared as `cache`, not `noCache`. The flag a person types is
+    // --no-cache, and meow reads that as the negation of `cache` -- so a flag
+    // declared under the negated name is never set by it, and never rejected
+    // either. LineLord went on caching, and the only sign was a cache file
+    // nobody had asked for.
+    cache: {
       type: 'boolean',
-      default: false,
+      default: true,
     },
     refresh: {
       type: 'boolean',
@@ -171,7 +176,7 @@ if (cli.flags.clearCache) {
 // analysis the next ordinary run will reuse.
 if (cli.flags.writeMailmap) {
   const service = new LineLordService(repoPath, thresholdBytes, {
-    useCache: !cli.flags.noCache,
+    useCache: cli.flags.cache,
     refresh: cli.flags.refresh,
     ignoreRevisions: cli.flags.ignoreRev,
   })
@@ -202,7 +207,7 @@ if (cli.flags.writeMailmap) {
 const element = React.createElement(App, {
   repoPath: repoPath,
   thresholdKB: thresholdKB,
-  useCache: !cli.flags.noCache,
+  useCache: cli.flags.cache,
   refresh: cli.flags.refresh,
   authorPolicy: cli.flags.fuzzyAuthors ? 'loose' : 'strict',
   ignoreRevisions: cli.flags.ignoreRev,

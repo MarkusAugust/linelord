@@ -40,6 +40,10 @@ export default function About({ onBack }: AboutProps) {
             .mailmap says otherwise
           </Text>
           <Text>
+            • {pc.cyan('Code Longevity')} - How old the code each warrior still
+            holds is
+          </Text>
+          <Text>
             • {pc.cyan('Intelligent Filtering')} - Skips binaries and oversized
             files
           </Text>
@@ -71,9 +75,42 @@ export default function About({ onBack }: AboutProps) {
             • Shows {pc.yellow('current line dominance')}, not ancient commit
             history
           </Text>
-          <Text>• Warriors are united based on email and name similarity</Text>
+          <Text>
+            • Warriors are told apart by {pc.yellow('email address')}; .mailmap
+            unites them
+          </Text>
           <Text>• Great refactors may shift territorial control</Text>
           <Text>• Blank lines are banished from the realm</Text>
+        </Box>
+      </Box>
+
+      {/*
+        L6. The longevity screen is the easiest of these to misread as a
+        judgement of people, and the barbarian tone must not be allowed to
+        hide that it is not one.
+      */}
+      <Box flexDirection="column" marginY={1}>
+        <Text>{pc.bold('⏳ On the age of code:')}</Text>
+        <Box flexDirection="column" marginLeft={2}>
+          <Text>
+            • Age is when a line was {pc.yellow('last changed')}, not when it
+            was written
+          </Text>
+          <Text>
+            • A reformatting resets it — name those commits in
+            .git-blame-ignore-revs
+          </Text>
+          <Text>• Old code is stable code. Stable is not the same as good</Text>
+          <Text>
+            • New code usually means working where the work is, not working
+            badly
+          </Text>
+          <Text>
+            •{' '}
+            {pc.yellow(
+              'None of this measures a warrior. Do not use it that way.',
+            )}
+          </Text>
         </Box>
       </Box>
 
