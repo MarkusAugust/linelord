@@ -1,5 +1,8 @@
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import type { LineLordDatabase } from '../db/database'
+import { HISTORY_HEAD_KEY, readMeta } from '../db/meta'
+import { authors, cohortLines, snapshots } from '../db/schema'
+import { type AuthorSurvival, computeSurvival } from './survival'
 
 /**
  * How old the code is that somebody still owns.
@@ -124,6 +127,12 @@ const EMPTY_HISTOGRAM: AgeHistogram = {
   overTwoYears: 0,
 }
 
+/** What the cohort walk found, with the person attached. */
+export interface AuthorSurvivalWithIdentity extends AuthorSurvival {
+  name: string
+  email: string
+}
+
 export class LongevityService {
   constructor(
     private db: LineLordDatabase,
@@ -243,6 +252,62 @@ export class LongevityService {
       ORDER BY medianAgeDays DESC
       LIMIT ${limit}
     `)
+  }
+
+  /**
+   * Which revision the stored history describes, or null if there is none.
+   *
+   * The caller compares this against the revision being analysed. Cohort rows
+   * outlive the analysis that produced them, so a history from before HEAD
+   * moved is still there and still readable -- and a curve drawn from it
+   * would be about a repository that has changed since.
+   */
+  historyDescribes(): string | null {
+    return readMeta(this.db, HISTORY_HEAD_KEY)
+  }
+
+  /**
+   * How long each person's work lasted, from the cohort walk.
+   *
+   * Empty when no history has been gathered, which is the ordinary case:
+   * tier 2 only runs when it is asked for.
+   */
+  async survivalByAuthor(): Promise<AuthorSurvivalWithIdentity[]> {
+    const sampled = await this.db
+      .select({ at: snapshots.snapshotTimestamp })
+      .from(snapshots)
+    if (sampled.length === 0) return []
+
+    const rows = await this.db
+      .select({
+        authorId: cohortLines.authorId,
+        cohortMonth: cohortLines.cohortMonth,
+        snapshotAt: snapshots.snapshotTimestamp,
+        lineCount: cohortLines.lineCount,
+      })
+      .from(cohortLines)
+      .innerJoin(snapshots, eq(snapshots.id, cohortLines.snapshotId))
+
+    const identities = new Map(
+      (
+        await this.db
+          .select({
+            id: authors.id,
+            name: authors.displayName,
+            email: authors.email,
+          })
+          .from(authors)
+      ).map((one) => [one.id, one]),
+    )
+
+    return computeSurvival(
+      rows,
+      sampled.map((one) => one.at),
+    ).map((one) => ({
+      ...one,
+      name: identities.get(one.authorId)?.name ?? '',
+      email: identities.get(one.authorId)?.email ?? '',
+    }))
   }
 
   /** The same question asked of the codebase as a whole. */
