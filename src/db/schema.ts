@@ -63,6 +63,43 @@ export const blameLines = sqliteTable('blame_lines', {
 })
 
 /**
+ * The repository as it stood at one point in the past.
+ *
+ * Tier 2 of the longevity work samples the history rather than walking it:
+ * the last commit of each month, quarter or week. Only aggregates survive a
+ * snapshot -- the raw blame of sixty revisions would dwarf the analysis of
+ * HEAD and answer nothing the counts do not.
+ */
+export const snapshots = sqliteTable('snapshots', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  commitSha: text('commit_sha').notNull().unique(),
+  /** Committer time of the sampled commit, in whole seconds. */
+  snapshotTimestamp: integer('snapshot_timestamp').notNull(),
+  totalLines: integer('total_lines').notNull().default(0),
+})
+
+/**
+ * How many lines an author wrote in one month were still alive at one
+ * snapshot.
+ *
+ * The cohort is the month the line was written; the snapshot is when it was
+ * counted. Reading a cohort across snapshots gives the curve of how much of
+ * that month's work is still standing, and where it crosses half gives a
+ * half-life.
+ */
+export const cohortLines = sqliteTable('cohort_lines', {
+  snapshotId: integer('snapshot_id')
+    .notNull()
+    .references(() => snapshots.id),
+  authorId: integer('author_id')
+    .notNull()
+    .references(() => authors.id),
+  /** Start of the month the line was written, in whole seconds. */
+  cohortMonth: integer('cohort_month').notNull(),
+  lineCount: integer('line_count').notNull(),
+})
+
+/**
  * Key/value pairs describing how this database was built.
  *
  * Kept separate from the analysis tables because it is read first and on its
@@ -74,6 +111,8 @@ export const meta = sqliteTable('meta', {
   value: text('value').notNull(),
 })
 
+export type Snapshot = typeof snapshots.$inferSelect
+export type CohortLine = typeof cohortLines.$inferSelect
 export type Author = typeof authors.$inferSelect
 export type AuthorInsert = typeof authors.$inferInsert
 export type AuthorAlias = typeof authorAliases.$inferSelect

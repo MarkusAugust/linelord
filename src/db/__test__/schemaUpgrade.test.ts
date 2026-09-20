@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createDatabase, SCHEMA_VERSION } from '../database'
-import { authors, blameLines, files, meta } from '../schema'
+import { authors, blameLines, files, meta, snapshots } from '../schema'
 
 /**
  * Opening a cache file written by an older LineLord.
@@ -118,6 +118,28 @@ describe('a cache file from an older version', () => {
     // Including the fingerprint: a version stamp describing tables that have
     // been dropped would invite a reuse of rows that no longer exist.
     expect(await db.select().from(meta)).toEqual([])
+  })
+
+  it('adds a table that did not exist without throwing the cache away', async () => {
+    // Tier 2's tables were added after 0.9.0 shipped. They are additive:
+    // nothing already stored is less true for them, so a cache from before
+    // must keep its analysis and simply gain the new tables.
+    const path = join(directory, 'cache.db')
+    const first = createDatabase({ path })
+    await first.insert(authors).values({
+      name: 'Gorvek',
+      email: 'gorvek@firma.no',
+      displayName: 'Gorvek',
+    })
+
+    const second = createDatabase({ path })
+
+    expect(await second.select().from(authors)).toHaveLength(1)
+    await second.insert(snapshots).values({
+      commitSha: 'a'.repeat(40),
+      snapshotTimestamp: 1_700_000_000,
+    })
+    expect(await second.select().from(snapshots)).toHaveLength(1)
   })
 
   it('keeps a cache written by this version', async () => {
