@@ -9,15 +9,18 @@ export const IN_MEMORY = ':memory:'
 /**
  * The shape of the data, as distinct from the analysis that fills it.
  *
- * Bump this when the tables or their columns change. An old cache is then
- * unreadable rather than merely out of date, so the two are kept apart: a
- * schema change need not mean the analysis would produce different answers,
- * and an analysis change need not touch the tables.
+ * Bump this when a stored row stops being readable or stops being true: a
+ * column that changed type or meaning, a column or table that went away. An
+ * old cache is then thrown out rather than written into, which is what keeps
+ * the two apart -- a schema change need not mean the analysis would produce
+ * different answers, and an analysis change need not touch the tables.
  *
- * Indexes are deliberately not on that list. They are created idempotently
- * on every open, so adding one reaches an existing cache by itself, and no
- * stored row is any less true for being reached a different way. Bumping for
- * an index would make every user re-analyse their repository to gain nothing.
+ * Purely additive changes are deliberately not on that list. A new index or a
+ * new table is created idempotently on every open, so it reaches an existing
+ * cache by itself, and nothing already stored is any less true for it.
+ * Bumping for one would make every user re-analyse their repository to gain
+ * nothing. `commit_timestamp` replacing `commit_date` is the other kind, and
+ * is why this is at 2.
  */
 export const SCHEMA_VERSION = 2
 
@@ -55,6 +58,8 @@ function discardIfWrittenByAnotherVersion(sqlite: Database): void {
 
   sqlite.exec(`
     PRAGMA foreign_keys = OFF;
+    DROP TABLE IF EXISTS cohort_lines;
+    DROP TABLE IF EXISTS snapshots;
     DROP TABLE IF EXISTS blame_lines;
     DROP TABLE IF EXISTS author_aliases;
     DROP TABLE IF EXISTS authors;
@@ -139,6 +144,28 @@ export function createDatabase(options: CreateDatabaseOptions = {}) {
     -- Everything the cache needs to decide whether it may be reused: the
     -- revision it was built against, and the settings that would change the
     -- answer if they differed. Read before anything else on startup.
+    -- Tier 2 of the longevity work: the repository as it stood at points in
+    -- the past. Only the aggregates are kept -- a line count per author per
+    -- cohort month per snapshot -- because the raw blame of sixty revisions
+    -- would dwarf the analysis of HEAD and answer no question that these
+    -- counts do not.
+    CREATE TABLE IF NOT EXISTS snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      commit_sha TEXT NOT NULL UNIQUE,
+      snapshot_timestamp INTEGER NOT NULL,
+      total_lines INTEGER NOT NULL DEFAULT 0
+    );
+
+    -- How many lines written by author_id in the month cohort_month were
+    -- still alive at snapshot_id.
+    CREATE TABLE IF NOT EXISTS cohort_lines (
+      snapshot_id INTEGER NOT NULL REFERENCES snapshots(id),
+      author_id INTEGER NOT NULL REFERENCES authors(id),
+      cohort_month INTEGER NOT NULL,
+      line_count INTEGER NOT NULL,
+      PRIMARY KEY (snapshot_id, author_id, cohort_month)
+    );
+
     CREATE TABLE IF NOT EXISTS meta (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
@@ -159,6 +186,8 @@ export function createDatabase(options: CreateDatabaseOptions = {}) {
     -- the sort to an index search with no sort at all.
     CREATE INDEX IF NOT EXISTS idx_blame_time
       ON blame_lines(commit_timestamp);
+    CREATE INDEX IF NOT EXISTS idx_cohort_author
+      ON cohort_lines(author_id, cohort_month);
     CREATE INDEX IF NOT EXISTS idx_files_path ON files(path);
     CREATE INDEX IF NOT EXISTS idx_authors_email ON authors(email);
     CREATE INDEX IF NOT EXISTS idx_authors_canonical ON authors(canonical_id);
@@ -185,6 +214,8 @@ export function createDatabase(options: CreateDatabaseOptions = {}) {
  * shape of the tables, which emptying them does not change.
  */
 export function clearDatabase(db: LineLordDatabase) {
+  db.delete(schema.cohortLines).run()
+  db.delete(schema.snapshots).run()
   db.delete(schema.blameLines).run()
   db.delete(schema.authorAliases).run()
   db.delete(schema.authors).run()
