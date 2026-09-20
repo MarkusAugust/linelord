@@ -5,8 +5,10 @@ import {
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
 import { createDatabase } from '../../db/database'
+import { readMeta } from '../../db/meta'
 import { authors, cohortLines, snapshots } from '../../db/schema'
-import { HistoryService } from '../HistoryService'
+import { HISTORY_HEAD_KEY, HistoryService } from '../HistoryService'
+import { LineLordService } from '../LineLordService'
 
 /**
  * Walking the history, and the one thing that must be true about it.
@@ -241,6 +243,89 @@ describe('HistoryService', () => {
       .from(snapshots)
     expect(order).toHaveLength(2)
     expect(order[0]?.at).toBeGreaterThan(order[1]?.at ?? 0)
+  }, 120000)
+
+  it('blames the files even when handed a nonsense batch size', async () => {
+    // Math.max(1, NaN) is NaN, and a batching loop stepping by NaN slices an
+    // empty batch and then ends -- so nothing is read and the run reports
+    // success with no lines at all. The same expression was found in
+    // GitService a branch ago; this is the same settling.
+    repo = await repoWithAYear()
+    const db = createDatabase()
+
+    const run = await new HistoryService(repo.path, db, {
+      interval: 'month',
+      concurrency: Number.NaN,
+    }).analyse()
+
+    expect(run.filesBlamed).toBeGreaterThan(0)
+    const [first] = await db.select().from(snapshots)
+    expect(first?.totalLines).toBeGreaterThan(0)
+  }, 120000)
+
+  it('names a forgotten contributor rather than showing their address', async () => {
+    repo = await repoWithAYear()
+    const db = createDatabase()
+
+    await new HistoryService(repo.path, db, { interval: 'month' }).analyse()
+
+    const [zygofer] = await db
+      .select({ name: authors.displayName })
+      .from(authors)
+      .where(eq(authors.email, ZYGOFER.email))
+
+    expect(zygofer?.name).toBe(ZYGOFER.name)
+  }, 120000)
+
+  it('records which revision the history describes', async () => {
+    // Otherwise the rows sit in the cache after HEAD has moved on, and
+    // nothing can tell that the curve drawn from them is about a repository
+    // that no longer exists.
+    repo = await repoWithAYear()
+    const db = createDatabase()
+
+    await new HistoryService(repo.path, db, { interval: 'month' }).analyse()
+
+    expect(readMeta(db, HISTORY_HEAD_KEY)).toBe(await repo.head())
+  }, 120000)
+
+  it('attributes a merged address to whoever it was merged into', async () => {
+    // Identity normalisation has already run by the time this does. Pointing
+    // a cohort row at the address rather than at the person splits somebody
+    // who committed from two machines in two, or drops them entirely from
+    // anything that joins on canonical authors.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'from the office',
+      author: { name: 'Gorvek the Ironbane', email: 'gorvek@firma.no' },
+      date: new Date('2025-01-10T10:00:00Z'),
+      write: { 'a.ts': 'one\ntwo\n' },
+    })
+    await repo.commit({
+      message: 'from the laptop',
+      author: { name: 'Gorvek Ironbane', email: 'gorvek@privat.no' },
+      date: new Date('2025-02-10T10:00:00Z'),
+      write: { 'b.ts': 'three\n' },
+    })
+
+    const service = new LineLordService(repo.path, 50 * 1024, {
+      authorPolicy: 'loose',
+    })
+    await service.initialize()
+    const db = service.getDatabase()
+    await new HistoryService(repo.path, db, { interval: 'month' }).analyse()
+
+    const merged = await db
+      .select({ id: authors.id })
+      .from(authors)
+      .where(eq(authors.isCanonical, false))
+    const used = await db
+      .select({ authorId: cohortLines.authorId })
+      .from(cohortLines)
+    const mergedIds = new Set(merged.map((one) => one.id))
+
+    expect(merged.length).toBeGreaterThan(0)
+    expect(used.filter((one) => mergedIds.has(one.authorId))).toEqual([])
   }, 120000)
 
   it('has nothing to walk in a repository with no commits', async () => {

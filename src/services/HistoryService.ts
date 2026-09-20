@@ -1,8 +1,10 @@
 import { spawn } from 'node:child_process'
 import { sql } from 'drizzle-orm'
 import type { LineLordDatabase } from '../db/database'
+import { writeMeta } from '../db/meta'
 import { authors, cohortLines, snapshots } from '../db/schema'
 import { isAncestor, pathsTouchedBetween } from '../utility/gitRepository'
+import { normaliseConcurrency } from './GitService'
 import {
   analysablePathsAtRevision,
   blameFileAtRevision,
@@ -59,9 +61,24 @@ export interface HistoryRun {
   /** Files blamed across every snapshot, and files carried across instead. */
   filesBlamed: number
   filesCarried: number
+  /**
+   * Files that could not be read, with the revision they were read at.
+   *
+   * A file that fails contributes no lines, which silently understates the
+   * snapshot it belongs to. Collected rather than printed, as everywhere
+   * else here: Ink owns the terminal by the time this runs.
+   */
+  failures: HistoryFailure[]
 }
 
-const DEFAULT_CONCURRENCY = 12
+/** Where the revision this history describes is recorded. */
+export const HISTORY_HEAD_KEY = 'history_head_sha'
+
+export interface HistoryFailure {
+  revision: string
+  path: string
+  error: string
+}
 
 export class HistoryService {
   private interval: SnapshotInterval
@@ -70,6 +87,9 @@ export class HistoryService {
   private ignoredRevisions: string[]
   private reuse: boolean
   private concurrency: number
+  private failures: HistoryFailure[] = []
+  /** The name each address wrote under, for people the present has forgotten. */
+  private namesByEmail = new Map<string, string>()
 
   constructor(
     private repoPath: string,
@@ -81,7 +101,10 @@ export class HistoryService {
     this.thresholdBytes = options.thresholdBytes ?? 50 * 1024
     this.ignoredRevisions = options.ignoredRevisions ?? []
     this.reuse = options.reuseBetweenSnapshots ?? true
-    this.concurrency = Math.max(1, options.concurrency ?? DEFAULT_CONCURRENCY)
+    // The same settling GitService does, and for the same reason: a NaN
+    // makes the batching loop slice an empty batch and then end, so nothing
+    // is blamed and the run reports success with no lines at all.
+    this.concurrency = normaliseConcurrency(options.concurrency)
   }
 
   /** The revisions this run would sample, without sampling them. */
@@ -106,7 +129,7 @@ export class HistoryService {
   ): Promise<HistoryRun> {
     const planned = await this.plannedSnapshots()
     if (planned.length === 0) {
-      return { snapshots: 0, filesBlamed: 0, filesCarried: 0 }
+      return { snapshots: 0, filesBlamed: 0, filesCarried: 0, failures: [] }
     }
 
     this.forgetPreviousRun()
@@ -117,7 +140,10 @@ export class HistoryService {
       snapshots: 0,
       filesBlamed: 0,
       filesCarried: 0,
+      failures: [],
     }
+    this.failures = []
+    this.namesByEmail = new Map()
 
     for (const [index, snapshot] of planned.entries()) {
       onProgress?.(
@@ -143,6 +169,18 @@ export class HistoryService {
       previousSha = snapshot.sha
     }
 
+    // Which revision this history describes. Without it, cohort rows sit in
+    // the cache after HEAD has moved on and there is no way to tell that the
+    // curve drawn from them is about a repository that no longer exists.
+    const head = planned[planned.length - 1]
+    if (head) {
+      writeMeta(this.db, {
+        [HISTORY_HEAD_KEY]: head.sha,
+        history_snapshots: String(run.snapshots),
+      })
+    }
+
+    run.failures = this.failures
     onProgress?.(planned.length, planned.length, 'History complete')
     return run
   }
@@ -245,15 +283,27 @@ export class HistoryService {
               path,
               this.ignoredRevisions,
             ),
+            this.namesByEmail,
           ),
         })),
       )
-      for (const result of results) {
-        // A file that cannot be read contributes nothing rather than failing
-        // the whole history, which may be fifty snapshots deep by then.
+      for (const [index, result] of results.entries()) {
         if (result.status === 'fulfilled') {
           into.set(result.value.path, result.value.counts)
+          continue
         }
+        // A file that cannot be read contributes nothing rather than failing
+        // the whole history, which may be fifty snapshots deep by then -- but
+        // contributing nothing understates the snapshot, so it is written
+        // down rather than shrugged off.
+        this.failures.push({
+          revision,
+          path: batch[index] ?? '',
+          error:
+            result.reason instanceof Error
+              ? result.reason.message
+              : String(result.reason),
+        })
       }
     }
   }
@@ -310,33 +360,40 @@ export class HistoryService {
   }
 
   /**
-   * The author row for an address, creating one if the history has someone
-   * the present does not.
+   * The author row an address belongs to, creating one if the history has
+   * somebody the present does not.
    *
-   * Somebody whose every line has since been rewritten is absent from the
-   * analysis of HEAD, and they are precisely who this feature is about. They
-   * are created canonical, which is what they are under the default identity
-   * policy; a later `--fuzzy-authors` run would not merge them, since
-   * normalisation has already been and gone by the time this runs.
+   * Two things matter here. Somebody whose every line has since been
+   * rewritten is absent from the analysis of HEAD, and is precisely who this
+   * feature is about; they are created, under the name they committed with
+   * rather than under their address, which is all the contributor list would
+   * otherwise have to show.
+   *
+   * And an address that exists may have been merged into another by identity
+   * normalisation, which has already run by the time this does. The cohort
+   * rows must point at whoever the address resolves to, or a contributor who
+   * committed from two machines has their history split in two -- or dropped
+   * entirely by anything that joins on canonical authors.
    */
   private resolveAuthor(email: string): number {
+    const name = this.namesByEmail.get(email) ?? email
     const [row] = this.db
       .insert(authors)
       .values({
-        name: email,
+        name,
         email,
-        displayName: email,
+        displayName: name,
         isCanonical: true,
       })
       .onConflictDoUpdate({
         target: authors.email,
         set: { email: sql`excluded.email` },
       })
-      .returning({ id: authors.id })
+      .returning({ id: authors.id, canonicalId: authors.canonicalId })
       .all()
 
     if (!row) throw new Error(`Could not resolve an author for ${email}`)
-    return row.id
+    return row.canonicalId ?? row.id
   }
 
   /** Drop any earlier history, which described other revisions. */
