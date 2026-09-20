@@ -141,6 +141,12 @@ export function createDatabase(options: CreateDatabaseOptions = {}) {
 
     CREATE INDEX IF NOT EXISTS idx_blame_file_id ON blame_lines(file_id);
     CREATE INDEX IF NOT EXISTS idx_blame_author_id ON blame_lines(author_id);
+    -- Age is asked per author and in timestamp order: how old is the median
+    -- line this person still owns, which is their oldest, which their newest.
+    -- Without this every one of those questions is a scan of every line in
+    -- the repository.
+    CREATE INDEX IF NOT EXISTS idx_blame_author_time
+      ON blame_lines(author_id, commit_timestamp);
     CREATE INDEX IF NOT EXISTS idx_files_path ON files(path);
     CREATE INDEX IF NOT EXISTS idx_authors_email ON authors(email);
     CREATE INDEX IF NOT EXISTS idx_authors_canonical ON authors(canonical_id);
