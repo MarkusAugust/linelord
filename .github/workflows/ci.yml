@@ -18,10 +18,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # Pinned for the same reason bun-version is: `ubuntu-latest` moves to
+        # Ubuntu 26 in October 2026, and a label that changes underneath the
+        # repository can turn a green rerun red without a line of it having
+        # changed. Bump this deliberately, when there is a reason to.
+        os: [ubuntu-24.04, macos-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Bun
         # Pinned rather than `latest`: an unpinned runtime means a Bun release
