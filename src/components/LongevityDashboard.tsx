@@ -67,9 +67,20 @@ export default function LongevityDashboard({
     let cancelled = false
 
     const load = async () => {
-      if (!lineLordService?.isInitialized()) return
+      if (!lineLordService?.isInitialized()) {
+        // Returning here without saying so leaves the loading message on
+        // screen for good: there is no second attempt, and nothing else will
+        // ever clear it. The one state this screen must not reach is one it
+        // cannot explain.
+        if (cancelled) return
+        setError('LineLord service is unavailable or not initialized')
+        setIsLoading(false)
+        return
+      }
+
       try {
         setIsLoading(true)
+        setError(null)
         const service = new LongevityService(lineLordService.getDatabase())
         const [byAuthor, wholeRepository] = await Promise.all([
           service.forAuthors(),
