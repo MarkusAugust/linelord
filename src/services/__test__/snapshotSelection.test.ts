@@ -73,10 +73,11 @@ describe('intervalKey', () => {
 
 describe('selectSnapshots', () => {
   it('takes the last commit of each month', () => {
+    // Newest first, as git log gives them.
     const commits = [
-      at('2026-01-05T10:00:00Z', 'jan-early'),
-      at('2026-01-28T10:00:00Z', 'jan-late'),
       at('2026-02-14T10:00:00Z', 'feb-only'),
+      at('2026-01-28T10:00:00Z', 'jan-late'),
+      at('2026-01-05T10:00:00Z', 'jan-early'),
     ]
 
     expect(selectSnapshots(commits).map((one) => one.sha)).toEqual([
@@ -90,8 +91,8 @@ describe('selectSnapshots', () => {
     // analysis walks them in.
     const commits = [
       at('2026-03-20T10:00:00Z', 'mar'),
-      at('2026-01-20T10:00:00Z', 'jan'),
       at('2026-02-20T10:00:00Z', 'feb'),
+      at('2026-01-20T10:00:00Z', 'jan'),
     ]
 
     expect(selectSnapshots(commits).map((one) => one.sha)).toEqual([
@@ -103,10 +104,11 @@ describe('selectSnapshots', () => {
 
   it('keeps the newest when there are more months than the ceiling', () => {
     // A curve through the recent past beats one that stops three years ago.
+    // Newest first, as git gives them: m10 down to m1.
     const commits = Array.from({ length: 10 }, (_, index) =>
       at(
-        `2026-${String(index + 1).padStart(2, '0')}-15T10:00:00Z`,
-        `m${index + 1}`,
+        `2026-${String(10 - index).padStart(2, '0')}-15T10:00:00Z`,
+        `m${10 - index}`,
       ),
     )
 
@@ -114,6 +116,38 @@ describe('selectSnapshots', () => {
       'm8',
       'm9',
       'm10',
+    ])
+  })
+
+  it('orders by ancestry, not by the clock', () => {
+    // git lets a commit carry an earlier timestamp than its own parent --
+    // clock skew, or a rebase. Ordering snapshots by time then puts a
+    // descendant before its ancestor, and the walk between them asks git for
+    // the commits in a range that is not a range at all. The counts carried
+    // across are wrong, and nothing says so.
+    //
+    // The list arrives newest first, as git log --first-parent gives it, so
+    // position in it is ancestry and needs no clock.
+    const commits = [
+      at('2025-05-01T10:00:00Z', 'child-dated-may'),
+      at('2025-06-01T10:00:00Z', 'parent-dated-june'),
+    ]
+
+    expect(selectSnapshots(commits).map((one) => one.sha)).toEqual([
+      'parent-dated-june',
+      'child-dated-may',
+    ])
+  })
+
+  it('stands for an interval with the commit closest to HEAD', () => {
+    // "Last of the month" means last in the history, not latest on the clock.
+    const commits = [
+      at('2026-01-05T10:00:00Z', 'newest-in-january'),
+      at('2026-01-28T10:00:00Z', 'older-but-later-dated'),
+    ]
+
+    expect(selectSnapshots(commits).map((one) => one.sha)).toEqual([
+      'newest-in-january',
     ])
   })
 

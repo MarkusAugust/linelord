@@ -59,14 +59,24 @@ export function intervalKey(
 /**
  * Pick the last commit of each interval, oldest first, at most `max` of them.
  *
- * "Last" means latest by time within the interval, which is what makes a
- * snapshot describe the repository as it stood at the end of that month
- * rather than somewhere in the middle of it.
+ * `commits` must arrive newest first, as `git log --first-parent` gives them.
+ * That order is ancestry, and ancestry is what everything here is decided by
+ * -- never the timestamps, which are used only to say which interval a commit
+ * belongs to.
+ *
+ * The distinction is not pedantry. git permits a commit to carry an earlier
+ * time than its own parent: clock skew across machines, or a rebase. Ordering
+ * snapshots by time can then place a descendant before its ancestor, and the
+ * walk between two such revisions asks git for the commits in a range that is
+ * not a range. What it carries across is wrong, and nothing says so.
+ *
+ * So "last of the month" means last in the history rather than latest on the
+ * clock, and the snapshots come back in the order the history reaches them.
  *
  * When there are more intervals than the ceiling allows, the *newest* are
- * kept. A survival curve drawn from the recent past with a coarse tail is
- * more useful than one that stops years ago, and the half-life of code
- * nobody has touched since is not the question being asked.
+ * kept. A survival curve drawn through the recent past with a coarse tail is
+ * more useful than one that stops years ago, and the half-life of code nobody
+ * has touched since is not the question being asked.
  */
 export function selectSnapshots(
   commits: HistoryCommit[],
@@ -75,18 +85,22 @@ export function selectSnapshots(
 ): Snapshot[] {
   if (max <= 0) return []
 
-  const lastOfInterval = new Map<string, Snapshot>()
-  for (const commit of commits) {
+  // Position in the list, where 0 is HEAD. Lower is later in the history.
+  const lastOfInterval = new Map<string, { snapshot: Snapshot; rank: number }>()
+  for (const [rank, commit] of commits.entries()) {
     const key = intervalKey(commit.timestamp, interval)
     const standing = lastOfInterval.get(key)
-    if (!standing || commit.timestamp > standing.timestamp) {
-      lastOfInterval.set(key, { sha: commit.sha, timestamp: commit.timestamp })
+    if (!standing || rank < standing.rank) {
+      lastOfInterval.set(key, {
+        snapshot: { sha: commit.sha, timestamp: commit.timestamp },
+        rank,
+      })
     }
   }
 
-  const chosen = [...lastOfInterval.values()].sort(
-    (a, b) => a.timestamp - b.timestamp,
-  )
+  const chosen = [...lastOfInterval.values()]
+    .sort((a, b) => b.rank - a.rank)
+    .map((one) => one.snapshot)
 
   return chosen.length > max ? chosen.slice(chosen.length - max) : chosen
 }

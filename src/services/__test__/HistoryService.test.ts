@@ -204,6 +204,45 @@ describe('HistoryService', () => {
     expect(await cohortRows(db)).toEqual(after)
   }, 120000)
 
+  it('is unmoved by a commit dated before its own parent', async () => {
+    // Clock skew across machines, or a rebase. Ordering the snapshots by time
+    // would put the descendant first, and the walk would then ask git for the
+    // commits between two revisions that are not in that relation -- carrying
+    // across counts that are wrong without looking wrong.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'the parent, dated June',
+      author: GORVEK,
+      date: new Date('2025-06-01T10:00:00Z'),
+      write: { 'f.ts': 'one\ntwo\nthree\n' },
+    })
+    await repo.commit({
+      message: 'the child, dated May',
+      author: NIGHTSHROUD,
+      date: new Date('2025-05-01T10:00:00Z'),
+      write: { 'f.ts': 'one\ntwo\nfour\nfive\n' },
+    })
+
+    const incremental = createDatabase()
+    await new HistoryService(repo.path, incremental, {
+      interval: 'month',
+    }).analyse()
+    const exhaustive = createDatabase()
+    await new HistoryService(repo.path, exhaustive, {
+      interval: 'month',
+      reuseBetweenSnapshots: false,
+    }).analyse()
+
+    expect(await cohortRows(incremental)).toEqual(await cohortRows(exhaustive))
+
+    // And the snapshots are walked parent first, whatever the dates say.
+    const order = await incremental
+      .select({ at: snapshots.snapshotTimestamp })
+      .from(snapshots)
+    expect(order).toHaveLength(2)
+    expect(order[0]?.at).toBeGreaterThan(order[1]?.at ?? 0)
+  }, 120000)
+
   it('has nothing to walk in a repository with no commits', async () => {
     repo = await createTestRepo()
     const db = createDatabase()

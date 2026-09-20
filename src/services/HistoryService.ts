@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { sql } from 'drizzle-orm'
 import type { LineLordDatabase } from '../db/database'
 import { authors, cohortLines, snapshots } from '../db/schema'
-import { pathsTouchedBetween } from '../utility/gitRepository'
+import { isAncestor, pathsTouchedBetween } from '../utility/gitRepository'
 import {
   analysablePathsAtRevision,
   blameFileAtRevision,
@@ -180,6 +180,18 @@ export class HistoryService {
     let toBlame = analysable
 
     if (this.reuse && previousCounts && previousSha) {
+      // Carrying counts across is only sound when the previous snapshot is an
+      // ancestor of this one, because that is the only case in which "the
+      // commits between them" is a set at all. Snapshots are ordered by
+      // ancestry precisely so this holds -- and it is checked anyway, because
+      // the failure it guards against is a survival curve that is wrong
+      // without looking wrong. Null means git could not answer, which is not
+      // a yes.
+      const ancestral = await isAncestor(this.repoPath, previousSha, revision)
+      if (ancestral !== true) {
+        return this.blameAll(revision, analysable)
+      }
+
       const touched = new Set(
         await pathsTouchedBetween(this.repoPath, previousSha, revision),
       )
@@ -192,8 +204,37 @@ export class HistoryService {
       toBlame = stale
     }
 
-    for (let at = 0; at < toBlame.length; at += this.concurrency) {
-      const batch = toBlame.slice(at, at + this.concurrency)
+    await this.blameInto(counts, revision, toBlame)
+
+    return {
+      counts,
+      blamed: toBlame.length,
+      carried: analysable.length - toBlame.length,
+    }
+  }
+
+  /** Read every path at a revision, carrying nothing across. */
+  private async blameAll(
+    revision: string,
+    analysable: string[],
+  ): Promise<{
+    counts: Map<string, PathCounts>
+    blamed: number
+    carried: number
+  }> {
+    const counts = new Map<string, PathCounts>()
+    await this.blameInto(counts, revision, analysable)
+    return { counts, blamed: analysable.length, carried: 0 }
+  }
+
+  /** Blame a set of paths at a revision, adding their counts to `into`. */
+  private async blameInto(
+    into: Map<string, PathCounts>,
+    revision: string,
+    paths: string[],
+  ): Promise<void> {
+    for (let at = 0; at < paths.length; at += this.concurrency) {
+      const batch = paths.slice(at, at + this.concurrency)
       const results = await Promise.allSettled(
         batch.map(async (path) => ({
           path,
@@ -211,15 +252,9 @@ export class HistoryService {
         // A file that cannot be read contributes nothing rather than failing
         // the whole history, which may be fifty snapshots deep by then.
         if (result.status === 'fulfilled') {
-          counts.set(result.value.path, result.value.counts)
+          into.set(result.value.path, result.value.counts)
         }
       }
-    }
-
-    return {
-      counts,
-      blamed: toBlame.length,
-      carried: analysable.length - toBlame.length,
     }
   }
 
