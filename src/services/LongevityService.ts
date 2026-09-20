@@ -374,11 +374,14 @@ export class LongevityService {
    */
   private histogramColumns() {
     const cutoff = (days: number) => this.nowSeconds - days * DAY_SECONDS
+    // A bucket holds ages from `younger` up to but not including `older`, so
+    // a line exactly seven days old belongs to "a week to a month" and not to
+    // "under a week". In timestamps that reverses: older than an edge means a
+    // timestamp at or before its cutoff.
     const bucket = (younger: number | null, older: number | null) => {
-      if (younger === null)
-        return sql`commit_timestamp >= ${cutoff(older ?? 0)}`
-      if (older === null) return sql`commit_timestamp < ${cutoff(younger)}`
-      return sql`commit_timestamp < ${cutoff(younger)} AND commit_timestamp >= ${cutoff(older)}`
+      if (younger === null) return sql`commit_timestamp > ${cutoff(older ?? 0)}`
+      if (older === null) return sql`commit_timestamp <= ${cutoff(younger)}`
+      return sql`commit_timestamp <= ${cutoff(younger)} AND commit_timestamp > ${cutoff(older)}`
     }
     const count = (condition: ReturnType<typeof bucket>) =>
       sql`SUM(CASE WHEN ${condition} THEN 1 ELSE 0 END)`

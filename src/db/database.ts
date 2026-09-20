@@ -7,12 +7,17 @@ import * as schema from './schema'
 export const IN_MEMORY = ':memory:'
 
 /**
- * The shape of the database, as distinct from the analysis that fills it.
+ * The shape of the data, as distinct from the analysis that fills it.
  *
- * Bump this when the tables or indexes change. An old cache is then unreadable
- * rather than merely out of date, so the two are kept apart: a schema change
- * need not mean the analysis would produce different answers, and an analysis
- * change need not touch the tables.
+ * Bump this when the tables or their columns change. An old cache is then
+ * unreadable rather than merely out of date, so the two are kept apart: a
+ * schema change need not mean the analysis would produce different answers,
+ * and an analysis change need not touch the tables.
+ *
+ * Indexes are deliberately not on that list. They are created idempotently
+ * on every open, so adding one reaches an existing cache by itself, and no
+ * stored row is any less true for being reached a different way. Bumping for
+ * an index would make every user re-analyse their repository to gain nothing.
  */
 export const SCHEMA_VERSION = 2
 
@@ -147,6 +152,13 @@ export function createDatabase(options: CreateDatabaseOptions = {}) {
     -- the repository.
     CREATE INDEX IF NOT EXISTS idx_blame_author_time
       ON blame_lines(author_id, commit_timestamp);
+    -- And the same questions asked of the repository as a whole, which name
+    -- no author and so cannot use the index above: its leading column is
+    -- author_id. Measured with EXPLAIN QUERY PLAN, the median and
+    -- oldest-line queries went from a full scan plus a temporary B-tree for
+    -- the sort to an index search with no sort at all.
+    CREATE INDEX IF NOT EXISTS idx_blame_time
+      ON blame_lines(commit_timestamp);
     CREATE INDEX IF NOT EXISTS idx_files_path ON files(path);
     CREATE INDEX IF NOT EXISTS idx_authors_email ON authors(email);
     CREATE INDEX IF NOT EXISTS idx_authors_canonical ON authors(canonical_id);
