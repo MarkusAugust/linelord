@@ -10,6 +10,13 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.9.0] — 2026-09-20
+
+A repository that has been through a reformatting gets a different answer from
+this release, and a truer one.
+
 ### Added
 
 - **A reformatting no longer steals the whole codebase.** One commit that runs
@@ -270,6 +277,7 @@ stored analysis is rebuilt once, because the database layout changed.
 Earlier releases predate this changelog. See the
 [releases page](https://github.com/MarkusAugust/linelord/releases).
 
-[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/MarkusAugust/linelord/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/MarkusAugust/linelord/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/MarkusAugust/linelord/releases/tag/v0.7.2
