@@ -5,10 +5,11 @@ import {
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
 import { clearDatabase, createDatabase } from '../../db/database'
-import { readMeta } from '../../db/meta'
+import { HISTORY_HEAD_KEY, readMeta } from '../../db/meta'
 import { authors, cohortLines, snapshots } from '../../db/schema'
-import { HISTORY_HEAD_KEY, HistoryService } from '../HistoryService'
+import { HistoryService } from '../HistoryService'
 import { LineLordService } from '../LineLordService'
+import { LongevityService } from '../LongevityService'
 
 /**
  * Walking the history, and the one thing that must be true about it.
@@ -489,6 +490,73 @@ describe('HistoryService', () => {
     // One row for the person, holding all three lines.
     expect(rows).toHaveLength(1)
     expect(rows[0]?.lines).toBe(3)
+  }, 120000)
+
+  it('reads back through the service the interface will use', async () => {
+    // The walk and the reading are written apart and tested apart. This is
+    // the seam between them: rows written by one, read and turned into
+    // figures by the other, over a repository where the answer is known.
+    repo = await createTestRepo()
+    const ten = Array.from({ length: 10 }, (_, i) => `g${i}`).join('\n')
+    await repo.commit({
+      message: 'ten lines in January',
+      author: GORVEK,
+      date: new Date('2025-01-10T10:00:00Z'),
+      write: { 'a.ts': `${ten}\n` },
+    })
+    await repo.commit({
+      message: 'every one of them replaced in April',
+      author: NIGHTSHROUD,
+      date: new Date('2025-04-10T10:00:00Z'),
+      write: { 'a.ts': 'n0\nn1\nn2\nn3\nn4\nn5\nn6\nn7\nn8\nn9\n' },
+    })
+    await repo.commit({
+      message: 'and one more in July',
+      author: NIGHTSHROUD,
+      date: new Date('2025-07-10T10:00:00Z'),
+      write: {
+        'a.ts': 'n0\nn1\nn2\nn3\nn4\nn5\nn6\nn7\nn8\nn9\nn10\n',
+      },
+    })
+
+    const service = new LineLordService(repo.path, 50 * 1024)
+    await service.initialize()
+    const db = service.getDatabase()
+    await new HistoryService(repo.path, db, {
+      interval: 'month',
+      thresholdBytes: THRESHOLD,
+    }).analyse()
+
+    const longevity = new LongevityService(db)
+    expect(longevity.historyDescribes()).toBe(await repo.head())
+
+    const survival = await longevity.survivalByAuthor()
+    const gorvek = survival.find((one) => one.email === GORVEK.email)
+    const nightshroud = survival.find((one) => one.email === NIGHTSHROUD.email)
+
+    // Gorvek wrote ten and has none left. Nothing in the database says zero
+    // -- the row simply stops -- so a half-life at all is the thing being
+    // checked here.
+    expect(gorvek?.linesEverWritten).toBe(10)
+    expect(gorvek?.survivingLines).toBe(0)
+    expect(gorvek?.survivalRate).toBe(0)
+    expect(gorvek?.halfLifeDays).not.toBe(null)
+
+    // Nightshroud's work is all still standing.
+    expect(nightshroud?.survivalRate).toBe(1)
+    expect(nightshroud?.halfLifeDays).toBe(null)
+    expect(nightshroud?.name).toBe(NIGHTSHROUD.name)
+  }, 120000)
+
+  it('reports no survival figures when no history was gathered', async () => {
+    repo = await repoWithAYear()
+    const service = new LineLordService(repo.path, 50 * 1024)
+    await service.initialize()
+
+    const longevity = new LongevityService(service.getDatabase())
+
+    expect(await longevity.survivalByAuthor()).toEqual([])
+    expect(longevity.historyDescribes()).toBe(null)
   }, 120000)
 
   it('has nothing to walk in a repository with no commits', async () => {

@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
 import { eq, sql } from 'drizzle-orm'
 import type { LineLordDatabase } from '../db/database'
-import { writeMeta } from '../db/meta'
+import { HISTORY_HEAD_KEY, HISTORY_SNAPSHOTS_KEY, writeMeta } from '../db/meta'
 import { authors, cohortLines, meta, snapshots } from '../db/schema'
 import { isAncestor, pathsTouchedBetween } from '../utility/gitRepository'
 import { normaliseConcurrency } from './GitService'
@@ -87,12 +87,6 @@ export interface HistoryRun {
    */
   failures: HistoryFailure[]
 }
-
-/** Where the revision this history describes is recorded. */
-export const HISTORY_HEAD_KEY = 'history_head_sha'
-
-/** How many snapshots that history holds. */
-export const HISTORY_SNAPSHOTS_KEY = 'history_snapshots'
 
 export interface HistoryFailure {
   revision: string

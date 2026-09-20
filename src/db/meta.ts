@@ -47,3 +47,16 @@ export function writeMeta(
     }
   })
 }
+
+/**
+ * Which revision the stored cohort history describes.
+ *
+ * Kept here rather than in the service that writes it, so that reading it
+ * does not mean importing the whole history walk -- the interface only ever
+ * wants to know whether what it holds is still about the revision in front
+ * of it.
+ */
+export const HISTORY_HEAD_KEY = 'history_head_sha'
+
+/** How many snapshots that history holds. */
+export const HISTORY_SNAPSHOTS_KEY = 'history_snapshots'
