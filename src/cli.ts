@@ -8,8 +8,13 @@ import App from './App'
 import { resolveCachePath } from './db/cacheLocation'
 import { removeAllCaches, removeCacheFor } from './db/cacheMaintenance'
 import { CLI_HELP } from './resources/cliHelp'
+import { DEFAULT_CONCURRENCY } from './services/GitService'
 import { LineLordService } from './services/LineLordService'
-import { expandTilde, validateThresholdKB } from './utility/cliValidation'
+import {
+  expandTilde,
+  validateConcurrency,
+  validateThresholdKB,
+} from './utility/cliValidation'
 import { findRepositoryRoot } from './utility/gitRepository'
 import { writeMailmap } from './utility/mailmap'
 
@@ -63,6 +68,10 @@ const cli = meow(CLI_HELP, {
     writeMailmap: {
       type: 'boolean',
       default: false,
+    },
+    concurrency: {
+      type: 'number',
+      default: DEFAULT_CONCURRENCY,
     },
     ignoreRev: {
       type: 'string',
@@ -154,6 +163,12 @@ if (!thresholdCheck.ok) {
   )
 }
 
+const concurrencyCheck = validateConcurrency(cli.flags.concurrency)
+
+if (!concurrencyCheck.ok) {
+  exitWithError(concurrencyCheck.message)
+}
+
 const thresholdKB = thresholdCheck.thresholdKB
 const thresholdBytes = thresholdKB * 1024
 
@@ -179,6 +194,7 @@ if (cli.flags.writeMailmap) {
     useCache: cli.flags.cache,
     refresh: cli.flags.refresh,
     ignoreRevisions: cli.flags.ignoreRev,
+    concurrency: cli.flags.concurrency,
   })
   await service.initialize()
 
@@ -211,6 +227,7 @@ const element = React.createElement(App, {
   refresh: cli.flags.refresh,
   authorPolicy: cli.flags.fuzzyAuthors ? 'loose' : 'strict',
   ignoreRevisions: cli.flags.ignoreRev,
+  concurrency: cli.flags.concurrency,
 })
 
 const app = render(element)

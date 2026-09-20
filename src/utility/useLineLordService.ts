@@ -16,9 +16,15 @@ export function useLineLordService(
     refresh?: boolean
     authorPolicy?: 'strict' | 'loose'
     ignoreRevisions?: string[]
+    concurrency?: number
   } = {},
 ) {
-  const { useCache = true, refresh = false, authorPolicy = 'strict' } = options
+  const {
+    useCache = true,
+    refresh = false,
+    authorPolicy = 'strict',
+    concurrency,
+  } = options
   // Joined for the dependency list below: a new array each render would
   // otherwise re-create the service on every one of them.
   const ignoreRevisions = (options.ignoreRevisions ?? []).join(' ')
@@ -36,6 +42,14 @@ export function useLineLordService(
   useEffect(() => {
     if (!repoPath) return
 
+    // An analysis takes seconds to minutes, and every one of the callbacks
+    // below writes state when it finishes. Two things can happen in that
+    // window: the app can exit, or the user can change repository again. The
+    // second is the one that shows: the abandoned run reports success, and
+    // the screen then presents the previous repository's analysis as ready
+    // under the new repository's name.
+    let cancelled = false
+
     setInitError(null)
 
     const handleProgress = (
@@ -43,15 +57,18 @@ export function useLineLordService(
       total: number,
       message: string,
     ) => {
+      if (cancelled) return
       setInitProgress({ current, total, message })
     }
 
     const handleSuccess = () => {
+      if (cancelled) return
       setIsInitialized(true)
       setInitError(null)
     }
 
     const handleError = (error: unknown) => {
+      if (cancelled) return
       // No console while Ink holds the terminal; the message reaches the user
       // through initError, which App renders as the error screen.
       setInitError(error instanceof Error ? error.message : String(error))
@@ -82,10 +99,15 @@ export function useLineLordService(
         refresh,
         authorPolicy,
         ignoreRevisions: ignoreRevisions ? ignoreRevisions.split(' ') : [],
+        concurrency,
       })
       setLineLordService(service)
 
       service.initialize(handleProgress).then(handleSuccess).catch(handleError)
+    }
+
+    return () => {
+      cancelled = true
     }
   }, [
     repoPath,
@@ -95,6 +117,7 @@ export function useLineLordService(
     refresh,
     authorPolicy,
     ignoreRevisions,
+    concurrency,
   ])
 
   return {

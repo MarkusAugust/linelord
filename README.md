@@ -89,7 +89,15 @@ linelord --clear-all-caches  # forget every repository's
 ```bash
 # Reformatting commits
 linelord --ignore-rev 1a2b3c4   # look past this commit as well
+
+# How hard to work the machine
+linelord --concurrency 4        # blame four files at a time (default: 12)
 ```
+
+LineLord runs one `git blame` per file, twelve at a time. Lower it on a
+machine that is busy with something else, raise it on one that is not — though
+past a point the time goes into spawning processes rather than reading blame,
+so it is capped at 64.
 
 The analysis is kept in `$XDG_CACHE_HOME/linelord` (or `~/.cache/linelord`),
 one file per repository. It holds file paths, commit hashes and dates, and

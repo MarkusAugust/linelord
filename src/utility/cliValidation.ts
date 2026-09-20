@@ -47,3 +47,42 @@ export function validateThresholdKB(value: unknown): ThresholdResult {
 
   return { ok: true, thresholdKB: value }
 }
+
+/** How many files may be blamed at once. */
+export type ConcurrencyResult =
+  | { ok: true; concurrency: number }
+  | { ok: false; message: string }
+
+/**
+ * Check --concurrency before it reaches the analysis.
+ *
+ * Zero or a negative number would make the batching loop spin without ever
+ * blaming a file, which looks exactly like a repository that takes forever;
+ * a non-number would do the same by way of NaN.
+ */
+export function validateConcurrency(value: unknown): ConcurrencyResult {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return {
+      ok: false,
+      message: `--concurrency must be a whole number of files, but got "${String(
+        value,
+      )}".`,
+    }
+  }
+
+  if (!Number.isInteger(value) || value <= 0) {
+    return {
+      ok: false,
+      message: `--concurrency must be a whole number greater than zero, but got ${value}.`,
+    }
+  }
+
+  if (value > 64) {
+    return {
+      ok: false,
+      message: `--concurrency is capped at 64, but got ${value}. LineLord runs one git process per file, and past this the machine spends its time spawning them rather than reading blame.`,
+    }
+  }
+
+  return { ok: true, concurrency: value }
+}

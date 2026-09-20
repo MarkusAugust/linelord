@@ -79,6 +79,8 @@ export interface LineLordOptions {
    * down yet.
    */
   ignoreRevisions?: string[]
+  /** How many files may be blamed at once. */
+  concurrency?: number
 }
 
 export class LineLordService {
@@ -93,6 +95,7 @@ export class LineLordService {
   private refresh: boolean
   private authorPolicy: AuthorPolicy
   private extraIgnoreRevisions: string[]
+  private concurrency: number | undefined
   private ignoredRevisions: IgnoreRevs = {
     revisions: [],
     sources: { file: false, flag: false },
@@ -116,11 +119,13 @@ export class LineLordService {
     this.refresh = options.refresh ?? false
     this.authorPolicy = options.authorPolicy ?? 'strict'
     this.extraIgnoreRevisions = options.ignoreRevisions ?? []
+    this.concurrency = options.concurrency
     this.db = createDatabase()
     this.gitService = new GitService(
       repoPath,
       this.db,
       this.largeFileThresholdBytes,
+      options.concurrency,
     )
     this.normalizationService = new AuthorNormalizationService(this.db)
     this.rankingService = new AuthorRankingService(this.db)
@@ -135,7 +140,12 @@ export class LineLordService {
   /** Point every service at a different database. */
   private attachDatabase(db: LineLordDatabase, repoPath: string): void {
     this.db = db
-    this.gitService = new GitService(repoPath, db, this.largeFileThresholdBytes)
+    this.gitService = new GitService(
+      repoPath,
+      db,
+      this.largeFileThresholdBytes,
+      this.concurrency,
+    )
     this.normalizationService = new AuthorNormalizationService(db)
     this.rankingService = new AuthorRankingService(db)
     this.analysisService = new AnalysisService(db)

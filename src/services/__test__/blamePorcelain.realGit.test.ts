@@ -66,6 +66,50 @@ describe('parseBlamePorcelain against git itself', () => {
     }
   })
 
+  it('reads the two porcelain forms into exactly the same entries', async () => {
+    // --porcelain writes the commit header once per commit instead of once
+    // per line, which is three quarters less output to read and parse. It is
+    // only worth switching to if the two are the same answer, so this asserts
+    // that rather than assuming it.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'the first hand',
+      author: GORVEK,
+      date: new Date('2021-01-02T03:04:05Z'),
+      write: { 'f.txt': 'one\ntwo\n\nfour\nfive\n' },
+    })
+    await repo.commit({
+      message: 'a second hand',
+      author: NIGHTSHROUD,
+      date: new Date('2022-02-03T04:05:06Z'),
+      write: { 'f.txt': 'one\nCHANGED\n\nfour\nfive\nsix\n' },
+    })
+    await repo.commit({
+      message: 'and back to the first',
+      author: GORVEK,
+      date: new Date('2023-03-04T05:06:07Z'),
+      write: { 'f.txt': 'one\nCHANGED\n\nfour\nALSO CHANGED\nsix\nseven\n' },
+    })
+
+    const line = parseBlamePorcelain(
+      await repo.git([
+        'blame',
+        '-w',
+        '--line-porcelain',
+        'HEAD',
+        '--',
+        'f.txt',
+      ]),
+    )
+    const compact = parseBlamePorcelain(
+      await repo.git(['blame', '-w', '--porcelain', 'HEAD', '--', 'f.txt']),
+    )
+
+    expect(compact).toEqual(line)
+    expect(compact).toHaveLength(7)
+    expect(new Set(compact.map((entry) => entry.author)).size).toBe(2)
+  })
+
   it('reads a file whose lines come from several commits, blanks included', async () => {
     repo = await createTestRepo()
     await repo.commit({
