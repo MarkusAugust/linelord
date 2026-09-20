@@ -1,9 +1,15 @@
 import { afterEach, describe, expect, it } from 'bun:test'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { resolveCachePath } from '../../db/cacheLocation'
+import { acquireCacheLock } from '../../db/cacheMaintenance'
 import { snapshots } from '../../db/schema'
+import { findRepositoryRoot } from '../../utility/gitRepository'
 import { LineLordService } from '../LineLordService'
 import { LongevityService } from '../LongevityService'
 
@@ -97,6 +103,54 @@ describe('gatherHistory', () => {
     // outside the strict one, so the two histories cannot agree.
     expect(withBigFile?.totalLines).toBe(4003)
     expect(withoutBigFile?.totalLines).toBe(3)
+  }, 60000)
+
+  it('will not walk while another LineLord holds the stored analysis', async () => {
+    // initialize lets the lock go as soon as it has finished writing, so that
+    // somebody browsing menus does not keep everyone else out. The walk
+    // writes too -- it empties the snapshot tables and fills them again -- so
+    // two of them in one database would leave a set of snapshots describing
+    // neither run.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'one',
+      author: GORVEK,
+      date: new Date('2025-01-10T10:00:00Z'),
+      write: { 'a.ts': 'a\n' },
+    })
+
+    const cacheHome = await mkdtemp(join(tmpdir(), 'linelord-history-lock-'))
+    process.env.XDG_CACHE_HOME = cacheHome
+    try {
+      const service = new LineLordService(repo.path, 50 * 1024, {
+        useCache: true,
+        history: MONTHLY,
+      })
+      await service.initialize()
+
+      // Somebody else takes it between the analysis and the walk. Through the
+      // resolved root, which is what the service locks: on macOS a temporary
+      // directory is reached as /var and resolves to /private/var, and two
+      // spellings of one repository would be two different lock files.
+      const lookup = await findRepositoryRoot(repo.path)
+      const held = acquireCacheLock(
+        resolveCachePath(lookup.found ? lookup.root : repo.path),
+      )
+      expect(held).not.toBe(null)
+
+      await expect(service.gatherHistory()).rejects.toThrow()
+      expect(await service.getDatabase().select().from(snapshots)).toEqual([])
+
+      held?.release()
+      // And once it is free, the walk goes ahead.
+      await service.gatherHistory()
+      expect(await service.getDatabase().select().from(snapshots)).toHaveLength(
+        1,
+      )
+    } finally {
+      delete process.env.XDG_CACHE_HOME
+      await rm(cacheHome, { force: true, recursive: true })
+    }
   }, 60000)
 
   it('reports the progress of a walk that can take minutes', async () => {

@@ -105,6 +105,10 @@ export default function App({
     ? lineLordService.getFailures()
     : []
 
+  const historyFailures = lineLordService?.isInitialized()
+    ? lineLordService.getHistoryFailures()
+    : []
+
   const cache = lineLordService?.isInitialized()
     ? lineLordService.getCacheStatus()
     : undefined
@@ -301,6 +305,36 @@ export default function App({
                   {'  '}Nothing was merged. Pick "Draft a .mailmap" below to
                   record the ones that are right.
                 </Text>
+              </Box>
+            )}
+
+            {/*
+              A file the history could not read contributes no lines to the
+              snapshot it belongs to, so a history that finished is not the
+              same as a history that is whole.
+            */}
+            {historyFailures.length > 0 && (
+              <Box flexDirection="column" marginTop={1}>
+                <Text color="yellow">
+                  ⚠ The history could not read {historyFailures.length} file
+                  {historyFailures.length === 1 ? '' : 's'}, so the snapshots
+                  they belong to count fewer lines than were there:
+                </Text>
+                {historyFailures.slice(0, 3).map((failure) => (
+                  <Text
+                    key={`${failure.revision}:${failure.path}`}
+                    color="gray"
+                  >
+                    {'  '}
+                    {failure.path} at {failure.revision.slice(0, 7)} —{' '}
+                    {failure.error.split('\n')[0]}
+                  </Text>
+                ))}
+                {historyFailures.length > 3 && (
+                  <Text color="gray">
+                    {'  '}… and {historyFailures.length - 3} more
+                  </Text>
+                )}
               </Box>
             )}
 

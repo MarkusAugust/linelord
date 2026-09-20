@@ -35,7 +35,11 @@ import {
   type AnalysisFailure,
   GitService,
 } from './GitService'
-import { type HistoryRun, HistoryService } from './HistoryService'
+import {
+  type HistoryFailure,
+  type HistoryRun,
+  HistoryService,
+} from './HistoryService'
 import type { SnapshotInterval } from './snapshotSelection'
 
 /** What the run did, and why, so the interface can say so rather than imply it. */
@@ -108,6 +112,7 @@ export class LineLordService {
   private extraIgnoreRevisions: string[]
   private concurrency: number | undefined
   private history: LineLordOptions['history']
+  private historyRun: HistoryRun | null = null
   private ignoredRevisions: IgnoreRevs = {
     revisions: [],
     sources: { file: false, flag: false },
@@ -509,13 +514,50 @@ export class LineLordService {
         lookup.found ? lookup.root : null,
       )) ?? this.currentRepoPath
 
-    return new HistoryService(root, this.db, {
-      thresholdBytes: this.largeFileThresholdBytes,
-      ignoredRevisions: this.ignoredRevisions.revisions,
-      concurrency: this.concurrency,
-      interval: this.history.interval,
-      maxSnapshots: this.history.maxSnapshots,
-    }).analyse(onProgress)
+    // initialize lets the lock go as soon as it has finished writing, so that
+    // somebody browsing menus does not keep every other LineLord out. The
+    // walk writes too -- it empties the snapshot tables and fills them again
+    // -- so it has to hold the lock for itself, or two histories interleave
+    // into one database and leave a set of snapshots describing neither.
+    const lockPath = this.useCache ? resolveCachePath(root) : null
+    const lock = lockPath ? acquireCacheLock(lockPath) : null
+    if (lockPath && !lock) {
+      throw new Error(
+        'Another LineLord is analysing this repository. Reading the history ' +
+          'writes to the same stored analysis, so this run has stopped rather ' +
+          'than interleave with it.',
+      )
+    }
+
+    try {
+      const run = await new HistoryService(root, this.db, {
+        thresholdBytes: this.largeFileThresholdBytes,
+        ignoredRevisions: this.ignoredRevisions.revisions,
+        concurrency: this.concurrency,
+        interval: this.history.interval,
+        maxSnapshots: this.history.maxSnapshots,
+      }).analyse(onProgress)
+      this.historyRun = run
+      return run
+    } finally {
+      lock?.release()
+    }
+  }
+
+  /**
+   * Files the history could not read, if it was walked.
+   *
+   * A file that fails contributes no lines, which understates the snapshot it
+   * belongs to -- so a history that completed is not the same as a history
+   * that is whole, and the interface should be able to tell them apart.
+   */
+  getHistoryFailures(): HistoryFailure[] {
+    return this.historyRun?.failures ?? []
+  }
+
+  /** How many revisions the history read, or zero if it was not walked. */
+  getHistorySnapshotCount(): number {
+    return this.historyRun?.snapshots ?? 0
   }
 
   /**

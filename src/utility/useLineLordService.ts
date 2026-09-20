@@ -73,9 +73,12 @@ export function useLineLordService(
       message: string,
     ) => {
       if (cancelled) return
+      // The walk counts snapshots; the loading screen draws a percentage.
+      // Handing it the snapshot number left a sixty-snapshot run finishing
+      // at 60% and a three-snapshot one at 3%.
       setInitProgress({
-        current,
-        total,
+        current: total > 0 ? Math.round((current / total) * 100) : 100,
+        total: 100,
         message: `${message} — reading the history takes a pass over the repository each time`,
       })
     }

@@ -80,6 +80,49 @@ function sortWarriors(
 }
 
 /**
+ * Put back the people the present has forgotten.
+ *
+ * The table is built from the analysis of HEAD, so somebody whose every line
+ * has since been rewritten has no row in it -- and they are precisely the
+ * case the history exists to show. They are given a row with nothing in the
+ * columns that describe surviving code, because they have none.
+ */
+function withForgottenContributors(
+  warriors: AuthorLongevity[],
+  survival: Map<number, AuthorSurvivalWithIdentity>,
+): AuthorLongevity[] {
+  const present = new Set(warriors.map((one) => one.authorId))
+  const forgotten: AuthorLongevity[] = []
+
+  for (const [authorId, one] of survival) {
+    if (present.has(authorId) || one.linesEverWritten === 0) continue
+    forgotten.push({
+      authorId,
+      name: one.name,
+      email: one.email,
+      survivingLines: 0,
+      medianAgeDays: Number.NaN,
+      meanAgeDays: Number.NaN,
+      p10AgeDays: Number.NaN,
+      p90AgeDays: Number.NaN,
+      oldestLine: null,
+      newestLine: null,
+      ageHistogram: {
+        underAWeek: 0,
+        weekToMonth: 0,
+        oneToThreeMonths: 0,
+        threeToTwelveMonths: 0,
+        oneToTwoYears: 0,
+        overTwoYears: 0,
+      },
+      activeSpanDays: 0,
+    })
+  }
+
+  return [...warriors, ...forgotten]
+}
+
+/**
  * The half-life column, or a reason there is not one.
  *
  * A dash on its own reads as "this person has no half-life", which is a
@@ -185,10 +228,12 @@ export default function LongevityDashboard({
     }
   }, [lineLordService])
 
-  const shown = sortWarriors(warriors, sortKey, survival).slice(
-    0,
-    WARRIORS_SHOWN,
-  )
+  const current = historyState.kind === 'current'
+  const shown = sortWarriors(
+    current ? withForgottenContributors(warriors, survival) : warriors,
+    sortKey,
+    survival,
+  ).slice(0, WARRIORS_SHOWN)
   const chosen = shown[selected]
 
   useInput((input, key) => {
@@ -205,8 +250,11 @@ export default function LongevityDashboard({
     if (input === 'l') setSortKey('lines')
     // Only when there is a history to sort by: a key that silently does
     // nothing is worse than one that is not offered.
-    if (input === 'h' && historyState.kind !== 'absent') setSortKey('halflife')
-    if (input === 's' && historyState.kind !== 'absent') setSortKey('survival')
+    // Only a history about the revision in front of us. A stale one is
+    // explicitly not drawn, and ranking by data the screen says it will not
+    // show is the same claim by another route.
+    if (input === 'h' && historyState.kind === 'current') setSortKey('halflife')
+    if (input === 's' && historyState.kind === 'current') setSortKey('survival')
   })
 
   if (inDetail && chosen && lineLordService) {
@@ -214,7 +262,11 @@ export default function LongevityDashboard({
       <LongevityDetail
         lineLordService={lineLordService}
         warrior={chosen}
-        survival={survival.get(chosen.authorId)}
+        survival={
+          historyState.kind === 'current'
+            ? survival.get(chosen.authorId)
+            : undefined
+        }
         onBack={() => setInDetail(false)}
       />
     )
@@ -270,7 +322,10 @@ export default function LongevityDashboard({
             {warrior.name.slice(0, 19).padEnd(20)}
             {warrior.survivingLines.toLocaleString('en-GB').padStart(7)}
             {formatAge(warrior.medianAgeDays).padStart(9)}
-            {formatSpread(warrior.p10AgeDays, warrior.p90AgeDays).padStart(16)}
+            {(warrior.survivingLines === 0
+              ? '—'
+              : formatSpread(warrior.p10AgeDays, warrior.p90AgeDays)
+            ).padStart(16)}
             {halfLifeColumn(historyState, survival.get(warrior.authorId))}
             {'  '}
             {renderAgeSparkline(warrior.ageHistogram)}
@@ -280,6 +335,16 @@ export default function LongevityDashboard({
 
       {shown.length === 0 && (
         <Text color="gray">Nobody holds a line with a date on it.</Text>
+      )}
+
+      {current && shown.some((one) => one.survivingLines === 0) && (
+        <Box marginTop={1}>
+          <Text color="gray">
+            A row with no surviving lines is somebody whose work has since been
+            rewritten in full. They hold nothing now, which is why the age
+            columns are empty — what they wrote is in the history.
+          </Text>
+        </Box>
       )}
 
       {/*
