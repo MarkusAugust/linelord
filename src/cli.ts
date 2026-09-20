@@ -10,9 +10,12 @@ import { removeAllCaches, removeCacheFor } from './db/cacheMaintenance'
 import { CLI_HELP } from './resources/cliHelp'
 import { DEFAULT_CONCURRENCY } from './services/GitService'
 import { LineLordService } from './services/LineLordService'
+import { DEFAULT_MAX_SNAPSHOTS } from './services/snapshotSelection'
 import {
   expandTilde,
   validateConcurrency,
+  validateMaxSnapshots,
+  validateSnapshotInterval,
   validateThresholdKB,
 } from './utility/cliValidation'
 import { findRepositoryRoot } from './utility/gitRepository'
@@ -72,6 +75,18 @@ const cli = meow(CLI_HELP, {
     concurrency: {
       type: 'number',
       default: DEFAULT_CONCURRENCY,
+    },
+    history: {
+      type: 'boolean',
+      default: false,
+    },
+    snapshotInterval: {
+      type: 'string',
+      default: 'month',
+    },
+    maxSnapshots: {
+      type: 'number',
+      default: DEFAULT_MAX_SNAPSHOTS,
     },
     ignoreRev: {
       type: 'string',
@@ -169,6 +184,24 @@ if (!concurrencyCheck.ok) {
   exitWithError(concurrencyCheck.message)
 }
 
+// Only checked when the history is actually being walked: refusing a run
+// over the shape of a flag nobody used would be a rule about nothing.
+const intervalCheck = validateSnapshotInterval(cli.flags.snapshotInterval)
+const maxSnapshotsCheck = validateMaxSnapshots(cli.flags.maxSnapshots)
+
+if (cli.flags.history) {
+  if (!intervalCheck.ok) exitWithError(intervalCheck.message)
+  if (!maxSnapshotsCheck.ok) exitWithError(maxSnapshotsCheck.message)
+}
+
+const history =
+  cli.flags.history && intervalCheck.ok && maxSnapshotsCheck.ok
+    ? {
+        interval: intervalCheck.interval,
+        maxSnapshots: maxSnapshotsCheck.maxSnapshots,
+      }
+    : undefined
+
 const thresholdKB = thresholdCheck.thresholdKB
 const thresholdBytes = thresholdKB * 1024
 
@@ -228,6 +261,7 @@ const element = React.createElement(App, {
   authorPolicy: cli.flags.fuzzyAuthors ? 'loose' : 'strict',
   ignoreRevisions: cli.flags.ignoreRev,
   concurrency: cli.flags.concurrency,
+  history,
 })
 
 const app = render(element)

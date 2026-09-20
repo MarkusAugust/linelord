@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
 import { LineLordService } from '../services/LineLordService'
+import type { SnapshotInterval } from '../services/snapshotSelection'
 
 interface InitProgress {
   current: number
@@ -17,6 +18,7 @@ export function useLineLordService(
     authorPolicy?: 'strict' | 'loose'
     ignoreRevisions?: string[]
     concurrency?: number
+    history?: { interval: SnapshotInterval; maxSnapshots: number }
   } = {},
 ) {
   const {
@@ -25,6 +27,12 @@ export function useLineLordService(
     authorPolicy = 'strict',
     concurrency,
   } = options
+  // Taken apart into values rather than kept as the object it arrived in.
+  // An object is a new reference on every render, and a dependency list that
+  // holds one re-creates the service each time -- which is why
+  // ignoreRevisions is joined into a string a few lines above.
+  const historyInterval = options.history?.interval
+  const historyMaxSnapshots = options.history?.maxSnapshots
   // Joined for the dependency list below: a new array each render would
   // otherwise re-create the service on every one of them.
   const ignoreRevisions = (options.ignoreRevisions ?? []).join(' ')
@@ -54,6 +62,25 @@ export function useLineLordService(
     ) => {
       if (cancelled) return
       setInitProgress({ current, total, message })
+    }
+
+    // A pass over the repository per snapshot, so the count is the honest
+    // warning: somebody who asked for sixty of them should be able to see
+    // that before deciding to wait.
+    const handleHistoryProgress = (
+      current: number,
+      total: number,
+      message: string,
+    ) => {
+      if (cancelled) return
+      // The walk counts snapshots; the loading screen draws a percentage.
+      // Handing it the snapshot number left a sixty-snapshot run finishing
+      // at 60% and a three-snapshot one at 3%.
+      setInitProgress({
+        current: total > 0 ? Math.round((current / total) * 100) : 100,
+        total: 100,
+        message: `${message} — reading the history takes a pass over the repository each time`,
+      })
     }
 
     const handleSuccess = () => {
@@ -90,9 +117,21 @@ export function useLineLordService(
       authorPolicy,
       ignoreRevisions: ignoreRevisions ? ignoreRevisions.split(' ') : [],
       concurrency,
+      history:
+        historyInterval && historyMaxSnapshots
+          ? { interval: historyInterval, maxSnapshots: historyMaxSnapshots }
+          : undefined,
     })
     setLineLordService(service)
-    service.initialize(handleProgress).then(handleSuccess).catch(handleError)
+
+    // The history is walked after the present, not instead of it: the screens
+    // that only need HEAD are ready either way, and the walk is the part that
+    // can take minutes.
+    service
+      .initialize(handleProgress)
+      .then(() => service.gatherHistory(handleHistoryProgress))
+      .then(handleSuccess)
+      .catch(handleError)
 
     return () => {
       cancelled = true
@@ -109,6 +148,8 @@ export function useLineLordService(
     authorPolicy,
     ignoreRevisions,
     concurrency,
+    historyInterval,
+    historyMaxSnapshots,
   ])
 
   // Whether this is a switch rather than a first analysis, which is all the

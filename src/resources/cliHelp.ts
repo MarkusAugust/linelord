@@ -17,6 +17,11 @@ export const CLI_HELP = `
 ║   --clear-all-caches  Forget every repository's              ║
 ║   --fuzzy-authors  Guess which identities are one person     ║
 ║   --concurrency N  Files blamed at once (default: 12)        ║
+║   --history        Also read the repository as it stood in   ║
+║                    the past, for half-life and survival      ║
+║   --snapshot-interval  week | month | quarter (default:      ║
+║                    month)                                    ║
+║   --max-snapshots N  Revisions to read (default: 60)         ║
 ║   --ignore-rev SHA Look past a commit, as .git-blame-ignore-  ║
 ║                    revs does (repeatable)                    ║
 ║   --write-mailmap  Draft a .mailmap from the guesses         ║

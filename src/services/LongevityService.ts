@@ -2,7 +2,11 @@ import { eq, sql } from 'drizzle-orm'
 import type { LineLordDatabase } from '../db/database'
 import { HISTORY_HEAD_KEY, readMeta } from '../db/meta'
 import { authors, cohortLines, snapshots } from '../db/schema'
-import { type AuthorSurvival, computeSurvival } from './survival'
+import {
+  type AuthorSurvival,
+  computeSurvival,
+  type SurvivalPoint,
+} from './survival'
 
 /**
  * How old the code is that somebody still owns.
@@ -128,6 +132,8 @@ const EMPTY_HISTOGRAM: AgeHistogram = {
 }
 
 /** What the cohort walk found, with the person attached. */
+export type { SurvivalPoint }
+
 export interface AuthorSurvivalWithIdentity extends AuthorSurvival {
   name: string
   email: string

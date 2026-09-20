@@ -35,6 +35,12 @@ import {
   type AnalysisFailure,
   GitService,
 } from './GitService'
+import {
+  type HistoryFailure,
+  type HistoryRun,
+  HistoryService,
+} from './HistoryService'
+import type { SnapshotInterval } from './snapshotSelection'
 
 /** What the run did, and why, so the interface can say so rather than imply it. */
 export interface CacheStatus {
@@ -81,6 +87,15 @@ export interface LineLordOptions {
   ignoreRevisions?: string[]
   /** How many files may be blamed at once. */
   concurrency?: number
+  /**
+   * Walk the history as well, and how.
+   *
+   * Absent means the ordinary analysis of HEAD and nothing more. Present
+   * means reading the repository as it stood at points in the past, which
+   * takes minutes on anything substantial -- so it is only ever here because
+   * somebody asked for it.
+   */
+  history?: { interval: SnapshotInterval; maxSnapshots: number }
 }
 
 export class LineLordService {
@@ -96,6 +111,8 @@ export class LineLordService {
   private authorPolicy: AuthorPolicy
   private extraIgnoreRevisions: string[]
   private concurrency: number | undefined
+  private history: LineLordOptions['history']
+  private historyRun: HistoryRun | null = null
   private ignoredRevisions: IgnoreRevs = {
     revisions: [],
     sources: { file: false, flag: false },
@@ -120,6 +137,7 @@ export class LineLordService {
     this.authorPolicy = options.authorPolicy ?? 'strict'
     this.extraIgnoreRevisions = options.ignoreRevisions ?? []
     this.concurrency = options.concurrency
+    this.history = options.history
     this.db = createDatabase()
     this.gitService = new GitService(
       repoPath,
@@ -470,6 +488,76 @@ export class LineLordService {
   /** Files the analysis could not read. Empty when everything was analysed. */
   getFailures(): AnalysisFailure[] {
     return this.gitService.getFailures()
+  }
+
+  /** Whether this run was asked to walk the history. */
+  wantsHistory(): boolean {
+    return this.history !== undefined
+  }
+
+  /**
+   * Walk the history, under exactly the settings the present was read with.
+   *
+   * Constructed here rather than by the caller so that the threshold, the
+   * commits being looked past and the batch size cannot drift apart from the
+   * ones the analysis of HEAD used. A history measured under different rules
+   * than the present it is drawn beside would be two answers to two
+   * questions, presented as one.
+   */
+  async gatherHistory(
+    onProgress?: (current: number, total: number, message: string) => void,
+  ): Promise<HistoryRun | null> {
+    if (!this.history) return null
+
+    const root =
+      (await findRepositoryRoot(this.currentRepoPath).then((lookup) =>
+        lookup.found ? lookup.root : null,
+      )) ?? this.currentRepoPath
+
+    // initialize lets the lock go as soon as it has finished writing, so that
+    // somebody browsing menus does not keep every other LineLord out. The
+    // walk writes too -- it empties the snapshot tables and fills them again
+    // -- so it has to hold the lock for itself, or two histories interleave
+    // into one database and leave a set of snapshots describing neither.
+    const lockPath = this.useCache ? resolveCachePath(root) : null
+    const lock = lockPath ? acquireCacheLock(lockPath) : null
+    if (lockPath && !lock) {
+      throw new Error(
+        'Another LineLord is analysing this repository. Reading the history ' +
+          'writes to the same stored analysis, so this run has stopped rather ' +
+          'than interleave with it.',
+      )
+    }
+
+    try {
+      const run = await new HistoryService(root, this.db, {
+        thresholdBytes: this.largeFileThresholdBytes,
+        ignoredRevisions: this.ignoredRevisions.revisions,
+        concurrency: this.concurrency,
+        interval: this.history.interval,
+        maxSnapshots: this.history.maxSnapshots,
+      }).analyse(onProgress)
+      this.historyRun = run
+      return run
+    } finally {
+      lock?.release()
+    }
+  }
+
+  /**
+   * Files the history could not read, if it was walked.
+   *
+   * A file that fails contributes no lines, which understates the snapshot it
+   * belongs to -- so a history that completed is not the same as a history
+   * that is whole, and the interface should be able to tell them apart.
+   */
+  getHistoryFailures(): HistoryFailure[] {
+    return this.historyRun?.failures ?? []
+  }
+
+  /** How many revisions the history read, or zero if it was not walked. */
+  getHistorySnapshotCount(): number {
+    return this.historyRun?.snapshots ?? 0
   }
 
   /**
