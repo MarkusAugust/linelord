@@ -272,6 +272,15 @@ describe('computeSurvival', () => {
     expect(result[1]?.linesEverWritten).toBe(4)
   })
 
+  it('refuses to read rows without the snapshots behind them', () => {
+    // An empty list type-checks. Reading the rows alone is exactly the
+    // failure the argument exists to prevent, so it is a mistake at the call
+    // site rather than something to answer quietly and wrongly.
+    const rows = [cell(GORVEK, '2025-01-01', '2025-01-31', 10)]
+
+    expect(() => computeSurvival(rows, [])).toThrow()
+  })
+
   it('has nothing to say about an empty history', () => {
     expect(computeSurvival([], sampled('2025-01-31'))).toEqual([])
   })

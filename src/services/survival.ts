@@ -85,6 +85,20 @@ export function computeSurvival(
 ): AuthorSurvival[] {
   if (observations.length === 0) return []
 
+  // Required is not the same as supplied. An empty list type-checks, and
+  // reading these rows without the snapshots they were counted at is the one
+  // failure this argument exists to prevent -- cohorts deleted outright look
+  // like cohorts that never halved. Observations only exist because snapshots
+  // do, so having the first without the second is a mistake at the call site
+  // rather than a state the data can be in.
+  if (snapshotTimes.length === 0) {
+    throw new Error(
+      'computeSurvival needs the snapshots the observations were counted at; ' +
+        'without them a cohort with nothing left of it cannot be told from ' +
+        'one that was never touched.',
+    )
+  }
+
   const everySnapshot = [
     ...new Set([
       ...snapshotTimes,
