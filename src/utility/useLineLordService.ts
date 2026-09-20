@@ -26,8 +26,13 @@ export function useLineLordService(
     refresh = false,
     authorPolicy = 'strict',
     concurrency,
-    history,
   } = options
+  // Taken apart into values rather than kept as the object it arrived in.
+  // An object is a new reference on every render, and a dependency list that
+  // holds one re-creates the service each time -- which is why
+  // ignoreRevisions is joined into a string a few lines above.
+  const historyInterval = options.history?.interval
+  const historyMaxSnapshots = options.history?.maxSnapshots
   // Joined for the dependency list below: a new array each render would
   // otherwise re-create the service on every one of them.
   const ignoreRevisions = (options.ignoreRevisions ?? []).join(' ')
@@ -109,7 +114,10 @@ export function useLineLordService(
       authorPolicy,
       ignoreRevisions: ignoreRevisions ? ignoreRevisions.split(' ') : [],
       concurrency,
-      history,
+      history:
+        historyInterval && historyMaxSnapshots
+          ? { interval: historyInterval, maxSnapshots: historyMaxSnapshots }
+          : undefined,
     })
     setLineLordService(service)
 
@@ -137,6 +145,8 @@ export function useLineLordService(
     authorPolicy,
     ignoreRevisions,
     concurrency,
+    historyInterval,
+    historyMaxSnapshots,
   ])
 
   // Whether this is a switch rather than a first analysis, which is all the
