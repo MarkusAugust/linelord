@@ -74,10 +74,13 @@ describe('release workflow', () => {
     // the dependency tree, and then builds. A persisted token would sit in
     // .git/config throughout. The release step is handed GITHUB_TOKEN
     // explicitly, so nothing here needs credentials on disk.
-    // Found by what the step is rather than by which version of it is
-    // pinned. Naming the version made this fail the day the action was
-    // updated, which says nothing about whether credentials are persisted.
-    const at = buildJob.search(/actions\/checkout@v\d+/)
+    // Found by the step rather than by how the action is referenced. Naming
+    // the version made this fail the day the action was updated, which says
+    // nothing about whether credentials are persisted -- and matching only
+    // `@v<major>` would fail again the day these are pinned to a commit,
+    // which is a change that makes the workflow safer, not less so. Anchored
+    // on `uses:` so a mention in a comment is not mistaken for the step.
+    const at = buildJob.search(/uses:\s*actions\/checkout@\S+/)
     expect(at).toBeGreaterThan(-1)
     const checkout = buildJob.slice(at)
     const nextStep = checkout.indexOf('\n      - name:')
