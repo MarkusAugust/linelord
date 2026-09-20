@@ -196,19 +196,24 @@ describe('LineLordService - end to end over a real repository', () => {
         write: { 'src/only.ts': 'const only = 1\n' },
       })
 
-      const service = new LineLordService(repo.path)
-      await service.initialize()
-      await service.changeRepository(other.path)
+      // A repository gets a service of its own. There used to be a method
+      // that pointed one service at a different repository, and this test
+      // guarded what it must not carry across; the guard is kept because the
+      // property still matters, even though it now holds by construction.
+      const first = new LineLordService(repo.path)
+      await first.initialize()
+      const second = new LineLordService(other.path)
+      await second.initialize()
 
-      const contributions = await service
+      const contributions = await second
         .getAnalysisService()
         .getAuthorContributions()
 
-      // Nothing from the first repository may survive the switch.
+      // Nothing from the first repository may appear in the second.
       expect(contributions).toHaveLength(1)
       expect(contributions[0]?.displayName).toBe(NIGHTSHROUD.name)
       expect(contributions[0]?.totalLines).toBe(1)
-      expect(service.getCurrentRepoPath()).toBe(other.path)
+      expect(second.getCurrentRepoPath()).toBe(other.path)
     } finally {
       await other.cleanup()
     }

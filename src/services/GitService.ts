@@ -94,6 +94,32 @@ export const BLAME_OPTIONS = ['-w', '--porcelain'] as const
  */
 export const DEFAULT_CONCURRENCY = 12
 
+/**
+ * The ceiling, shared with the flag that advertises it.
+ *
+ * Past this the time goes into spawning and reaping git processes rather than
+ * into reading blame.
+ */
+export const MAX_CONCURRENCY = 64
+
+/**
+ * Make a usable batch size out of whatever a caller passed.
+ *
+ * The CLI validates the flag and says why when it refuses, but the services
+ * take the number directly and are not entitled to assume it came from there.
+ * A NaN is the one that matters: the batching loop advances by this value, so
+ * a NaN never advances it and initialization sits forever, looking exactly
+ * like a repository that is simply large.
+ */
+export function normaliseConcurrency(value: number | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return DEFAULT_CONCURRENCY
+  }
+  const whole = Math.floor(value)
+  if (whole < 1) return DEFAULT_CONCURRENCY
+  return Math.min(whole, MAX_CONCURRENCY)
+}
+
 /** How much of a run was done afresh, and how much came from the cache. */
 export interface AnalysisRun {
   /** Files blamed during this run. */
@@ -137,8 +163,12 @@ export class GitService {
     private repoPath: string,
     private db: LineLordDatabase,
     private largeFileThresholdBytes: number = 50 * 1024,
-    private concurrency = DEFAULT_CONCURRENCY,
-  ) {}
+    concurrency: number = DEFAULT_CONCURRENCY,
+  ) {
+    this.concurrency = normaliseConcurrency(concurrency)
+  }
+
+  private concurrency: number
 
   /**
    * Tell blame which commits to look past, before anything is analysed.
@@ -408,11 +438,8 @@ export class GitService {
     filesToAnalyze: string[],
     onProgress?: (current: number, total: number, message: string) => void,
   ) {
-    // Capped, because git is a process per file and the machine has to keep
-    // up with spawning them. Twelve was the hard-coded ceiling; it is now the
-    // default of --concurrency, which is the same number for anyone who does
-    // not ask for another.
-    const batchSize = Math.max(1, this.concurrency)
+    // Settled in the constructor, so this is a number whatever was passed.
+    const batchSize = this.concurrency
     let processed = 0
 
     for (let i = 0; i < filesToAnalyze.length; i += batchSize) {

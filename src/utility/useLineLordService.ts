@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
 import { LineLordService } from '../services/LineLordService'
 
@@ -42,15 +42,10 @@ export function useLineLordService(
   useEffect(() => {
     if (!repoPath) return
 
-    // An analysis takes seconds to minutes, and every one of the callbacks
-    // below writes state when it finishes. Two things can happen in that
-    // window: the app can exit, or the user can change repository again. The
-    // second is the one that shows: the abandoned run reports success, and
-    // the screen then presents the previous repository's analysis as ready
-    // under the new repository's name.
+    // An analysis takes seconds to minutes, and every callback below writes
+    // state when it finishes. Two things can happen in that window: the app
+    // can exit, or the user can change repository again.
     let cancelled = false
-
-    setInitError(null)
 
     const handleProgress = (
       current: number,
@@ -75,43 +70,39 @@ export function useLineLordService(
       setIsInitialized(false)
     }
 
-    if (lineLordService && lineLordService.getCurrentRepoPath() !== repoPath) {
-      // Repository path changed, reinitialize with new repo
-      setIsInitialized(false)
-      setInitializingMessage(getRandomBarbarianMessage('initializing'))
-      setInitProgress({
-        current: 0,
-        total: 100,
-        message: 'Switching repositories...',
-      })
+    setIsInitialized(false)
+    setInitError(null)
+    setInitializingMessage(getRandomBarbarianMessage('initializing'))
+    setInitProgress({ current: 0, total: 100, message: 'Starting...' })
 
-      lineLordService
-        .changeRepository(repoPath, handleProgress, thresholdBytes)
-        .then(handleSuccess)
-        .catch(handleError)
-    } else if (!lineLordService) {
-      // Create new service for the first time
-      setInitializingMessage(getRandomBarbarianMessage('initializing'))
-      // The one place that turns the cache on. Everywhere else -- tests
-      // included -- gets an analysis that leaves nothing behind.
-      const service = new LineLordService(repoPath, thresholdBytes, {
-        useCache,
-        refresh,
-        authorPolicy,
-        ignoreRevisions: ignoreRevisions ? ignoreRevisions.split(' ') : [],
-        concurrency,
-      })
-      setLineLordService(service)
-
-      service.initialize(handleProgress).then(handleSuccess).catch(handleError)
-    }
+    // A service of its own for each repository, rather than one that is told
+    // to switch. Switching replaced the database and the git service on the
+    // object a running analysis was still using, so an abandoned run could
+    // carry on against the repository that replaced it -- and suppressing its
+    // callbacks does nothing about that. An abandoned service here is simply
+    // one nobody reads.
+    //
+    // The one place that turns the cache on. Everywhere else -- tests
+    // included -- gets an analysis that leaves nothing behind.
+    const service = new LineLordService(repoPath, thresholdBytes, {
+      useCache,
+      refresh,
+      authorPolicy,
+      ignoreRevisions: ignoreRevisions ? ignoreRevisions.split(' ') : [],
+      concurrency,
+    })
+    setLineLordService(service)
+    service.initialize(handleProgress).then(handleSuccess).catch(handleError)
 
     return () => {
       cancelled = true
     }
+    // lineLordService is deliberately not a dependency. Setting it re-renders,
+    // and with it in the list that re-render tears this effect down and
+    // starts another -- cancelling the very run it had just begun, so the
+    // first load never finished and the loading screen stayed up for good.
   }, [
     repoPath,
-    lineLordService,
     thresholdBytes,
     useCache,
     refresh,
@@ -120,9 +111,18 @@ export function useLineLordService(
     concurrency,
   ])
 
+  // Whether this is a switch rather than a first analysis, which is all the
+  // loading screen needs to know. Read from a ref because it must not itself
+  // cause a render.
+  const hasAnalysedBefore = useRef(false)
+  useEffect(() => {
+    if (isInitialized) hasAnalysedBefore.current = true
+  }, [isInitialized])
+
   return {
     lineLordService,
     isInitialized,
+    isChangingRepo: hasAnalysedBefore.current && !isInitialized,
     initializingMessage,
     initError,
     initProgress,

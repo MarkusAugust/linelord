@@ -432,43 +432,6 @@ export class LineLordService {
     writeMeta(this.db, { [HEAD_KEY]: head ?? headSha })
   }
 
-  async changeRepository(
-    newRepoPath: string,
-    onProgress?: (current: number, total: number, message: string) => void,
-    newThresholdBytes?: number,
-  ): Promise<void> {
-    onProgress?.(0, 100, 'Switching repositories...')
-
-    // The database being left behind is the previous repository's cache, and
-    // emptying it would throw away an analysis the user paid for and may come
-    // back to. Detaching is enough: initialize opens whichever database the
-    // new repository should use.
-
-    // Update the repository path and threshold if provided
-    this.currentRepoPath = newRepoPath
-    if (newThresholdBytes) {
-      this.largeFileThresholdBytes = newThresholdBytes
-    }
-
-    // A different repository has a different cache. Pointing the services at
-    // the new path while still holding the old database would analyse one
-    // repository into another's file.
-    this.releaseCacheLock()
-    this.attachDatabase(createDatabase(), newRepoPath)
-
-    // Mark as uninitialized
-    this.initialized = false
-
-    onProgress?.(10, 100, 'Initializing new repository...')
-
-    // Initialize with the new repository
-    await this.initialize((current, total, message) => {
-      // Map initialization progress to 10-100% of total progress
-      const adjustedCurrent = 10 + (current / total) * 90
-      onProgress?.(adjustedCurrent, 100, message)
-    })
-  }
-
   getCurrentRepoPath(): string {
     return this.currentRepoPath
   }

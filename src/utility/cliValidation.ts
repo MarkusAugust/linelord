@@ -1,4 +1,5 @@
 import { homedir } from 'node:os'
+import { MAX_CONCURRENCY } from '../services/GitService'
 
 /** Expand a leading `~` to the user's home directory. */
 export function expandTilde(filepath: string): string {
@@ -77,10 +78,10 @@ export function validateConcurrency(value: unknown): ConcurrencyResult {
     }
   }
 
-  if (value > 64) {
+  if (value > MAX_CONCURRENCY) {
     return {
       ok: false,
-      message: `--concurrency is capped at 64, but got ${value}. LineLord runs one git process per file, and past this the machine spends its time spawning them rather than reading blame.`,
+      message: `--concurrency is capped at ${MAX_CONCURRENCY}, but got ${value}. LineLord runs one git process per file, and past this the machine spends its time spawning them rather than reading blame.`,
     }
   }
 

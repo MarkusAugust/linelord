@@ -264,11 +264,18 @@ describe('LineLordService - the cache', () => {
         write: { 'only-here.txt': 'a\nb\n' },
       })
 
-      const service = new LineLordService(repo.path, 50 * 1024, {
+      // Analysing a second repository must not cost the first its stored
+      // analysis. This was a real bug when one service was pointed at a new
+      // path: it emptied the database it was holding, which was the previous
+      // repository's cache file.
+      const first = new LineLordService(repo.path, 50 * 1024, {
         useCache: true,
       })
-      await service.initialize()
-      await service.changeRepository(other.path)
+      await first.initialize()
+      const second = new LineLordService(other.path, 50 * 1024, {
+        useCache: true,
+      })
+      await second.initialize()
 
       const { status } = await cached(repo.path)
 

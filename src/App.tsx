@@ -72,6 +72,7 @@ export default function App({
     initializingMessage,
     initError,
     initProgress,
+    isChangingRepo,
   } = useLineLordService(repoPath, largeFileThresholdBytes, {
     useCache,
     refresh,
@@ -150,7 +151,6 @@ export default function App({
 
   // Show loading screen during initialization
   if (repoPath && lineLordService && !isInitialized && !initError) {
-    const isChangingRepo = lineLordService.getCurrentRepoPath() !== repoPath
     return (
       <LoadingScreen
         message={initializingMessage}
