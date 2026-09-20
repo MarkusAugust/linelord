@@ -31,6 +31,14 @@ export interface AgeHistogram {
 export interface SurvivingLine {
   /** Author time of the commit that last touched it, in whole seconds. */
   timestamp: number
+  /**
+   * How old it is, in days.
+   *
+   * Carried rather than left for the caller to work out, so that nothing on
+   * screen computes an age against a different `now` than the rest of the
+   * figures it sits beside.
+   */
+  ageDays: number
   path: string
   lineNumber: number
 }
@@ -57,6 +65,14 @@ export interface AuthorLongevity {
   ageHistogram: AgeHistogram
   /** Days between the oldest and newest line still standing. */
   activeSpanDays: number
+}
+
+/** One file, from one author's point of view. */
+export interface AuthorFileLongevity {
+  path: string
+  /** Lines in this file owned by that author. */
+  lines: number
+  medianAgeDays: number
 }
 
 export interface RepositoryLongevity {
@@ -193,6 +209,42 @@ export class LongevityService {
     return result.sort((a, b) => b.medianAgeDays - a.medianAgeDays)
   }
 
+  /**
+   * The files where one author's surviving code is oldest.
+   *
+   * The detail view's answer to "where is this old code, then" -- a median
+   * age on its own says a person's code is old without saying where to look.
+   * Ranked by the same nearest-rank median as everything else.
+   */
+  async filesForAuthor(
+    authorId: number,
+    limit = 5,
+  ): Promise<AuthorFileLongevity[]> {
+    return this.db.all<AuthorFileLongevity>(sql`
+      WITH ranked AS (
+        SELECT
+          bl.file_id AS fileId,
+          bl.commit_timestamp AS ts,
+          ROW_NUMBER() OVER (
+            PARTITION BY bl.file_id ORDER BY bl.commit_timestamp DESC, bl.id DESC
+          ) AS rn,
+          COUNT(*) OVER (PARTITION BY bl.file_id) AS total
+        FROM blame_lines bl
+        WHERE bl.author_id = ${authorId} AND bl.commit_timestamp IS NOT NULL
+      )
+      SELECT
+        f.path AS path,
+        MAX(r.total) AS lines,
+        (${this.nowSeconds} - MAX(CASE WHEN r.rn >= (r.total + 1) / 2 THEN r.ts END))
+          / 86400.0 AS medianAgeDays
+      FROM ranked r
+      JOIN files f ON f.id = r.fileId
+      GROUP BY r.fileId
+      ORDER BY medianAgeDays DESC
+      LIMIT ${limit}
+    `)
+  }
+
   /** The same question asked of the codebase as a whole. */
   async forRepository(): Promise<RepositoryLongevity> {
     const [totals] = this.db.all<{
@@ -260,7 +312,9 @@ export class LongevityService {
       medianAgeDays: median ? this.ageInDays(median.medianTimestamp) : null,
       ageHistogram: histogram ?? { ...EMPTY_HISTOGRAM },
       writtenInLast90Days: (totals?.recentLines ?? 0) / survivingLines,
-      oldestLine: oldest ?? null,
+      oldestLine: oldest
+        ? { ...oldest, ageDays: this.ageInDays(oldest.timestamp) }
+        : null,
     }
   }
 
@@ -378,6 +432,7 @@ export class LongevityService {
     for (const row of rows) {
       const line: SurvivingLine = {
         timestamp: row.timestamp,
+        ageDays: this.ageInDays(row.timestamp),
         path: row.path,
         lineNumber: row.lineNumber,
       }

@@ -10,7 +10,36 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Code Longevity**, a new screen: how old the code each contributor still
+  holds is. For every line surviving in the analysed revision, how long ago was
+  the commit that last touched it — the median, the mean, the tenth and
+  ninetieth percentiles, and a histogram of the whole spread drawn as a
+  sparkline with the newest code on the left. Sorted by median rather than
+  mean, because one ancient file somebody still owns drags a mean across years
+  and the median not at all. Enter opens one contributor: the histogram with
+  numbers, the oldest and newest line they hold with file and line number, and
+  the files where their oldest code sits. The repository gets the same
+  treatment at the top, including how much of it was touched in the last ninety
+  days.
+
+  What the numbers are not is on the screen itself, not only in the README:
+  age is when a line was last changed rather than written, a reformatting
+  resets it, old code is stable rather than good, new code usually means
+  working where the work is — and none of it measures a person.
+
+### Fixed
+
+- **`--no-cache` now does something.** The flag has been in the help text and
+  the README since caching landed, and it was never read: the option was
+  declared under the negated name, and `--no-cache` is parsed as the negation
+  of `--cache`, so it set a flag nobody looked at. It was not rejected either.
+  LineLord went on storing the analysis, and the only sign was a cache file
+  nobody had asked for.
+- **The About screen said contributors were matched by name similarity.** They
+  have not been since identity matching became strict; the screen was simply
+  never brought along.
 
 ## [0.8.1] — 2026-09-20
 
