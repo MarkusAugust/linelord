@@ -4,7 +4,7 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
-import { createDatabase } from '../../db/database'
+import { clearDatabase, createDatabase } from '../../db/database'
 import { readMeta } from '../../db/meta'
 import { authors, cohortLines, snapshots } from '../../db/schema'
 import { HISTORY_HEAD_KEY, HistoryService } from '../HistoryService'
@@ -19,6 +19,9 @@ import { LineLordService } from '../LineLordService'
  * everything every time. The test that says so is the most important one
  * here; the rest describe what the walk produces.
  */
+
+/** The same threshold the analysis of HEAD uses by default. */
+const THRESHOLD = 50 * 1024
 
 const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
 const NIGHTSHROUD = {
@@ -116,11 +119,13 @@ describe('HistoryService', () => {
     const incremental = createDatabase()
     await new HistoryService(repo.path, incremental, {
       interval: 'month',
+      thresholdBytes: THRESHOLD,
     }).analyse()
 
     const exhaustive = createDatabase()
     await new HistoryService(repo.path, exhaustive, {
       interval: 'month',
+      thresholdBytes: THRESHOLD,
       reuseBetweenSnapshots: false,
     }).analyse()
 
@@ -134,6 +139,7 @@ describe('HistoryService', () => {
 
     const run = await new HistoryService(repo.path, db, {
       interval: 'month',
+      thresholdBytes: THRESHOLD,
     }).analyse()
 
     expect(run.filesCarried).toBeGreaterThan(0)
@@ -144,7 +150,10 @@ describe('HistoryService', () => {
     repo = await repoWithAYear()
     const db = createDatabase()
 
-    await new HistoryService(repo.path, db, { interval: 'month' }).analyse()
+    await new HistoryService(repo.path, db, {
+      interval: 'month',
+      thresholdBytes: THRESHOLD,
+    }).analyse()
 
     const stored = await db.select().from(snapshots)
     // January, March, May, August and November saw commits; no others did.
@@ -158,7 +167,10 @@ describe('HistoryService', () => {
     repo = await repoWithAYear()
     const db = createDatabase()
 
-    await new HistoryService(repo.path, db, { interval: 'month' }).analyse()
+    await new HistoryService(repo.path, db, {
+      interval: 'month',
+      thresholdBytes: THRESHOLD,
+    }).analyse()
 
     const stored = await db.select().from(snapshots)
     const first = stored[0]
@@ -176,7 +188,10 @@ describe('HistoryService', () => {
     repo = await repoWithAYear()
     const db = createDatabase()
 
-    await new HistoryService(repo.path, db, { interval: 'month' }).analyse()
+    await new HistoryService(repo.path, db, {
+      interval: 'month',
+      thresholdBytes: THRESHOLD,
+    }).analyse()
 
     const stored = await db.select({ email: authors.email }).from(authors)
     expect(stored.map((one) => one.email)).toContain(ZYGOFER.email)
@@ -188,6 +203,7 @@ describe('HistoryService', () => {
 
     await new HistoryService(repo.path, db, {
       interval: 'month',
+      thresholdBytes: THRESHOLD,
       maxSnapshots: 2,
     }).analyse()
 
@@ -197,7 +213,10 @@ describe('HistoryService', () => {
   it('forgets an earlier history rather than adding to it', async () => {
     repo = await repoWithAYear()
     const db = createDatabase()
-    const service = new HistoryService(repo.path, db, { interval: 'month' })
+    const service = new HistoryService(repo.path, db, {
+      interval: 'month',
+      thresholdBytes: THRESHOLD,
+    })
 
     await service.analyse()
     const after = await cohortRows(db)
@@ -228,10 +247,12 @@ describe('HistoryService', () => {
     const incremental = createDatabase()
     await new HistoryService(repo.path, incremental, {
       interval: 'month',
+      thresholdBytes: THRESHOLD,
     }).analyse()
     const exhaustive = createDatabase()
     await new HistoryService(repo.path, exhaustive, {
       interval: 'month',
+      thresholdBytes: THRESHOLD,
       reuseBetweenSnapshots: false,
     }).analyse()
 
@@ -255,6 +276,7 @@ describe('HistoryService', () => {
 
     const run = await new HistoryService(repo.path, db, {
       interval: 'month',
+      thresholdBytes: THRESHOLD,
       concurrency: Number.NaN,
     }).analyse()
 
@@ -267,7 +289,10 @@ describe('HistoryService', () => {
     repo = await repoWithAYear()
     const db = createDatabase()
 
-    await new HistoryService(repo.path, db, { interval: 'month' }).analyse()
+    await new HistoryService(repo.path, db, {
+      interval: 'month',
+      thresholdBytes: THRESHOLD,
+    }).analyse()
 
     const [zygofer] = await db
       .select({ name: authors.displayName })
@@ -284,7 +309,10 @@ describe('HistoryService', () => {
     repo = await repoWithAYear()
     const db = createDatabase()
 
-    await new HistoryService(repo.path, db, { interval: 'month' }).analyse()
+    await new HistoryService(repo.path, db, {
+      interval: 'month',
+      thresholdBytes: THRESHOLD,
+    }).analyse()
 
     expect(readMeta(db, HISTORY_HEAD_KEY)).toBe(await repo.head())
   }, 120000)
@@ -313,7 +341,10 @@ describe('HistoryService', () => {
     })
     await service.initialize()
     const db = service.getDatabase()
-    await new HistoryService(repo.path, db, { interval: 'month' }).analyse()
+    await new HistoryService(repo.path, db, {
+      interval: 'month',
+      thresholdBytes: THRESHOLD,
+    }).analyse()
 
     const merged = await db
       .select({ id: authors.id })
@@ -328,11 +359,145 @@ describe('HistoryService', () => {
     expect(used.filter((one) => mergedIds.has(one.authorId))).toEqual([])
   }, 120000)
 
+  it('follows one month of work decaying across the snapshots', async () => {
+    // This is what the whole feature is: a cohort is the month a line was
+    // written, and reading one cohort across snapshots is the survival curve.
+    // The equivalence test proves the fast path matches the slow one; it
+    // would prove that just as happily if both were wrong. This says the
+    // numbers mean what they are drawn as.
+    repo = await createTestRepo()
+    const ten = Array.from({ length: 10 }, (_, i) => `g${i}`).join('\n')
+    await repo.commit({
+      message: 'ten lines in January',
+      author: GORVEK,
+      date: new Date('2025-01-10T10:00:00Z'),
+      write: { 'a.ts': `${ten}\n` },
+    })
+    await repo.commit({
+      message: 'five of them rewritten in March',
+      author: NIGHTSHROUD,
+      date: new Date('2025-03-12T10:00:00Z'),
+      write: { 'a.ts': 'g0\ng1\ng2\ng3\ng4\nn0\nn1\nn2\nn3\nn4\n' },
+    })
+    await repo.commit({
+      message: 'three more of them rewritten in June',
+      author: ZYGOFER,
+      date: new Date('2025-06-14T10:00:00Z'),
+      write: { 'a.ts': 'g0\ng1\nn0\nn1\nn2\nn3\nn4\nz0\nz1\nz2\n' },
+    })
+
+    const db = createDatabase()
+    await new HistoryService(repo.path, db, {
+      interval: 'month',
+      thresholdBytes: THRESHOLD,
+    }).analyse()
+
+    const january = Math.floor(
+      new Date('2025-01-01T00:00:00Z').getTime() / 1000,
+    )
+    const rows = await db
+      .select({
+        at: snapshots.snapshotTimestamp,
+        month: cohortLines.cohortMonth,
+        lines: cohortLines.lineCount,
+      })
+      .from(cohortLines)
+      .innerJoin(snapshots, eq(snapshots.id, cohortLines.snapshotId))
+
+    const januaryCohort = rows
+      .filter((row) => row.month === january)
+      .sort((a, b) => a.at - b.at)
+      .map((row) => row.lines)
+
+    // Ten written, five still standing in March, two by June.
+    expect(januaryCohort).toEqual([10, 5, 2])
+  }, 120000)
+
+  it('makes no claim about a history it has thrown away', async () => {
+    // Clearing the rows while leaving the marker behind says the database
+    // holds a history of one revision while holding none -- for the whole of
+    // a run that may take minutes, and for good if that run is interrupted.
+    repo = await repoWithAYear()
+    const db = createDatabase()
+    const service = new HistoryService(repo.path, db, {
+      interval: 'month',
+      thresholdBytes: THRESHOLD,
+    })
+    await service.analyse()
+    expect(readMeta(db, HISTORY_HEAD_KEY)).toBeTruthy()
+
+    // What a run does before it has anything of its own to say.
+    ;(service as unknown as { forgetPreviousRun(): void }).forgetPreviousRun()
+
+    expect(readMeta(db, HISTORY_HEAD_KEY)).toBe(null)
+    expect(await db.select().from(snapshots)).toHaveLength(0)
+  }, 120000)
+
+  it('is thrown away when the analysis it belongs to is', async () => {
+    // A history describes one analysis of one repository. clearDatabase runs
+    // whenever that analysis is rebuilt from nothing -- a changed .mailmap,
+    // a changed threshold -- and the cohort rows have to go with it, or a
+    // curve is drawn from revisions the new analysis knows nothing about.
+    repo = await repoWithAYear()
+    const db = createDatabase()
+    await new HistoryService(repo.path, db, {
+      interval: 'month',
+      thresholdBytes: THRESHOLD,
+    }).analyse()
+
+    clearDatabase(db)
+
+    expect(await db.select().from(snapshots)).toHaveLength(0)
+    expect(await db.select().from(cohortLines)).toHaveLength(0)
+  }, 120000)
+
+  it('sums two addresses of one person written in the same month', async () => {
+    // The previous test has the two addresses committing in different months,
+    // which is exactly why it passed while this did not: one person, one
+    // month and one snapshot is one row, and producing two of them collides
+    // on the primary key, fails the transaction, and loses the snapshot --
+    // every snapshot, so the whole history comes back empty.
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'from the office',
+      author: { name: 'Gorvek the Ironbane', email: 'gorvek@firma.no' },
+      date: new Date('2025-04-10T10:00:00Z'),
+      write: { 'a.ts': 'one\ntwo\n' },
+    })
+    await repo.commit({
+      message: 'from the laptop, the same month',
+      author: { name: 'Gorvek Ironbane', email: 'gorvek@privat.no' },
+      date: new Date('2025-04-20T10:00:00Z'),
+      write: { 'b.ts': 'three\n' },
+    })
+
+    const service = new LineLordService(repo.path, 50 * 1024, {
+      authorPolicy: 'loose',
+    })
+    await service.initialize()
+    const db = service.getDatabase()
+
+    const run = await new HistoryService(repo.path, db, {
+      interval: 'month',
+      thresholdBytes: THRESHOLD,
+    }).analyse()
+
+    expect(run.snapshots).toBe(1)
+    const rows = await db
+      .select({ lines: cohortLines.lineCount })
+      .from(cohortLines)
+    // One row for the person, holding all three lines.
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.lines).toBe(3)
+  }, 120000)
+
   it('has nothing to walk in a repository with no commits', async () => {
     repo = await createTestRepo()
     const db = createDatabase()
 
-    const run = await new HistoryService(repo.path, db).analyse()
+    const run = await new HistoryService(repo.path, db, {
+      thresholdBytes: THRESHOLD,
+    }).analyse()
 
     expect(run.snapshots).toBe(0)
   }, 60000)

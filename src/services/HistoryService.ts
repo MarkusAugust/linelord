@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process'
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import type { LineLordDatabase } from '../db/database'
 import { writeMeta } from '../db/meta'
-import { authors, cohortLines, snapshots } from '../db/schema'
+import { authors, cohortLines, meta, snapshots } from '../db/schema'
 import { isAncestor, pathsTouchedBetween } from '../utility/gitRepository'
 import { normaliseConcurrency } from './GitService'
 import {
@@ -40,9 +40,26 @@ import {
  */
 
 export interface HistoryOptions {
+  /**
+   * The size above which a file is left out, as the analysis of HEAD uses it.
+   *
+   * Required rather than defaulted. A default is a number that looks right
+   * and silently disagrees with `--threshold`, and the history would then be
+   * measured under different rules than the present it is drawn beside --
+   * which is the one thing this module promises not to do. The caller knows
+   * the number; make it say so.
+   */
+  thresholdBytes: number
   interval?: SnapshotInterval
   maxSnapshots?: number
-  thresholdBytes?: number
+  /**
+   * Commits for blame to look past, as the analysis of HEAD resolved them.
+   *
+   * Defaulted, because nothing configured is a real state and is the same
+   * default the analysis has. A caller that has resolved a set must pass it:
+   * a reformatting ignored in the present and counted in the history would
+   * put the whole codebase in one cohort.
+   */
   ignoredRevisions?: string[]
   /**
    * Carry untouched files between snapshots instead of blaming them again.
@@ -74,6 +91,9 @@ export interface HistoryRun {
 /** Where the revision this history describes is recorded. */
 export const HISTORY_HEAD_KEY = 'history_head_sha'
 
+/** How many snapshots that history holds. */
+export const HISTORY_SNAPSHOTS_KEY = 'history_snapshots'
+
 export interface HistoryFailure {
   revision: string
   path: string
@@ -94,11 +114,11 @@ export class HistoryService {
   constructor(
     private repoPath: string,
     private db: LineLordDatabase,
-    options: HistoryOptions = {},
+    options: HistoryOptions,
   ) {
     this.interval = options.interval ?? 'month'
     this.maxSnapshots = options.maxSnapshots ?? DEFAULT_MAX_SNAPSHOTS
-    this.thresholdBytes = options.thresholdBytes ?? 50 * 1024
+    this.thresholdBytes = options.thresholdBytes
     this.ignoredRevisions = options.ignoredRevisions ?? []
     this.reuse = options.reuseBetweenSnapshots ?? true
     // The same settling GitService does, and for the same reason: a NaN
@@ -176,7 +196,7 @@ export class HistoryService {
     if (head) {
       writeMeta(this.db, {
         [HISTORY_HEAD_KEY]: head.sha,
-        history_snapshots: String(run.snapshots),
+        [HISTORY_SNAPSHOTS_KEY]: String(run.snapshots),
       })
     }
 
@@ -319,17 +339,35 @@ export class HistoryService {
       }
     }
 
-    const rows = [...byAuthorAndMonth].map(([key, lineCount]) => {
-      const { email, month } = readCountKey(key)
-      return { email, month, lineCount }
-    })
-
+    // Summed by the person rather than by the address they wrote from.
+    // Identity normalisation can put two addresses on one person, and two
+    // rows for the same person, month and snapshot collide on the primary
+    // key -- which fails the transaction and loses the whole snapshot. The
+    // counting has to happen after the addresses are resolved, not before.
     const authorIds = new Map<string, number>()
-    for (const row of rows) {
-      if (!authorIds.has(row.email)) {
-        authorIds.set(row.email, this.resolveAuthor(row.email))
+    const byPersonAndMonth = new Map<string, number>()
+    for (const [key, lineCount] of byAuthorAndMonth) {
+      const { email, month } = readCountKey(key)
+      let authorId = authorIds.get(email)
+      if (authorId === undefined) {
+        authorId = this.resolveAuthor(email)
+        authorIds.set(email, authorId)
       }
+      const personKey = `${authorId}\u0000${month}`
+      byPersonAndMonth.set(
+        personKey,
+        (byPersonAndMonth.get(personKey) ?? 0) + lineCount,
+      )
     }
+
+    const rows = [...byPersonAndMonth].map(([key, lineCount]) => {
+      const at = key.indexOf('\u0000')
+      return {
+        authorId: Number.parseInt(key.slice(0, at), 10),
+        month: Number.parseInt(key.slice(at + 1), 10),
+        lineCount,
+      }
+    })
 
     this.db.transaction((tx) => {
       const [stored] = tx
@@ -345,12 +383,10 @@ export class HistoryService {
       if (!stored) return
 
       for (const row of rows) {
-        const authorId = authorIds.get(row.email)
-        if (authorId === undefined) continue
         tx.insert(cohortLines)
           .values({
             snapshotId: stored.id,
-            authorId,
+            authorId: row.authorId,
             cohortMonth: row.month,
             lineCount: row.lineCount,
           })
@@ -396,11 +432,20 @@ export class HistoryService {
     return row.canonicalId ?? row.id
   }
 
-  /** Drop any earlier history, which described other revisions. */
+  /**
+   * Drop any earlier history, and the claim about which revision it was.
+   *
+   * Dropping the rows without dropping the claim leaves the database saying
+   * it holds a history of revision X while holding none -- for the whole of
+   * a run that may take minutes, and permanently if that run is interrupted.
+   * The claim is written again at the end, once there is something to claim.
+   */
   private forgetPreviousRun(): void {
     this.db.transaction((tx) => {
       tx.delete(cohortLines).run()
       tx.delete(snapshots).run()
+      tx.delete(meta).where(eq(meta.key, HISTORY_HEAD_KEY)).run()
+      tx.delete(meta).where(eq(meta.key, HISTORY_SNAPSHOTS_KEY)).run()
     })
   }
 
