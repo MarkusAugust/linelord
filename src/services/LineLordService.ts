@@ -18,6 +18,15 @@ import {
 } from '../adapters/sqlite/meta'
 import { createSqliteStore } from '../adapters/sqlite/store'
 import {
+  type AnalysisContext,
+  type AnalysisFailure,
+  analyseRevision,
+  contextFor,
+  describeRevision,
+  NO_IGNORE_REVS,
+  updateAnalysis,
+} from '../core/analyse'
+import {
   describeExistingMerges,
   findIdentityGuesses,
   type IdentityMerge,
@@ -36,11 +45,6 @@ import {
   decideCacheUse,
   HEAD_KEY,
 } from './CacheService'
-import {
-  type AnalysisContext,
-  type AnalysisFailure,
-  GitService,
-} from './GitService'
 import {
   type HistoryFailure,
   type HistoryRun,
@@ -106,8 +110,13 @@ export interface LineLordOptions {
 
 export class LineLordService {
   private db: LineLordDatabase
-  private gitService: GitService
+  private git: GitPort
   private store: AnalysisStore
+  private context: AnalysisContext = contextFor(
+    { headSha: null, uncommittedFileCount: 0 },
+    NO_IGNORE_REVS,
+  )
+  private failures: AnalysisFailure[] = []
   /** The analysis as values, loaded once initialization is complete. */
   private analysis: AnalysisData | null = null
   /** The history as values, and which revision it claims to describe. */
@@ -150,13 +159,7 @@ export class LineLordService {
     this.concurrency = options.concurrency
     this.history = options.history
     this.db = createDatabase()
-    this.gitService = new GitService(
-      repoPath,
-      this.db,
-      this.largeFileThresholdBytes,
-      options.concurrency,
-      createGit(repoPath),
-    )
+    this.git = createGit(repoPath)
     this.store = createSqliteStore(this.db)
   }
 
@@ -168,13 +171,7 @@ export class LineLordService {
   /** Point every service at a different database. */
   private attachDatabase(db: LineLordDatabase, repoPath: string): void {
     this.db = db
-    this.gitService = new GitService(
-      repoPath,
-      db,
-      this.largeFileThresholdBytes,
-      this.concurrency,
-      createGit(repoPath),
-    )
+    this.git = createGit(repoPath)
     this.store = createSqliteStore(db)
   }
 
@@ -252,7 +249,7 @@ export class LineLordService {
           lookup.found ? lookup.root : null,
         )) ?? this.currentRepoPath
       const cachePath = this.openCache(root)
-      const git = createGit(root)
+      const git = this.git
       const headSha = await git.resolveHead()
 
       // Before the cache decision, because which commits are being looked
@@ -262,15 +259,19 @@ export class LineLordService {
       this.ignoredRevisions = await resolveIgnoreRevs(
         root,
         this.extraIgnoreRevisions,
+        git,
       )
-      this.gitService.lookPast(this.ignoredRevisions)
 
       const decision = await this.decideWhatToDo(root, headSha, git)
       this.cacheStatus = { ...decision.status, path: cachePath }
 
       if (decision.plan === 'reuse') {
         onProgress?.(100, 100, 'Reusing the stored analysis')
-        await this.gitService.describeAnalysisWithoutRunning()
+        this.context = contextFor(
+          await describeRevision(git),
+          this.ignoredRevisions,
+        )
+        this.failures = []
         this.identityMerges = await this.collectIdentityMerges()
         this.analysis = await this.store.loadAnalysis()
         this.historyReading = await this.readHistory()
@@ -286,11 +287,15 @@ export class LineLordService {
 
       const run =
         decision.plan === 'incremental'
-          ? await this.gitService.updateIncrementally(
+          ? await updateAnalysis(
+              { git, store: this.store },
+              this.analysisSettings(),
               decision.touched,
               forwardProgress,
             )
           : await this.runFullAnalysis(forwardProgress)
+      this.context = run.context
+      this.failures = run.failures
 
       this.cacheStatus = {
         ...this.cacheStatus,
@@ -335,7 +340,20 @@ export class LineLordService {
     onProgress?: (current: number, total: number, message: string) => void,
   ) {
     clearDatabase(this.db)
-    return await this.gitService.initialize(onProgress)
+    return await analyseRevision(
+      { git: this.git, store: this.store },
+      this.analysisSettings(),
+      onProgress,
+    )
+  }
+
+  /** What the analysis is run with: the threshold, the batch size and the commits looked past. */
+  private analysisSettings() {
+    return {
+      thresholdBytes: this.largeFileThresholdBytes,
+      concurrency: this.concurrency,
+      ignoreRevs: this.ignoredRevisions,
+    }
   }
 
   /**
@@ -490,12 +508,12 @@ export class LineLordService {
 
   /** Which revision the numbers describe, and how much of the working copy they leave out. */
   getAnalysisContext(): AnalysisContext {
-    return this.gitService.getAnalysisContext()
+    return { ...this.context }
   }
 
   /** Files the analysis could not read. Empty when everything was analysed. */
   getFailures(): AnalysisFailure[] {
-    return this.gitService.getFailures()
+    return [...this.failures]
   }
 
   /** Whether this run was asked to walk the history. */

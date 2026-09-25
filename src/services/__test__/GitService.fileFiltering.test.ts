@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from 'bun:test'
+import { analyseInto } from '../../__test__/helpers/analyseInto'
 import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
 import { createDatabase } from '../../adapters/sqlite/database'
 import { blameLines, files } from '../../adapters/sqlite/schema'
-import { GitService } from '../GitService'
 
 type FileRow = {
   path: string
@@ -17,7 +17,7 @@ type FileRow = {
 
 async function analyse(repoPath: string, thresholdBytes = 50 * 1024) {
   const db = createDatabase()
-  await new GitService(repoPath, db, thresholdBytes).initialize()
+  await analyseInto(repoPath, db, { thresholdBytes })
 
   const rows: FileRow[] = await db
     .select({

@@ -11,8 +11,8 @@ import {
   removeAllCaches,
   removeCacheFor,
 } from './adapters/sqlite/cacheMaintenance'
+import { DEFAULT_CONCURRENCY } from './core/concurrency'
 import { CLI_HELP } from './resources/cliHelp'
-import { DEFAULT_CONCURRENCY } from './services/GitService'
 import { LineLordService } from './services/LineLordService'
 import { DEFAULT_MAX_SNAPSHOTS } from './services/snapshotSelection'
 import {

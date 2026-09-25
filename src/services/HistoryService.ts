@@ -12,8 +12,8 @@ import {
   meta,
   snapshots,
 } from '../adapters/sqlite/schema'
+import { normaliseConcurrency } from '../core/concurrency'
 import type { GitPort } from '../ports/git'
-import { normaliseConcurrency } from './GitService'
 import {
   analysablePathsAtRevision,
   countBlame,

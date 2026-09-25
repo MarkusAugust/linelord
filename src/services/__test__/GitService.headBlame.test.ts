@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'bun:test'
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { analyseInto } from '../../__test__/helpers/analyseInto'
 import {
   createTestRepo,
   type TestRepo,
@@ -9,7 +10,6 @@ import { createGit } from '../../adapters/git/spawnGit'
 import { createDatabase } from '../../adapters/sqlite/database'
 import { authors, blameLines, files } from '../../adapters/sqlite/schema'
 import type { GitPort } from '../../ports/git'
-import { GitService } from '../GitService'
 
 const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
 const NIGHTSHROUD = {
@@ -19,8 +19,7 @@ const NIGHTSHROUD = {
 
 async function analyse(repoPath: string) {
   const db = createDatabase()
-  const gitService = new GitService(repoPath, db)
-  await gitService.initialize()
+  const outcome = await analyseInto(repoPath, db)
 
   const authorRows = await db
     .select({ name: authors.name, email: authors.email })
@@ -45,7 +44,7 @@ async function analyse(repoPath: string) {
   return {
     authors: authorRows,
     linesByEmail,
-    context: gitService.getAnalysisContext(),
+    context: outcome.context,
   }
 }
 
@@ -144,7 +143,7 @@ describe('GitService - the file list comes from HEAD, not the index', () => {
 
   async function analysedPaths(repoPath: string, thresholdBytes?: number) {
     const db = createDatabase()
-    await new GitService(repoPath, db, thresholdBytes).initialize()
+    await analyseInto(repoPath, db, { thresholdBytes })
     const rows = await db
       .select({ path: files.path, size: files.size })
       .from(files)
@@ -239,10 +238,9 @@ describe('GitService - the whole run is pinned to one revision', () => {
     })
 
     const db = createDatabase()
-    const gitService = new GitService(repo.path, db)
-    await gitService.initialize()
+    const outcome = await analyseInto(repo.path, db)
 
-    const reported = gitService.getAnalysisContext().headSha ?? ''
+    const reported = outcome.context.headSha ?? ''
     const inThatTree = (
       await repo.git(['ls-tree', '-r', '--name-only', reported])
     )
@@ -287,13 +285,7 @@ describe('GitService - the whole run is pinned to one revision', () => {
       },
     }
 
-    await new GitService(
-      repo.path,
-      createDatabase(),
-      50 * 1024,
-      12,
-      recording,
-    ).initialize()
+    await analyseInto(repo.path, createDatabase(), { git: recording })
 
     expect(revisions.length).toBeGreaterThan(0)
     expect(new Set(revisions)).toEqual(new Set([head]))

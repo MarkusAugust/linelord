@@ -4,15 +4,14 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
+import { analyseInto } from '../../__test__/helpers/analyseInto'
 import { clearDatabase, createDatabase } from '../../adapters/sqlite/database'
 import { authors, blameLines, files } from '../../adapters/sqlite/schema'
-import { GitService } from '../GitService'
 
 const execAsync = promisify(exec)
 
 describe('GitService - Files with $ character', () => {
   let tempRepoPath: string
-  let gitService: GitService
   let db: ReturnType<typeof createDatabase>
 
   beforeEach(async () => {
@@ -56,9 +55,7 @@ describe('GitService - Files with $ character', () => {
       cwd: tempRepoPath,
     })
 
-    // Create database and service
     db = createDatabase()
-    gitService = new GitService(tempRepoPath, db)
   })
 
   afterEach(async () => {
@@ -69,7 +66,7 @@ describe('GitService - Files with $ character', () => {
 
   it('should process files with $ characters in filenames', async () => {
     // Initialize the git service
-    await gitService.initialize()
+    await analyseInto(tempRepoPath, db)
 
     // Check that files with $ characters were processed
     const stats = await db.select().from(files)
@@ -99,7 +96,7 @@ describe('GitService - Files with $ character', () => {
   })
 
   it('should create author records when processing $ files', async () => {
-    await gitService.initialize()
+    await analyseInto(tempRepoPath, db)
 
     // Check that author was created
     const authorRecords = await db.select().from(authors)
@@ -148,7 +145,7 @@ describe('GitService - Files with $ character', () => {
 
     // Reinitialize service with new files
     clearDatabase(db)
-    await gitService.initialize()
+    await analyseInto(tempRepoPath, db)
 
     const stats = await db.select().from(files)
     const complexDollarFiles = stats.filter((file) =>
@@ -184,7 +181,7 @@ describe('GitService - Files with $ character', () => {
 
     // Reinitialize service with new files
     clearDatabase(db)
-    await gitService.initialize()
+    await analyseInto(tempRepoPath, db)
 
     // Check that files starting with $ were processed
     const stats = await db.select().from(files)

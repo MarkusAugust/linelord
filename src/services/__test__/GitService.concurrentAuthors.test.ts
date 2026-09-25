@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from 'bun:test'
+import { analyseInto } from '../../__test__/helpers/analyseInto'
 import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
 import { createDatabase } from '../../adapters/sqlite/database'
 import { authors, blameLines } from '../../adapters/sqlite/schema'
-import { GitService } from '../GitService'
 
 /**
  * Several files blamed at once, all introducing the same new contributor.
@@ -17,8 +17,6 @@ import { GitService } from '../GitService'
  * unique-constraint error on the address.
  */
 
-const WARRIOR_EMAIL = 'gorvek@ashendale.realm'
-
 const WARRIORS = [
   { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' },
   { name: 'Sister Nightshroud', email: 'night@alderstone.realm' },
@@ -26,37 +24,6 @@ const WARRIORS = [
   { name: 'Merigall the Trickster', email: 'merigall@bitterreach.realm' },
   { name: 'Rust the Ravenlander', email: 'rust@ravenland.realm' },
 ]
-
-describe('creating the same contributor twice at once', () => {
-  it('returns the one row rather than failing the second caller', async () => {
-    // Reaching past the visibility on purpose. This is the level the defect
-    // lives at: looking an author up and then inserting them is two steps
-    // with an await between, and two callers in that window both find nobody
-    // and both insert.
-    //
-    // It does not happen through the blame pipeline today, because each
-    // file's output arrives as its own I/O event and the microtask queue
-    // drains between them, so one file finishes creating an author before
-    // the next file's output is delivered. That is an accident of event
-    // ordering, not a guarantee -- and --concurrency and the cohort analysis
-    // are both changes that could disturb it. A test at the level above
-    // cannot pin this, because at that level it already passes.
-    const db = createDatabase()
-    const gitService = new GitService('/tmp', db) as unknown as {
-      getOrCreateAuthor(name: string, email: string): Promise<number>
-    }
-
-    const [first, second] = await Promise.all([
-      gitService.getOrCreateAuthor('Gorvek the Ironbane', WARRIOR_EMAIL),
-      gitService.getOrCreateAuthor('Gorvek the Ironbane', WARRIOR_EMAIL),
-    ])
-
-    expect(first).toBe(second)
-    expect(
-      await db.select({ email: authors.email }).from(authors),
-    ).toHaveLength(1)
-  })
-})
 
 describe('blaming many files at once', () => {
   let repo: TestRepo | undefined
@@ -80,10 +47,9 @@ describe('blaming many files at once', () => {
     }
 
     const db = createDatabase()
-    const gitService = new GitService(repo.path, db)
-    await gitService.initialize()
+    const outcome = await analyseInto(repo.path, db)
 
-    expect(gitService.getFailures()).toEqual([])
+    expect(outcome.failures).toEqual([])
 
     const stored = await db.select({ email: authors.email }).from(authors)
     expect(stored.map((one) => one.email).sort()).toEqual(

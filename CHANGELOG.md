@@ -50,6 +50,13 @@ because the earlier answer was wrong.
   resolution ask the port; a test can answer for git. The test that guarded
   against blaming the symbolic ref by reading the source now records what
   the port is asked and checks every revision is the resolved one.
+- **The analysis of a revision, as functions over the ports.** Which files
+  the tree holds and what kind each is, what changed since the store last
+  saw it, and which lines belong to somebody are pure decisions; blame is
+  read through the git port and written through the storage port, a batch
+  at a time. `GitService` is gone. The same files are read, classified and
+  stored as before; a file about to be read again loses its old lines first
+  on every kind of run, not only the incremental one.
 
 ## [0.11.0] — 2026-09-25
 

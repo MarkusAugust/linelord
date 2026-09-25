@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it } from 'bun:test'
 import { eq } from 'drizzle-orm'
+import { analyseInto } from '../../__test__/helpers/analyseInto'
 import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
 import { createDatabase } from '../../adapters/sqlite/database'
 import { blameLines, files } from '../../adapters/sqlite/schema'
-import { GitService } from '../GitService'
 
 /**
  * What the stored line numbers and timestamps actually refer to.
@@ -39,7 +39,7 @@ describe('what a blamed line is stored as', () => {
     })
 
     const db = createDatabase()
-    await new GitService(repo.path, db).initialize()
+    await analyseInto(repo.path, db)
 
     const rows = await db
       .select({ lineNumber: blameLines.lineNumber })
@@ -64,7 +64,7 @@ describe('what a blamed line is stored as', () => {
     })
 
     const db = createDatabase()
-    await new GitService(repo.path, db).initialize()
+    await analyseInto(repo.path, db)
 
     const [row] = await db
       .select({ commitTimestamp: blameLines.commitTimestamp })
