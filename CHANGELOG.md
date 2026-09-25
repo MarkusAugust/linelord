@@ -12,6 +12,16 @@ because the earlier answer was wrong.
 
 ### Changed
 
+- **One warrior screen where there were two.** *Single Developer Statistics*
+  showed a person's lines, files, share and top files; Enter on the longevity
+  table showed the same person's age histogram, oldest and newest line and
+  survival curve. Neither knew about the other. They are now one screen,
+  reached with ↑↓ and Enter from the overview, from the longevity table and
+  from the barbarian rankings alike: share and top files first, then how old
+  it is and where the oldest of it sits, then — when `--history` has been run
+  — what became of everything they wrote. The separate menu entry and its
+  pick-a-name step are gone, because the tables are the pick-a-name step.
+
 - **One overview where there were three screens.** The contributor list on
   the menu, *Repository Statistics* and *Extended Repository Statistics* all
   drew the same percentages — in a list, a bar chart, a horizontal "pie

@@ -3,6 +3,12 @@ import type {
   FileContribution,
   RepositoryStats,
 } from '../../services/AnalysisService'
+import type {
+  AuthorFileLongevity,
+  AuthorLongevity,
+  AuthorSurvivalWithIdentity,
+} from '../../services/LongevityService'
+import type { WarriorSource } from '../../services/WarriorSource'
 import type { OverviewSource } from '../Overview'
 
 /**
@@ -82,8 +88,6 @@ export function fakeAnalysisService(
   return {
     getRepositoryStats: async () => STATS,
     getAuthorContributions: async () => [GORVEK, NIGHTSHROUD, STABLE_BOY],
-    getAuthorFileContributions: async (id: number) =>
-      id === GORVEK.id ? GORVEK_FILES : [],
     ...overrides,
   }
 }
@@ -100,4 +104,61 @@ export const KEY = {
   down: '[B',
   enter: '\r',
   escape: '',
+}
+
+/** Gorvek's surviving code, as the longevity service would describe it. */
+export const GORVEK_AGE: AuthorLongevity = {
+  authorId: GORVEK.id,
+  name: GORVEK.displayName,
+  email: GORVEK.email,
+  survivingLines: 700,
+  medianAgeDays: 400,
+  meanAgeDays: 300,
+  p10AgeDays: 30,
+  p90AgeDays: 800,
+  oldestLine: { timestamp: 0, ageDays: 800, path: 'src/old.ts', lineNumber: 1 },
+  newestLine: { timestamp: 0, ageDays: 2, path: 'src/new.ts', lineNumber: 4 },
+  ageHistogram: {
+    underAWeek: 10,
+    weekToMonth: 20,
+    oneToThreeMonths: 70,
+    threeToTwelveMonths: 200,
+    oneToTwoYears: 300,
+    overTwoYears: 100,
+  },
+  activeSpanDays: 798,
+}
+
+export const GORVEK_OLDEST: AuthorFileLongevity[] = [
+  { path: 'src/old.ts', lines: 27, medianAgeDays: 800 },
+  { path: 'tsconfig.json', lines: 3, medianAgeDays: 790 },
+]
+
+export const GORVEK_SURVIVAL: AuthorSurvivalWithIdentity = {
+  authorId: GORVEK.id,
+  name: GORVEK.displayName,
+  email: GORVEK.email,
+  linesEverWritten: 1000,
+  survivingLines: 700,
+  survivalRate: 0.7,
+  halfLifeDays: 120,
+  survivalCurve: [
+    { ageDays: 0, fractionAlive: 1 },
+    { ageDays: 90, fractionAlive: 0.8 },
+    { ageDays: 180, fractionAlive: 0.4 },
+  ],
+}
+
+export function fakeWarriorSource(
+  overrides: Partial<WarriorSource> = {},
+): WarriorSource {
+  return {
+    share: async (id) =>
+      [GORVEK, NIGHTSHROUD, STABLE_BOY].find((one) => one.id === id) ?? null,
+    files: async (id) => (id === GORVEK.id ? GORVEK_FILES : []),
+    age: async (id) => (id === GORVEK.id ? GORVEK_AGE : null),
+    oldestFiles: async (id) => (id === GORVEK.id ? GORVEK_OLDEST : []),
+    survival: async () => null,
+    ...overrides,
+  }
 }

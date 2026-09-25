@@ -2,19 +2,21 @@ import { Box, Text, useInput } from 'ink'
 import pc from 'picocolors'
 import { useState } from 'react'
 import type { AnalysisService } from '../services/AnalysisService'
+import type { WarriorSource } from '../services/WarriorSource'
 import { useAsyncData } from '../utility/useAsyncData'
-import { AuthorStats } from './AuthorStats'
 import { ContributorTable } from './ContributorTable'
 import { RepositoryOverview } from './RepositoryOverview'
+import { WarriorDetail } from './WarriorDetail'
 
 /** What the overview needs to know, which a test can supply without a database. */
 export type OverviewSource = Pick<
   AnalysisService,
-  'getRepositoryStats' | 'getAuthorContributions' | 'getAuthorFileContributions'
+  'getRepositoryStats' | 'getAuthorContributions'
 >
 
 type OverviewProps = {
   analysisService: OverviewSource
+  warriorSource: WarriorSource
   largeFileThresholdKB: number
   onBack: () => void
 }
@@ -30,6 +32,7 @@ type OverviewProps = {
  */
 export function Overview({
   analysisService,
+  warriorSource,
   largeFileThresholdKB,
   onBack,
 }: OverviewProps) {
@@ -63,9 +66,13 @@ export function Overview({
 
   if (inDetail && chosen) {
     return (
-      <AuthorStats
-        analysisService={analysisService}
-        author={chosen}
+      <WarriorDetail
+        source={warriorSource}
+        warrior={{
+          authorId: chosen.id,
+          name: chosen.displayName,
+          email: chosen.email,
+        }}
         onBack={() => setInDetail(false)}
       />
     )

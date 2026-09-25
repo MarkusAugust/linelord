@@ -9,9 +9,11 @@ import { HonestyNote } from './HonestyNote'
 interface BarbarianRankingsProps {
   rankings: BarbarianRanking[]
   isLoading?: boolean
+  /** Index of the highlighted warrior, counting the champion as zero. */
+  selected?: number
 }
 
-const WARRIORS_SHOWN = 10
+export const WARRIORS_SHOWN = 10
 
 /** Every line in the legend names what is actually counted, not what it is called. */
 const METRIC_LEGEND: Array<{
@@ -73,6 +75,7 @@ const METRIC_LEGEND: Array<{
 export const BarbarianRankings: React.FC<BarbarianRankingsProps> = ({
   rankings,
   isLoading = false,
+  selected,
 }) => {
   if (isLoading) {
     return (
@@ -116,7 +119,8 @@ export const BarbarianRankings: React.FC<BarbarianRankingsProps> = ({
           <Text color="redBright" bold>
             {topWarrior.barbarianTitle}
           </Text>
-          <Text color="cyan" bold>
+          <Text color={selected === 0 ? 'green' : 'cyan'} bold>
+            {selected === 0 ? '› ' : ''}
             {topWarrior.displayName}
           </Text>
           <Text color="green">
@@ -156,11 +160,11 @@ export const BarbarianRankings: React.FC<BarbarianRankingsProps> = ({
           <Text color="cyan" bold>
             🏆 OTHER MIGHTY WARRIORS 🏆
           </Text>
-          {remainingWarriors.map((warrior) => (
+          {remainingWarriors.map((warrior, index) => (
             <Box key={warrior.authorId} flexDirection="column" marginTop={1}>
               <Box flexDirection="row">
-                <Text color="white" bold>
-                  #{warrior.rank + 1}{' '}
+                <Text color={selected === index + 1 ? 'green' : 'white'} bold>
+                  {selected === index + 1 ? '› ' : ''}#{warrior.rank + 1}{' '}
                 </Text>
                 <Text color="cyan">{warrior.barbarianTitle}</Text>
               </Box>

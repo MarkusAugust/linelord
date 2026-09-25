@@ -1,4 +1,5 @@
 import { Box, Text } from 'ink'
+import { useMemo } from 'react'
 import About from './components/About'
 import BarbarianRankingBox from './components/BarbarianRankingBox'
 import ErrorScreen from './components/ErrorScreen'
@@ -10,9 +11,9 @@ import MailmapDraft from './components/MailmapDraft'
 import Menu, { type MenuOption } from './components/Menu'
 import { Overview } from './components/Overview'
 import RepoPathInput from './components/RepoPathInput'
-import SingleDevRepoStats from './components/SingleDevRepoStats'
 
 import type { SnapshotInterval } from './services/snapshotSelection'
+import { type WarriorSource, warriorSourceFor } from './services/WarriorSource'
 import { menuOptions } from './utility/menuOptions'
 import { clearTerminal } from './utility/terminal'
 import { convertThresholdKBToBytes } from './utility/thresholdConverter'
@@ -114,6 +115,19 @@ export default function App({
   const identityMerges = lineLordService?.isInitialized()
     ? lineLordService.getIdentityMerges()
     : []
+
+  // One source for every screen that opens a warrior. Memoised, because a
+  // new object each render would be a new dependency for the screen's load.
+  const warriorSource: WarriorSource | null = useMemo(
+    () =>
+      isInitialized && lineLordService
+        ? warriorSourceFor({
+            db: lineLordService.getDatabase(),
+            analysedRevision: lineLordService.getAnalysisContext().headSha,
+          })
+        : null,
+    [lineLordService, isInitialized],
+  )
 
   const handleMenuSelect = (option: MenuOption) => {
     if (option.value === 'exit') {
@@ -375,6 +389,7 @@ export default function App({
       {state === 'longevity' && (
         <LongevityDashboard
           lineLordService={lineLordService}
+          warriorSource={warriorSource}
           onBack={returnToMenu}
         />
       )}
@@ -387,18 +402,12 @@ export default function App({
         />
       )}
 
-      {state === 'overview' && analysisService && (
+      {state === 'overview' && analysisService && warriorSource && (
         <Overview
           onBack={returnToMenu}
           largeFileThresholdKB={largeFileThresholdKB}
           analysisService={analysisService}
-        />
-      )}
-
-      {state === 'singledevrepostats' && (
-        <SingleDevRepoStats
-          onBack={returnToMenu}
-          analysisService={analysisService}
+          warriorSource={warriorSource}
         />
       )}
 
@@ -408,6 +417,7 @@ export default function App({
         <BarbarianRankingBox
           onBack={returnToMenu}
           lineLordService={lineLordService}
+          warriorSource={warriorSource}
         />
       )}
     </Layout>

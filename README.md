@@ -122,12 +122,16 @@ Once in LineLord's realm:
 
 ### Battle Reports Available
 
-1. **📊 Repository Overview** - What was analysed, and every warrior ranked by the share they hold. Enter on a warrior opens their files
-2. **👤 Single Developer Statistics** - Focus on one warrior's contributions
-3. **🪓 Brutal Barbarian Rankings** - Who holds ground: territory, sole conquests, code that outlived a year
-4. **⏳ Code Longevity** - How old the code each warrior still holds is
-5. **🧾 Draft a .mailmap** - Show which warriors may be one person, and write it down if they are
-6. **ℹ️ About** - Learn the ways of LineLord
+1. **📊 Repository Overview** - What was analysed, and every warrior ranked by the share they hold
+2. **🪓 Brutal Barbarian Rankings** - Who holds ground: territory, sole conquests, code that outlived a year
+3. **⏳ Code Longevity** - How old the code each warrior still holds is
+4. **🧾 Draft a .mailmap** - Show which warriors may be one person, and write it down if they are
+5. **ℹ️ About** - Learn the ways of LineLord
+
+On any of the first three, **↑↓ and Enter** open one warrior: their share of
+the codebase and the files they hold the most of, how old that code is and
+where the oldest of it sits, and — when the history has been walked with
+`--history` — what became of everything they ever wrote.
 
 ## 🔄 Updating Your Weapon - Stay Sharp for Battle
 
@@ -227,8 +231,7 @@ The theming is a joke about conquest. The numbers are not.
 - **File metrics** - Total files vs analyzed files vs large files cast aside
 - **Line counts** - The true measure of a codebase's might
 - **The ranking** - Every warrior by the share of surviving lines they hold,
-  with their title and address. Enter on a row shows the files they hold the
-  most of
+  with their title and address. Enter on a row opens the warrior
 
 ### The Great Filtering
 
@@ -418,9 +421,10 @@ Sorted by the **median**, not the mean: one ancient file somebody still owns
 drags a mean across years and the median not at all. The last column is the
 age histogram — newest code on the left, oldest on the right — so the shape of
 someone's remaining code is readable at a glance. `m`, `a` and `l` re-sort by
-median, mean and line count. Enter opens one warrior: the full histogram with
-numbers, the oldest and newest line they still hold with file and line number,
-and the files where their oldest code sits.
+median, mean and line count. Enter opens one warrior: their share of the
+codebase, the full histogram with numbers, the oldest and newest line they
+still hold with file and line number, and the files where their oldest code
+sits.
 
 #### How long code actually lasts
 
