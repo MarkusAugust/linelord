@@ -9,6 +9,7 @@ import {
 import { resolveCachePath } from '../../adapters/sqlite/cacheLocation'
 import { acquireCacheLock } from '../../adapters/sqlite/cacheMaintenance'
 import { writeMeta } from '../../adapters/sqlite/meta'
+import { authorContributions } from '../../core/ownership'
 import { findRepositoryRoot } from '../../utility/gitRepository'
 import { LineLordService } from '../LineLordService'
 
@@ -26,9 +27,7 @@ const NIGHTSHROUD = {
 
 /** Ownership per contributor, which is what every comparison here is about. */
 async function ownership(service: LineLordService) {
-  const contributions = await service
-    .getAnalysisService()
-    .getAuthorContributions()
+  const contributions = authorContributions(service.getAnalysis())
   return contributions
     .map((c) => `${c.email}:${c.totalLines}`)
     .sort()

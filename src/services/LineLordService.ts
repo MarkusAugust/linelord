@@ -11,6 +11,11 @@ import {
   type LineLordDatabase,
 } from '../adapters/sqlite/database'
 import { readAllMeta, writeMeta } from '../adapters/sqlite/meta'
+import { createSqliteStore } from '../adapters/sqlite/store'
+import type { AnalysisData } from '../core/model'
+import { wasAnalysed } from '../core/ownership'
+import { rankAuthors } from '../core/ranking'
+import type { AnalysisStore } from '../ports/storage'
 import {
   findRepositoryRoot,
   isAncestor,
@@ -18,12 +23,10 @@ import {
   resolveHead,
 } from '../utility/gitRepository'
 import { type IgnoreRevs, resolveIgnoreRevs } from '../utility/ignoreRevs'
-import { AnalysisService } from './AnalysisService'
 import {
   AuthorNormalizationService,
   type IdentityMerge,
 } from './AuthorNormalizationService'
-import { AuthorRankingService } from './AuthorRankingService'
 import {
   type AuthorPolicy,
   computeFingerprint,
@@ -102,8 +105,9 @@ export class LineLordService {
   private db: LineLordDatabase
   private gitService: GitService
   private normalizationService: AuthorNormalizationService
-  private rankingService: AuthorRankingService
-  private analysisService: AnalysisService
+  private store: AnalysisStore
+  /** The analysis as values, loaded once initialization is complete. */
+  private analysis: AnalysisData | null = null
   private initialized = false
   private currentRepoPath: string
   private useCache: boolean
@@ -146,8 +150,7 @@ export class LineLordService {
       options.concurrency,
     )
     this.normalizationService = new AuthorNormalizationService(this.db)
-    this.rankingService = new AuthorRankingService(this.db)
-    this.analysisService = new AnalysisService(this.db)
+    this.store = createSqliteStore(this.db)
   }
 
   /** What the last run did: how much it read, how much it kept, and why. */
@@ -165,8 +168,7 @@ export class LineLordService {
       this.concurrency,
     )
     this.normalizationService = new AuthorNormalizationService(db)
-    this.rankingService = new AuthorRankingService(db)
-    this.analysisService = new AnalysisService(db)
+    this.store = createSqliteStore(db)
   }
 
   /**
@@ -262,6 +264,7 @@ export class LineLordService {
         onProgress?.(100, 100, 'Reusing the stored analysis')
         await this.gitService.describeAnalysisWithoutRunning()
         this.identityMerges = await this.collectIdentityMerges()
+        this.analysis = await this.store.loadAnalysis()
         this.initialized = true
         return
       }
@@ -294,7 +297,10 @@ export class LineLordService {
       this.identityMerges = await this.collectIdentityMerges()
 
       onProgress?.(80, 100, 'Calculating ranks and percentages...')
-      await this.rankingService.calculateAndAssignRanksAndPercentages()
+      await this.store.updateAuthors(
+        rankAuthors(await this.store.loadAnalysis()),
+      )
+      this.analysis = await this.store.loadAnalysis()
 
       if (cachePath && headSha) {
         await this.recordFingerprint(root, headSha)
@@ -422,7 +428,7 @@ export class LineLordService {
   }
 
   private async countStoredFiles(): Promise<number> {
-    return (await this.analysisService.getRepositoryStats()).totalAnalyzedFiles
+    return (await this.store.listFiles()).filter(wasAnalysed).length
   }
 
   /**
@@ -458,22 +464,14 @@ export class LineLordService {
     return this.initialized
   }
 
-  getAnalysisService(): AnalysisService {
-    if (!this.initialized) {
+  /** The analysis as values, for the core's functions to answer questions over. */
+  getAnalysis(): AnalysisData {
+    if (!this.initialized || this.analysis === null) {
       throw new Error(
-        'LineLordService must be initialized before getting analysis service',
+        'LineLordService must be initialized before the analysis can be read',
       )
     }
-    return this.analysisService
-  }
-
-  getRankingService(): AuthorRankingService {
-    if (!this.initialized) {
-      throw new Error(
-        'LineLordService must be initialized before getting ranking service',
-      )
-    }
-    return this.rankingService
+    return this.analysis
   }
 
   getDatabase(): LineLordDatabase {

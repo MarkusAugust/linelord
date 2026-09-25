@@ -5,6 +5,11 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import {
+  authorContributions,
+  findCanonicalAuthorByEmail,
+  repositoryStats,
+} from '../../core/ownership'
 import { LineLordService } from '../LineLordService'
 
 const GORVEK = {
@@ -69,9 +74,7 @@ describe('LineLordService - end to end over a real repository', () => {
     const service = new LineLordService(repo.path)
     await service.initialize()
 
-    const contributions = await service
-      .getAnalysisService()
-      .getAuthorContributions()
+    const contributions = authorContributions(service.getAnalysis())
 
     // Gorvek's two addresses are one contributor holding 4 lines, because the
     // .mailmap says so. Were ranking to run before normalisation, he would
@@ -92,9 +95,7 @@ describe('LineLordService - end to end over a real repository', () => {
     const service = new LineLordService(repo.path)
     await service.initialize()
 
-    const contributions = await service
-      .getAnalysisService()
-      .getAuthorContributions()
+    const contributions = authorContributions(service.getAnalysis())
 
     const total = contributions.reduce((sum, c) => sum + c.percentage, 0)
     expect(total).toBeCloseTo(100, 1)
@@ -108,9 +109,9 @@ describe('LineLordService - end to end over a real repository', () => {
     const service = new LineLordService(repo.path)
     await service.initialize()
 
-    const analysis = service.getAnalysisService()
-    const stats = await analysis.getRepositoryStats()
-    const contributions = await analysis.getAuthorContributions()
+    const analysis = service.getAnalysis()
+    const stats = repositoryStats(analysis)
+    const contributions = authorContributions(analysis)
 
     const attributed = contributions.reduce((sum, c) => sum + c.totalLines, 0)
     expect(attributed).toBe(stats.totalLines)
@@ -125,15 +126,15 @@ describe('LineLordService - end to end over a real repository', () => {
     const service = new LineLordService(repo.path)
     await service.initialize()
 
-    const analysis = service.getAnalysisService()
-    const [first] = await analysis.getAuthorContributions()
+    const analysis = service.getAnalysis()
+    const [first] = authorContributions(analysis)
 
-    expect(await analysis.findCanonicalAuthorByEmail(GORVEK.email)).toBe(
+    expect(findCanonicalAuthorByEmail(analysis, GORVEK.email)).toBe(
       first?.id ?? -1,
     )
-    expect(
-      await analysis.findCanonicalAuthorByEmail(GORVEK_AT_HOME.email),
-    ).toBe(null)
+    expect(findCanonicalAuthorByEmail(analysis, GORVEK_AT_HOME.email)).toBe(
+      null,
+    )
   })
 
   it('resolves a superseded address through the alias table when guessing is on', async () => {
@@ -156,20 +157,19 @@ describe('LineLordService - end to end over a real repository', () => {
     })
     await service.initialize()
 
-    const analysis = service.getAnalysisService()
-    const [first] = await analysis.getAuthorContributions()
+    const analysis = service.getAnalysis()
+    const [first] = authorContributions(analysis)
 
-    expect(
-      await analysis.findCanonicalAuthorByEmail(GORVEK_AT_HOME.email),
-    ).toBe(first?.id ?? -1)
+    expect(findCanonicalAuthorByEmail(analysis, GORVEK_AT_HOME.email)).toBe(
+      first?.id ?? -1,
+    )
   })
 
   it('refuses to hand out services before it has been initialised', () => {
     const service = new LineLordService('/nonexistent')
 
     expect(service.isInitialized()).toBe(false)
-    expect(() => service.getAnalysisService()).toThrow()
-    expect(() => service.getRankingService()).toThrow()
+    expect(() => service.getAnalysis()).toThrow()
   })
 
   it('reports progress from start to finish', async () => {
@@ -205,9 +205,7 @@ describe('LineLordService - end to end over a real repository', () => {
       const second = new LineLordService(other.path)
       await second.initialize()
 
-      const contributions = await second
-        .getAnalysisService()
-        .getAuthorContributions()
+      const contributions = authorContributions(second.getAnalysis())
 
       // Nothing from the first repository may appear in the second.
       expect(contributions).toHaveLength(1)

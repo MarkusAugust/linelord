@@ -19,6 +19,12 @@ because the earlier answer was wrong.
   and both pass it. Nothing on screen changes; this is the first step of
   moving every calculation out of SQL and into plain functions over values,
   so that the core can be tested without a database at all.
+- **Who holds what, and the ranking, as plain functions.** The repository
+  summary, the contributor list, a warrior's files and the rank, share and
+  title each contributor is given are now computed from the loaded analysis
+  by functions in the core, and tested on values rather than on a seeded
+  database. The screens read the analysis once; nothing on them waits on a
+  query any more. Same numbers, same order.
 
 ## [0.11.0] — 2026-09-25
 

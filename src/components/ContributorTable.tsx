@@ -1,5 +1,5 @@
 import { Box, Text } from 'ink'
-import type { AuthorContribution } from '../services/AnalysisService'
+import type { AuthorContribution } from '../core/ownership'
 import { renderSimplePercentageBar } from '../utility/simplePercentageBar'
 
 type ContributorTableProps = {

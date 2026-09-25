@@ -92,8 +92,8 @@ export default function App({
 
   useErrorHandler(repoPath, initError, handleClearError)
 
-  const analysisService = lineLordService?.isInitialized()
-    ? lineLordService.getAnalysisService()
+  const analysis = lineLordService?.isInitialized()
+    ? lineLordService.getAnalysis()
     : undefined
 
   const analysisContext = lineLordService?.isInitialized()
@@ -122,6 +122,7 @@ export default function App({
     () =>
       isInitialized && lineLordService
         ? warriorSourceFor({
+            data: lineLordService.getAnalysis(),
             db: lineLordService.getDatabase(),
             analysedRevision: lineLordService.getAnalysisContext().headSha,
           })
@@ -402,11 +403,11 @@ export default function App({
         />
       )}
 
-      {state === 'overview' && analysisService && warriorSource && (
+      {state === 'overview' && analysis && warriorSource && (
         <Overview
           onBack={returnToMenu}
           largeFileThresholdKB={largeFileThresholdKB}
-          analysisService={analysisService}
+          analysis={analysis}
           warriorSource={warriorSource}
         />
       )}

@@ -1,21 +1,15 @@
 import { Box, Text, useInput } from 'ink'
 import pc from 'picocolors'
-import { useState } from 'react'
-import type { AnalysisService } from '../services/AnalysisService'
+import { useMemo, useState } from 'react'
+import type { AnalysisData } from '../core/model'
+import { authorContributions, repositoryStats } from '../core/ownership'
 import type { WarriorSource } from '../services/WarriorSource'
-import { useAsyncData } from '../utility/useAsyncData'
 import { ContributorTable } from './ContributorTable'
 import { RepositoryOverview } from './RepositoryOverview'
 import { WarriorDetail } from './WarriorDetail'
 
-/** What the overview needs to know, which a test can supply without a database. */
-export type OverviewSource = Pick<
-  AnalysisService,
-  'getRepositoryStats' | 'getAuthorContributions'
->
-
 type OverviewProps = {
-  analysisService: OverviewSource
+  analysis: AnalysisData
   warriorSource: WarriorSource
   largeFileThresholdKB: number
   onBack: () => void
@@ -29,9 +23,11 @@ type OverviewProps = {
  * a list, a bar chart, a pie chart, its legend and a top-and-bottom box —
  * the same number for the same person up to four times on one screen. This
  * is the one table, and Enter on a row is where the detail went.
+ *
+ * Drawn from the analysis as values: nothing here waits on anything.
  */
 export function Overview({
-  analysisService,
+  analysis,
   warriorSource,
   largeFileThresholdKB,
   onBack,
@@ -39,16 +35,8 @@ export function Overview({
   const [selected, setSelected] = useState(0)
   const [inDetail, setInDetail] = useState(false)
 
-  const loaded = useAsyncData(async () => {
-    const [stats, contributions] = await Promise.all([
-      analysisService.getRepositoryStats(),
-      analysisService.getAuthorContributions(),
-    ])
-    return { stats, contributions }
-  }, [analysisService])
-
-  const contributions =
-    loaded.status === 'ready' ? loaded.data.contributions : []
+  const stats = useMemo(() => repositoryStats(analysis), [analysis])
+  const contributions = useMemo(() => authorContributions(analysis), [analysis])
   const chosen = contributions[selected]
 
   useInput((input, key) => {
@@ -77,16 +65,6 @@ export function Overview({
       />
     )
   }
-
-  if (loaded.status === 'loading') {
-    return <Text color="gray">Surveying the realm…</Text>
-  }
-
-  if (loaded.status === 'failed') {
-    return <Text color="red">Could not survey the realm: {loaded.error}</Text>
-  }
-
-  const { stats } = loaded.data
 
   return (
     <Box flexDirection="column">

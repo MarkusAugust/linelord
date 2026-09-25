@@ -8,6 +8,7 @@ import {
   files,
   snapshots,
 } from '../../adapters/sqlite/schema'
+import { createSqliteStore } from '../../adapters/sqlite/store'
 import { LongevityService } from '../LongevityService'
 import { warriorSourceFor } from '../WarriorSource'
 
@@ -101,6 +102,16 @@ async function seedHistory(db: Db, describes: string) {
   writeMeta(db, { [HISTORY_HEAD_KEY]: describes })
 }
 
+/** The source over a database, with the analysis loaded from it. */
+async function sourceFor(db: Db, analysedRevision: string | null) {
+  return warriorSourceFor({
+    data: await createSqliteStore(db).loadAnalysis(),
+    db,
+    analysedRevision,
+    now: NOW,
+  })
+}
+
 describe('warriorSourceFor', () => {
   let db: Db
 
@@ -110,7 +121,7 @@ describe('warriorSourceFor', () => {
   })
 
   it('answers with the share the analysis recorded, and nothing for a ghost', async () => {
-    const source = warriorSourceFor({ db, analysedRevision: HEAD, now: NOW })
+    const source = await sourceFor(db, HEAD)
 
     const gorvek = await source.share(GORVEK)
     expect(gorvek?.totalLines).toBe(4)
@@ -120,7 +131,7 @@ describe('warriorSourceFor', () => {
   })
 
   it('lists the files they hold the most lines in first', async () => {
-    const source = warriorSourceFor({ db, analysedRevision: HEAD, now: NOW })
+    const source = await sourceFor(db, HEAD)
 
     const held = await source.files(GORVEK)
     expect(held.map((one) => one.path)).toEqual(['src/old.ts', 'src/new.ts'])
@@ -129,7 +140,7 @@ describe('warriorSourceFor', () => {
   })
 
   it('measures the age of what they hold against the given now', async () => {
-    const source = warriorSourceFor({ db, analysedRevision: HEAD, now: NOW })
+    const source = await sourceFor(db, HEAD)
 
     const age = await source.age(GORVEK)
     const [own] = await new LongevityService(db, NOW).forAuthors()
@@ -140,7 +151,7 @@ describe('warriorSourceFor', () => {
   })
 
   it('names the files where their oldest code sits', async () => {
-    const source = warriorSourceFor({ db, analysedRevision: HEAD, now: NOW })
+    const source = await sourceFor(db, HEAD)
 
     const oldest = await source.oldestFiles(GORVEK)
     expect(oldest[0]?.path).toBe('src/old.ts')
@@ -148,14 +159,14 @@ describe('warriorSourceFor', () => {
   })
 
   it('has no survival to report when no history was walked', async () => {
-    const source = warriorSourceFor({ db, analysedRevision: HEAD, now: NOW })
+    const source = await sourceFor(db, HEAD)
 
     expect(await source.survival(GHOST)).toBeNull()
   })
 
   it('reports survival from a history about the revision being analysed', async () => {
     await seedHistory(db, HEAD)
-    const source = warriorSourceFor({ db, analysedRevision: HEAD, now: NOW })
+    const source = await sourceFor(db, HEAD)
 
     const ghost = await source.survival(GHOST)
     expect(ghost?.linesEverWritten).toBe(10)
@@ -167,7 +178,7 @@ describe('warriorSourceFor', () => {
 
   it('has no history to offer when the analysis named no revision', async () => {
     await seedHistory(db, HEAD)
-    const source = warriorSourceFor({ db, analysedRevision: null, now: NOW })
+    const source = await sourceFor(db, null)
 
     expect(await source.survival(GHOST)).toBeNull()
   })
@@ -176,7 +187,7 @@ describe('warriorSourceFor', () => {
     // A curve drawn from it would be about a repository that has changed
     // since. The dashboard says so on screen; the detail simply leaves it out.
     await seedHistory(db, 'd'.repeat(40))
-    const source = warriorSourceFor({ db, analysedRevision: HEAD, now: NOW })
+    const source = await sourceFor(db, HEAD)
 
     expect(await source.survival(GHOST)).toBeNull()
   })

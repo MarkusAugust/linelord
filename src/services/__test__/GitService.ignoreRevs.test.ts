@@ -6,6 +6,7 @@ import {
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
 import { blameLines } from '../../adapters/sqlite/schema'
+import { authorContributions } from '../../core/ownership'
 import { IGNORE_REVS_FILENAME } from '../../utility/ignoreRevs'
 import { LineLordService } from '../LineLordService'
 
@@ -50,9 +51,7 @@ async function repoWithAReformatting() {
 async function ownership(
   service: LineLordService,
 ): Promise<Map<string, number>> {
-  const contributions = await service
-    .getAnalysisService()
-    .getAuthorContributions()
+  const contributions = authorContributions(service.getAnalysis())
   return new Map(
     contributions.map((one) => [one.email, one.totalLines] as const),
   )
