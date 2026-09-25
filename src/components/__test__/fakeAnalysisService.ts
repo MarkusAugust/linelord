@@ -1,15 +1,11 @@
-import type {
-  AuthorContribution,
-  FileContribution,
-  RepositoryStats,
-} from '../../services/AnalysisService'
+import type { AnalysisData } from '../../core/model'
+import type { AuthorContribution, FileContribution } from '../../core/ownership'
 import type {
   AuthorFileLongevity,
   AuthorLongevity,
   AuthorSurvivalWithIdentity,
 } from '../../services/LongevityService'
 import type { WarriorSource } from '../../services/WarriorSource'
-import type { OverviewSource } from '../Overview'
 
 /**
  * Enough of an AnalysisService for a screen to draw itself from.
@@ -54,17 +50,6 @@ export const STABLE_BOY: AuthorContribution = {
   rank: 3,
 }
 
-export const STATS: RepositoryStats = {
-  totalFiles: 20,
-  totalAnalyzedFiles: 17,
-  totalBinaryFiles: 1,
-  totalIgnoredFiles: 1,
-  totalLargeFiles: 1,
-  totalFailedFiles: 0,
-  totalLines: 1000,
-  totalAuthors: 3,
-}
-
 export const GORVEK_FILES: FileContribution[] = [
   {
     filename: 'GitService.ts',
@@ -82,13 +67,75 @@ export const GORVEK_FILES: FileContribution[] = [
   },
 ]
 
-export function fakeAnalysisService(
-  overrides: Partial<OverviewSource> = {},
-): OverviewSource {
+/**
+ * The three warriors above as an analysis: files and lines that add up to
+ * the shares they claim, so the overview and the table draw the same thing
+ * the detail says.
+ */
+export function fakeAnalysis(
+  contributions: AuthorContribution[] = [GORVEK, NIGHTSHROUD, STABLE_BOY],
+): AnalysisData {
+  const files: AnalysisData['files'] = []
+  const lines: AnalysisData['lines'] = []
+  for (const one of contributions) {
+    const perFile = Math.floor(one.totalLines / one.totalFiles)
+    for (let index = 0; index < one.totalFiles; index++) {
+      const id = files.length + 1
+      const count =
+        index === one.totalFiles - 1
+          ? one.totalLines - perFile * (one.totalFiles - 1)
+          : perFile
+      files.push({
+        id,
+        path: `src/${one.displayName.split(' ')[0]?.toLowerCase()}-${index}.ts`,
+        extension: '.ts',
+        size: count * 10,
+        isBinary: false,
+        isIgnored: false,
+        isLargerThanThreshold: false,
+        analysisFailed: false,
+        totalLines: count,
+      })
+      for (let n = 1; n <= count; n++) {
+        lines.push({
+          id: lines.length + 1,
+          fileId: id,
+          authorId: one.id,
+          lineNumber: n,
+          commitHash: null,
+          commitTimestamp: null,
+        })
+      }
+    }
+  }
   return {
-    getRepositoryStats: async () => STATS,
-    getAuthorContributions: async () => [GORVEK, NIGHTSHROUD, STABLE_BOY],
-    ...overrides,
+    files: [
+      ...files,
+      {
+        id: files.length + 1,
+        path: 'logo.png',
+        extension: '.png',
+        size: 5,
+        isBinary: true,
+        isIgnored: false,
+        isLargerThanThreshold: false,
+        analysisFailed: false,
+        totalLines: 0,
+      },
+    ],
+    authors: contributions.map((one) => ({
+      id: one.id,
+      name: one.name,
+      email: one.email,
+      displayName: one.displayName,
+      canonicalId: one.id,
+      isCanonical: true,
+      title: one.title,
+      rank: one.rank,
+      percentage: one.percentage,
+    })),
+    aliases: [],
+    lines,
   }
 }
 

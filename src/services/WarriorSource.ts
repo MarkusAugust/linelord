@@ -1,9 +1,11 @@
 import type { LineLordDatabase } from '../adapters/sqlite/database'
+import type { AnalysisData } from '../core/model'
 import {
-  AnalysisService,
   type AuthorContribution,
+  authorContributions,
   type FileContribution,
-} from './AnalysisService'
+  fileContributions,
+} from '../core/ownership'
 import {
   type AuthorFileLongevity,
   type AuthorLongevity,
@@ -37,6 +39,8 @@ export interface WarriorSource {
 }
 
 export function warriorSourceFor(options: {
+  /** The analysis as values, which share and files are read off. */
+  data: AnalysisData
   db: LineLordDatabase
   /**
    * The revision the analysis describes, which the history must match. Null
@@ -45,17 +49,18 @@ export function warriorSourceFor(options: {
   analysedRevision: string | null
   now?: Date
 }): WarriorSource {
-  const analysis = new AnalysisService(options.db)
   const longevity = new LongevityService(options.db, options.now)
 
   return {
     async share(authorId) {
-      const all = await analysis.getAuthorContributions()
-      return all.find((one) => one.id === authorId) ?? null
+      return (
+        authorContributions(options.data).find((one) => one.id === authorId) ??
+        null
+      )
     },
 
-    files(authorId) {
-      return analysis.getAuthorFileContributions(authorId)
+    async files(authorId) {
+      return fileContributions(options.data, authorId)
     },
 
     async age(authorId) {

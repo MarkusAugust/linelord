@@ -8,7 +8,8 @@ import {
 } from '../../__test__/helpers/createTestRepo'
 import { createDatabase } from '../../adapters/sqlite/database'
 import { blameLines, files } from '../../adapters/sqlite/schema'
-import { AnalysisService } from '../AnalysisService'
+import { createSqliteStore } from '../../adapters/sqlite/store'
+import { repositoryStats } from '../../core/ownership'
 import { GitService } from '../GitService'
 
 /** A file long enough to have overrun SQLite's parameter limit in one insert. */
@@ -216,7 +217,7 @@ describe('GitService - a failed file is not counted as analysed', () => {
     const gitService = new GitService(repo.path, db)
     await gitService.initialize()
 
-    const stats = await new AnalysisService(db).getRepositoryStats()
+    const stats = repositoryStats(await createSqliteStore(db).loadAnalysis())
 
     expect(stats.totalFiles).toBe(2)
     expect(stats.totalAnalyzedFiles).toBe(1)
@@ -264,7 +265,7 @@ describe('GitService - a partly written row is repaired, not left alone', () => 
 
     expect(row?.isBinary).toBe(false)
 
-    const stats = await new AnalysisService(db).getRepositoryStats()
+    const stats = repositoryStats(await createSqliteStore(db).loadAnalysis())
     expect(
       stats.totalAnalyzedFiles +
         stats.totalBinaryFiles +

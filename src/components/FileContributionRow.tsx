@@ -1,6 +1,6 @@
 import { Box, Text } from 'ink'
 import pc from 'picocolors'
-import type { FileContribution } from '../services/AnalysisService'
+import type { FileContribution } from '../core/ownership'
 import { parseFileName } from '../utility/fileName'
 import { renderSimplePercentageBar } from '../utility/simplePercentageBar'
 

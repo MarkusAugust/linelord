@@ -6,6 +6,7 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { canonicalAuthors } from '../../core/ownership'
 import { LineLordService } from '../LineLordService'
 
 /**
@@ -64,7 +65,7 @@ describe('identity guesses under the default policy', () => {
     expect(guesses).toHaveLength(1)
     expect(guesses[0]?.absorbed).toHaveLength(1)
     // Nothing was actually merged: both addresses still stand on their own.
-    const authors = await service.getAnalysisService().getAllAuthors()
+    const authors = canonicalAuthors(service.getAnalysis())
     expect(authors.length).toBe(3)
   })
 

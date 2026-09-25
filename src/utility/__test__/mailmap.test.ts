@@ -5,6 +5,7 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { canonicalAuthors } from '../../core/ownership'
 import type { IdentityMerge } from '../../services/AuthorNormalizationService'
 import { LineLordService } from '../../services/LineLordService'
 import { mailmapLines, writeMailmap } from '../mailmap'
@@ -232,7 +233,7 @@ describe('the guesses that get written', () => {
 
     expect(service.getIdentityMerges()).toHaveLength(1)
     // Shown, not acted on: both addresses still count separately.
-    const authors = await service.getAnalysisService().getAllAuthors()
+    const authors = canonicalAuthors(service.getAnalysis())
     expect(authors).toHaveLength(2)
   })
 })

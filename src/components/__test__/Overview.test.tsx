@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { render } from 'ink-testing-library'
 import { Overview } from '../Overview'
 import {
-  fakeAnalysisService,
+  fakeAnalysis,
   fakeWarriorSource,
   GORVEK,
   KEY,
@@ -18,7 +18,7 @@ describe('Overview', () => {
   it('draws the repository summary and every contributor with their share', async () => {
     const { lastFrame } = render(
       <Overview
-        analysisService={fakeAnalysisService()}
+        analysis={fakeAnalysis()}
         warriorSource={fakeWarriorSource()}
         largeFileThresholdKB={50}
         onBack={noop}
@@ -44,7 +44,7 @@ describe('Overview', () => {
   it('says the same number of developers as it lists', async () => {
     const { lastFrame } = render(
       <Overview
-        analysisService={fakeAnalysisService()}
+        analysis={fakeAnalysis()}
         warriorSource={fakeWarriorSource()}
         largeFileThresholdKB={50}
         onBack={noop}
@@ -59,7 +59,7 @@ describe('Overview', () => {
   it('moves the selection with the arrow keys and opens a warrior with Enter', async () => {
     const { lastFrame, stdin } = render(
       <Overview
-        analysisService={fakeAnalysisService()}
+        analysis={fakeAnalysis()}
         warriorSource={fakeWarriorSource()}
         largeFileThresholdKB={50}
         onBack={noop}
@@ -82,7 +82,7 @@ describe('Overview', () => {
   it('does not move the selection past the last row or before the first', async () => {
     const { lastFrame, stdin } = render(
       <Overview
-        analysisService={fakeAnalysisService()}
+        analysis={fakeAnalysis()}
         warriorSource={fakeWarriorSource()}
         largeFileThresholdKB={50}
         onBack={noop}
@@ -106,7 +106,7 @@ describe('Overview', () => {
     let left = 0
     const { lastFrame, stdin } = render(
       <Overview
-        analysisService={fakeAnalysisService()}
+        analysis={fakeAnalysis()}
         warriorSource={fakeWarriorSource()}
         largeFileThresholdKB={50}
         onBack={() => {
@@ -130,30 +130,10 @@ describe('Overview', () => {
     expect(left).toBe(1)
   })
 
-  it('says so when the analysis cannot be read, rather than loading for good', async () => {
-    const { lastFrame } = render(
-      <Overview
-        analysisService={fakeAnalysisService({
-          getAuthorContributions: async () => {
-            throw new Error('the scrolls are burnt')
-          },
-        })}
-        warriorSource={fakeWarriorSource()}
-        largeFileThresholdKB={50}
-        onBack={noop}
-      />,
-    )
-    await settle()
-
-    expect(stripAnsi(lastFrame() ?? '')).toContain('the scrolls are burnt')
-  })
-
   it('has a line for a repository nobody has written in', async () => {
     const { lastFrame } = render(
       <Overview
-        analysisService={fakeAnalysisService({
-          getAuthorContributions: async () => [],
-        })}
+        analysis={fakeAnalysis([])}
         warriorSource={fakeWarriorSource()}
         largeFileThresholdKB={50}
         onBack={noop}
