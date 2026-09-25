@@ -5,12 +5,16 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { createNodeFiles } from '../../adapters/fs/nodeFiles'
+import { createGit } from '../../adapters/git/spawnGit'
 import {
   IGNORE_REVS_FILENAME,
   ignoreRevArguments,
   parseIgnoreRevsFile,
   resolveIgnoreRevs,
 } from '../ignoreRevs'
+
+const files = createNodeFiles()
 
 const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
 
@@ -65,7 +69,12 @@ describe('resolveIgnoreRevs', () => {
     repo = await createTestRepo()
     await repo.commit({ message: 'one', write: { 'a.ts': 'a\n' } })
 
-    const result = await resolveIgnoreRevs(repo.path)
+    const result = await resolveIgnoreRevs(
+      repo.path,
+      [],
+      createGit(repo.path),
+      files,
+    )
 
     expect(result).toEqual({
       revisions: [],
@@ -82,7 +91,12 @@ describe('resolveIgnoreRevs', () => {
       `# not authorship\n${reformat}\n`,
     )
 
-    const result = await resolveIgnoreRevs(repo.path)
+    const result = await resolveIgnoreRevs(
+      repo.path,
+      [],
+      createGit(repo.path),
+      files,
+    )
 
     expect(result.revisions).toEqual([reformat])
     expect(result.sources).toEqual({ file: true, flag: false })
@@ -97,9 +111,24 @@ describe('resolveIgnoreRevs', () => {
     repo = created
     await repo.git(['tag', 'the-reformatting', reformat])
 
-    const full = await resolveIgnoreRevs(repo.path, [reformat])
-    const short = await resolveIgnoreRevs(repo.path, [reformat.slice(0, 8)])
-    const tag = await resolveIgnoreRevs(repo.path, ['the-reformatting'])
+    const full = await resolveIgnoreRevs(
+      repo.path,
+      [reformat],
+      createGit(repo.path),
+      files,
+    )
+    const short = await resolveIgnoreRevs(
+      repo.path,
+      [reformat.slice(0, 8)],
+      createGit(repo.path),
+      files,
+    )
+    const tag = await resolveIgnoreRevs(
+      repo.path,
+      ['the-reformatting'],
+      createGit(repo.path),
+      files,
+    )
 
     expect(short.revisions).toEqual(full.revisions)
     expect(tag.revisions).toEqual(full.revisions)
@@ -110,7 +139,12 @@ describe('resolveIgnoreRevs', () => {
     repo = created
     await writeFile(join(repo.path, IGNORE_REVS_FILENAME), `${reformat}\n`)
 
-    const result = await resolveIgnoreRevs(repo.path, [reformat])
+    const result = await resolveIgnoreRevs(
+      repo.path,
+      [reformat],
+      createGit(repo.path),
+      files,
+    )
 
     expect(result.revisions).toEqual([reformat])
   })
@@ -127,7 +161,12 @@ describe('resolveIgnoreRevs', () => {
       `${reformat}\nnot a commit at all\n`,
     )
 
-    const result = await resolveIgnoreRevs(repo.path)
+    const result = await resolveIgnoreRevs(
+      repo.path,
+      [],
+      createGit(repo.path),
+      files,
+    )
 
     expect(result.revisions).toEqual([reformat])
     expect(result.unresolved).toEqual([
@@ -140,7 +179,12 @@ describe('resolveIgnoreRevs', () => {
     repo = created
     const blob = (await repo.git(['rev-parse', 'HEAD:f.js'])).trim()
 
-    const result = await resolveIgnoreRevs(repo.path, [blob])
+    const result = await resolveIgnoreRevs(
+      repo.path,
+      [blob],
+      createGit(repo.path),
+      files,
+    )
 
     expect(result.revisions).toEqual([])
     expect(result.unresolved).toEqual([{ entry: blob, source: 'flag' }])
@@ -150,7 +194,12 @@ describe('resolveIgnoreRevs', () => {
     const { repo: created, reformat } = await repoWithAReformatting()
     repo = created
 
-    const result = await resolveIgnoreRevs(repo.path, [reformat])
+    const result = await resolveIgnoreRevs(
+      repo.path,
+      [reformat],
+      createGit(repo.path),
+      files,
+    )
 
     expect(result.sources).toEqual({ file: false, flag: true })
     expect(result.revisions).toEqual([reformat])
@@ -164,7 +213,12 @@ describe('resolveIgnoreRevs', () => {
     const first = await repo.git(['rev-parse', 'HEAD~1'])
     await writeFile(join(repo.path, IGNORE_REVS_FILENAME), `${reformat}\n`)
 
-    const result = await resolveIgnoreRevs(repo.path, [first.trim()])
+    const result = await resolveIgnoreRevs(
+      repo.path,
+      [first.trim()],
+      createGit(repo.path),
+      files,
+    )
 
     expect(result.sources).toEqual({ file: true, flag: true })
     expect(result.revisions).toHaveLength(2)
@@ -174,7 +228,12 @@ describe('resolveIgnoreRevs', () => {
     const { repo: created } = await repoWithAReformatting()
     repo = created
 
-    const result = await resolveIgnoreRevs(repo.path, ['not a commit'])
+    const result = await resolveIgnoreRevs(
+      repo.path,
+      ['not a commit'],
+      createGit(repo.path),
+      files,
+    )
 
     expect(result.sources.file).toBe(false)
     expect(result.unresolved).toEqual([
@@ -191,7 +250,9 @@ describe('resolveIgnoreRevs', () => {
     repo = created
     await mkdir(join(repo.path, IGNORE_REVS_FILENAME))
 
-    await expect(resolveIgnoreRevs(repo.path)).rejects.toThrow()
+    await expect(
+      resolveIgnoreRevs(repo.path, [], createGit(repo.path), files),
+    ).rejects.toThrow()
   })
 })
 

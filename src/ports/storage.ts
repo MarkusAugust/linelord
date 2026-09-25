@@ -83,6 +83,11 @@ export interface NewCohortLine {
 }
 
 export interface AnalysisStore {
+  /**
+   * How the tables are laid out, for the cache fingerprint. A store written
+   * under another layout is thrown out rather than read.
+   */
+  readonly layoutVersion: string
   /** Everything the analysis recorded, as values. */
   loadAnalysis(): Promise<AnalysisData>
   /** Everything the history walk recorded, as values. */

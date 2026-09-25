@@ -6,17 +6,23 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
-import { SCHEMA_VERSION } from '../../adapters/sqlite/database'
+import { createNodeFiles } from '../../adapters/fs/nodeFiles'
 import { BLAME_OPTIONS } from '../../ports/git'
 import { ANALYSIS_VERSION } from '../analysisVersion'
 import {
-  computeFingerprint,
   decideCacheUse,
   type Fingerprint,
-} from '../CacheService'
+  type FingerprintInputs,
+  computeFingerprint as fingerprintThrough,
+} from '../cache'
+
+const files = createNodeFiles()
+const computeFingerprint = (inputs: FingerprintInputs) =>
+  fingerprintThrough(inputs, files)
 
 const INPUTS = {
   repositoryRoot: '/nowhere-in-particular',
+  layoutVersion: '2',
   headSha: 'a'.repeat(40),
   thresholdBytes: 51200,
   authorPolicy: 'loose' as const,
@@ -46,7 +52,7 @@ describe('computeFingerprint', () => {
       'threshold_bytes',
     ])
     expect(fingerprint.analysis_version).toBe(String(ANALYSIS_VERSION))
-    expect(fingerprint.schema_version).toBe(String(SCHEMA_VERSION))
+    expect(fingerprint.schema_version).toBe('2')
   })
 
   it('hashes the blame options the analysis actually runs', async () => {

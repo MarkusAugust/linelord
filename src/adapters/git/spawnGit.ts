@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process'
 import {
   BLAME_OPTIONS,
+  type GitFactory,
   type GitPort,
   type HistoryCommit,
   type RepositoryLookup,
@@ -332,4 +333,9 @@ export async function findRepositoryRoot(
   }
 
   return { found: false, reason: 'not-a-repository' }
+}
+
+/** The factory over the git binary. */
+export function createGitFactory(): GitFactory {
+  return { locate: findRepositoryRoot, at: createGit }
 }

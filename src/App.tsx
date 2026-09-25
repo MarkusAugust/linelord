@@ -12,7 +12,9 @@ import Menu, { type MenuOption } from './components/Menu'
 import { Overview } from './components/Overview'
 import RepoPathInput from './components/RepoPathInput'
 
+import type { LineLordPorts } from './core/lineLord'
 import type { HistoryReading } from './core/longevity'
+import { writeMailmap } from './core/mailmap'
 import type { SnapshotInterval } from './core/snapshots'
 import { type WarriorSource, warriorSourceFor } from './services/WarriorSource'
 import { menuOptions } from './utility/menuOptions'
@@ -23,6 +25,8 @@ import { useErrorHandler } from './utility/useErrorHandler'
 import { useLineLordService } from './utility/useLineLordService'
 
 type AppProps = {
+  /** How the outside world is reached: git, the file system, the store. */
+  ports: LineLordPorts
   repoPath?: string
   thresholdKB?: number
   /** Whether the analysis may be stored and reused between runs. */
@@ -59,6 +63,7 @@ function namedBy(sources: { file: boolean; flag: boolean }): string {
 }
 
 export default function App({
+  ports,
   repoPath: initialRepoPath,
   thresholdKB,
   useCache = true,
@@ -83,7 +88,7 @@ export default function App({
     initError,
     initProgress,
     isChangingRepo,
-  } = useLineLordService(repoPath, largeFileThresholdBytes, {
+  } = useLineLordService(ports, repoPath, largeFileThresholdBytes, {
     useCache,
     refresh,
     authorPolicy,
@@ -406,8 +411,8 @@ export default function App({
 
       {state === 'mailmap' && (
         <MailmapDraft
-          repoPath={repoPath}
           merges={identityMerges}
+          write={(merges) => writeMailmap(repoPath, merges, ports.files)}
           onBack={returnToMenu}
         />
       )}

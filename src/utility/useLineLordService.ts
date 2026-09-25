@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import {
+  createLineLord,
+  type LineLord,
+  type LineLordPorts,
+} from '../core/lineLord'
 import type { SnapshotInterval } from '../core/snapshots'
 import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
-import { LineLordService } from '../services/LineLordService'
 
 interface InitProgress {
   current: number
@@ -10,6 +14,7 @@ interface InitProgress {
 }
 
 export function useLineLordService(
+  ports: LineLordPorts,
   repoPath: string,
   thresholdBytes: number,
   options: {
@@ -36,8 +41,7 @@ export function useLineLordService(
   // Joined for the dependency list below: a new array each render would
   // otherwise re-create the service on every one of them.
   const ignoreRevisions = (options.ignoreRevisions ?? []).join(' ')
-  const [lineLordService, setLineLordService] =
-    useState<LineLordService | null>(null)
+  const [lineLordService, setLineLordService] = useState<LineLord | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
   const [initializingMessage, setInitializingMessage] = useState('')
   const [initError, setInitError] = useState<string | null>(null)
@@ -111,7 +115,7 @@ export function useLineLordService(
     //
     // The one place that turns the cache on. Everywhere else -- tests
     // included -- gets an analysis that leaves nothing behind.
-    const service = new LineLordService(repoPath, thresholdBytes, {
+    const service = createLineLord(ports, repoPath, thresholdBytes, {
       useCache,
       refresh,
       authorPolicy,
@@ -141,6 +145,7 @@ export function useLineLordService(
     // starts another -- cancelling the very run it had just begun, so the
     // first load never finished and the loading screen stayed up for good.
   }, [
+    ports,
     repoPath,
     thresholdBytes,
     useCache,

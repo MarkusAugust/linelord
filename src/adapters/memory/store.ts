@@ -34,6 +34,8 @@ export function createMemoryStore(): AnalysisStore {
   const copy = <T>(value: T): T => structuredClone(value)
 
   return {
+    layoutVersion: 'memory',
+
     async loadAnalysis(): Promise<AnalysisData> {
       return copy({
         files: [...files.values()],

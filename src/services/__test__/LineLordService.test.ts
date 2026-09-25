@@ -5,12 +5,12 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { lineLord } from '../../__test__/helpers/lineLord'
 import {
   authorContributions,
   findCanonicalAuthorByEmail,
   repositoryStats,
 } from '../../core/ownership'
-import { LineLordService } from '../LineLordService'
 
 const GORVEK = {
   name: 'Gorvek the Ironbane',
@@ -61,7 +61,7 @@ async function buildRepo(): Promise<TestRepo> {
   return repo
 }
 
-describe('LineLordService - end to end over a real repository', () => {
+describe('LineLord - end to end over a real repository', () => {
   let repo: TestRepo | undefined
 
   afterEach(async () => {
@@ -71,7 +71,7 @@ describe('LineLordService - end to end over a real repository', () => {
 
   it('ranks a person declared in .mailmap on their combined lines', async () => {
     repo = await buildRepo()
-    const service = new LineLordService(repo.path)
+    const service = lineLord(repo.path)
     await service.initialize()
 
     const contributions = authorContributions(service.getAnalysis())
@@ -92,7 +92,7 @@ describe('LineLordService - end to end over a real repository', () => {
 
   it('reports percentages that account for the whole codebase', async () => {
     repo = await buildRepo()
-    const service = new LineLordService(repo.path)
+    const service = lineLord(repo.path)
     await service.initialize()
 
     const contributions = authorContributions(service.getAnalysis())
@@ -106,7 +106,7 @@ describe('LineLordService - end to end over a real repository', () => {
 
   it('agrees with itself: repository line count matches the contributors', async () => {
     repo = await buildRepo()
-    const service = new LineLordService(repo.path)
+    const service = lineLord(repo.path)
     await service.initialize()
 
     const analysis = service.getAnalysis()
@@ -123,7 +123,7 @@ describe('LineLordService - end to end over a real repository', () => {
     // git rewrites it while producing the blame, so there is no second
     // identity to reconcile and nothing to look up.
     repo = await buildRepo()
-    const service = new LineLordService(repo.path)
+    const service = lineLord(repo.path)
     await service.initialize()
 
     const analysis = service.getAnalysis()
@@ -152,7 +152,7 @@ describe('LineLordService - end to end over a real repository', () => {
       write: { 'b.ts': 'const b = 2\n' },
     })
 
-    const service = new LineLordService(repo.path, 50 * 1024, {
+    const service = lineLord(repo.path, 50 * 1024, {
       authorPolicy: 'loose',
     })
     await service.initialize()
@@ -166,7 +166,7 @@ describe('LineLordService - end to end over a real repository', () => {
   })
 
   it('refuses to hand out services before it has been initialised', () => {
-    const service = new LineLordService('/nonexistent')
+    const service = lineLord('/nonexistent')
 
     expect(service.isInitialized()).toBe(false)
     expect(() => service.getAnalysis()).toThrow()
@@ -174,7 +174,7 @@ describe('LineLordService - end to end over a real repository', () => {
 
   it('reports progress from start to finish', async () => {
     repo = await buildRepo()
-    const service = new LineLordService(repo.path)
+    const service = lineLord(repo.path)
 
     const progress: number[] = []
     await service.initialize((current) => progress.push(current))
@@ -200,9 +200,9 @@ describe('LineLordService - end to end over a real repository', () => {
       // that pointed one service at a different repository, and this test
       // guarded what it must not carry across; the guard is kept because the
       // property still matters, even though it now holds by construction.
-      const first = new LineLordService(repo.path)
+      const first = lineLord(repo.path)
       await first.initialize()
-      const second = new LineLordService(other.path)
+      const second = lineLord(other.path)
       await second.initialize()
 
       const contributions = authorContributions(second.getAnalysis())

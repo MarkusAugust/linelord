@@ -5,16 +5,17 @@ import { render } from 'ink'
 import meow from 'meow'
 import React from 'react'
 import App from './App'
-import { findRepositoryRoot } from './adapters/git/spawnGit'
 import { resolveCachePath } from './adapters/sqlite/cacheLocation'
 import {
   removeAllCaches,
   removeCacheFor,
 } from './adapters/sqlite/cacheMaintenance'
+import { defaultPorts } from './app/ports'
 import { DEFAULT_CONCURRENCY } from './core/concurrency'
+import { createLineLord } from './core/lineLord'
+import { writeMailmap } from './core/mailmap'
 import { DEFAULT_MAX_SNAPSHOTS } from './core/snapshots'
 import { CLI_HELP } from './resources/cliHelp'
-import { LineLordService } from './services/LineLordService'
 import {
   expandTilde,
   validateConcurrency,
@@ -22,7 +23,6 @@ import {
   validateSnapshotInterval,
   validateThresholdKB,
 } from './utility/cliValidation'
-import { writeMailmap } from './utility/mailmap'
 
 const cli = meow(CLI_HELP, {
   importMeta: import.meta,
@@ -150,7 +150,8 @@ if (!existsSync(resolvedPath)) {
 // directory that was not a repository produced an empty analysis rather than
 // an error, and a subdirectory produced a partial one labelled as the whole
 // repository.
-const lookup = await findRepositoryRoot(resolvedPath)
+const ports = defaultPorts()
+const lookup = await ports.git.locate(resolvedPath)
 
 if (!lookup.found) {
   // Two different problems with two different fixes, so they get two
@@ -226,7 +227,7 @@ if (cli.flags.clearCache) {
 // itself stays strict, so this neither merges anybody nor disturbs the stored
 // analysis the next ordinary run will reuse.
 if (cli.flags.writeMailmap) {
-  const service = new LineLordService(repoPath, thresholdBytes, {
+  const service = createLineLord(ports, repoPath, thresholdBytes, {
     useCache: cli.flags.cache,
     refresh: cli.flags.refresh,
     ignoreRevisions: cli.flags.ignoreRev,
@@ -235,7 +236,7 @@ if (cli.flags.writeMailmap) {
   await service.initialize()
 
   const merges = service.getIdentityMerges()
-  const result = await writeMailmap(repoPath, merges)
+  const result = await writeMailmap(repoPath, merges, ports.files)
 
   if (result.added.length === 0 && result.alreadyPresent.length === 0) {
     console.log('⚔️  Nothing to write: every contributor has one address.')
@@ -257,6 +258,7 @@ if (cli.flags.writeMailmap) {
 }
 
 const element = React.createElement(App, {
+  ports,
   repoPath: repoPath,
   thresholdKB: thresholdKB,
   useCache: cli.flags.cache,

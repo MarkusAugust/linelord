@@ -107,7 +107,7 @@ describe('cli argument handling', () => {
     // not a git repository. A shape guard, because cli.ts runs its work at the
     // top level where the test runner cannot reach it.
     const clearAll = cli.indexOf('cli.flags.clearAllCaches')
-    const resolvesRepository = cli.indexOf('findRepositoryRoot(resolvedPath)')
+    const resolvesRepository = cli.indexOf('ports.git.locate(resolvedPath)')
 
     expect(clearAll).toBeGreaterThan(-1)
     expect(resolvesRepository).toBeGreaterThan(-1)
@@ -116,7 +116,7 @@ describe('cli argument handling', () => {
 
   it('clears one repository only after establishing which', () => {
     const clearOne = cli.indexOf('cli.flags.clearCache')
-    const resolvesRepository = cli.indexOf('findRepositoryRoot(resolvedPath)')
+    const resolvesRepository = cli.indexOf('ports.git.locate(resolvedPath)')
 
     expect(clearOne).toBeGreaterThan(resolvesRepository)
   })

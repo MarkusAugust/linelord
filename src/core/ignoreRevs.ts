@@ -1,6 +1,4 @@
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { createGit } from '../adapters/git/spawnGit'
+import type { FileSystemPort } from '../ports/files'
 import type { GitPort } from '../ports/git'
 
 /**
@@ -76,37 +74,34 @@ export function parseIgnoreRevsFile(contents: string): string[] {
  */
 export async function resolveIgnoreRevs(
   repositoryRoot: string,
-  extraRevisions: string[] = [],
-  git: GitPort = createGit(repositoryRoot),
+  extraRevisions: string[],
+  git: GitPort,
+  files: FileSystemPort,
 ): Promise<IgnoreRevs> {
   let fromFile: string[] = []
 
   try {
-    const contents = await readFile(
-      join(repositoryRoot, IGNORE_REVS_FILENAME),
-      'utf8',
-    )
-    fromFile = parseIgnoreRevsFile(contents)
-  } catch (error) {
     // "Not there" is the usual case and means the repository is asking for
     // nothing. Anything else -- a file that exists but cannot be read -- is
     // not the same: carrying on would analyse without the ignore set the
     // repository did ask for, which is wrong ownership on every screen, and
     // the cache would store it as though it were right.
-    const code = (error as NodeJS.ErrnoException)?.code
-    if (code !== 'ENOENT' && code !== 'ENOTDIR') {
-      // Said plainly, and naming the file. Stopping is the right answer here,
-      // but `EISDIR: illegal operation on a directory` on its own tells
-      // nobody what LineLord was doing or what to fix.
-      throw new Error(
-        `${IGNORE_REVS_FILENAME} exists but could not be read, so the commits ` +
-          'it names cannot be looked past. Analysing without them would ' +
-          'credit a reformatting to whoever ran it. Fix the file, or move it ' +
-          `aside to analyse without it. (${
-            error instanceof Error ? error.message : String(error)
-          })`,
-      )
-    }
+    const contents = await files.readText(
+      `${repositoryRoot}/${IGNORE_REVS_FILENAME}`,
+    )
+    if (contents !== null) fromFile = parseIgnoreRevsFile(contents)
+  } catch (error) {
+    // Said plainly, and naming the file. Stopping is the right answer here,
+    // but `EISDIR: illegal operation on a directory` on its own tells
+    // nobody what LineLord was doing or what to fix.
+    throw new Error(
+      `${IGNORE_REVS_FILENAME} exists but could not be read, so the commits ` +
+        'it names cannot be looked past. Analysing without them would ' +
+        'credit a reformatting to whoever ran it. Fix the file, or move it ' +
+        `aside to analyse without it. (${
+          error instanceof Error ? error.message : String(error)
+        })`,
+    )
   }
 
   const named: UnresolvedIgnoreRev[] = [

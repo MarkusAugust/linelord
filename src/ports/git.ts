@@ -111,3 +111,14 @@ export interface GitPort {
   /** The first-parent history from HEAD, newest first. Empty with no commits. */
   firstParentHistory(): Promise<HistoryCommit[]>
 }
+
+/**
+ * git, before a repository is known.
+ *
+ * `locate` finds the root a path belongs to; `at` gives the port for one
+ * repository. Kept together so that a composition root hands over one thing.
+ */
+export interface GitFactory {
+  locate(startPath: string): Promise<RepositoryLookup>
+  at(cwd: string): GitPort
+}

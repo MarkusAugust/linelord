@@ -5,10 +5,13 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { lineLord } from '../../__test__/helpers/lineLord'
+import { createNodeFiles } from '../../adapters/fs/nodeFiles'
 import type { IdentityMerge } from '../../core/identity'
 import { canonicalAuthors } from '../../core/ownership'
-import { LineLordService } from '../../services/LineLordService'
 import { mailmapLines, writeMailmap } from '../mailmap'
+
+const files = createNodeFiles()
 
 const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@firma.no' }
 const GORVEK_AT_HOME = { name: 'Gorvek Ironbane', email: 'gorvek@privat.no' }
@@ -81,7 +84,7 @@ describe('writeMailmap', () => {
   }
 
   async function guessedMerges(repoPath: string) {
-    const service = new LineLordService(repoPath, 50 * 1024, {
+    const service = lineLord(repoPath, 50 * 1024, {
       authorPolicy: 'loose',
     })
     await service.initialize()
@@ -91,7 +94,11 @@ describe('writeMailmap', () => {
   it('records what the guessing found, and leaves other people alone', async () => {
     repo = await repoWithTwoAddresses()
 
-    const result = await writeMailmap(repo.path, await guessedMerges(repo.path))
+    const result = await writeMailmap(
+      repo.path,
+      await guessedMerges(repo.path),
+      files,
+    )
 
     expect(result.added).toEqual([
       'Gorvek the Ironbane <gorvek@firma.no> <gorvek@privat.no>',
@@ -106,9 +113,13 @@ describe('writeMailmap', () => {
     // while producing the blame, so the addresses arrive already merged and
     // there is no longer anything to guess about.
     repo = await repoWithTwoAddresses()
-    await writeMailmap(repo.path, await guessedMerges(repo.path))
+    await writeMailmap(repo.path, await guessedMerges(repo.path), files)
 
-    const second = await writeMailmap(repo.path, await guessedMerges(repo.path))
+    const second = await writeMailmap(
+      repo.path,
+      await guessedMerges(repo.path),
+      files,
+    )
 
     expect(second.added).toEqual([])
     const contents = await readFile(second.path, 'utf8')
@@ -121,7 +132,11 @@ describe('writeMailmap', () => {
     const existing = 'Someone Else <them@example.com> <old@example.com>\n'
     await writeFile(join(repo.path, '.mailmap'), existing)
 
-    const result = await writeMailmap(repo.path, await guessedMerges(repo.path))
+    const result = await writeMailmap(
+      repo.path,
+      await guessedMerges(repo.path),
+      files,
+    )
 
     const contents = await readFile(result.path, 'utf8')
     expect(contents).toContain('Someone Else')
@@ -135,7 +150,11 @@ describe('writeMailmap', () => {
       'Someone Else <them@example.com> <old@example.com>',
     )
 
-    const result = await writeMailmap(repo.path, await guessedMerges(repo.path))
+    const result = await writeMailmap(
+      repo.path,
+      await guessedMerges(repo.path),
+      files,
+    )
     const lines = (await readFile(result.path, 'utf8')).trim().split('\n')
 
     expect(lines).toHaveLength(2)
@@ -160,7 +179,7 @@ describe('writeMailmap', () => {
       await chmod(path, 0o222)
 
       await expect(
-        writeMailmap(repo.path, await guessedMerges(repo.path)),
+        writeMailmap(repo.path, await guessedMerges(repo.path), files),
       ).rejects.toThrow()
 
       await chmod(path, 0o644)
@@ -175,7 +194,11 @@ describe('writeMailmap', () => {
       write: { 'a.ts': 'a\n' },
     })
 
-    const result = await writeMailmap(repo.path, await guessedMerges(repo.path))
+    const result = await writeMailmap(
+      repo.path,
+      await guessedMerges(repo.path),
+      files,
+    )
 
     expect(result.added).toEqual([])
   })
@@ -202,7 +225,7 @@ describe('the guesses that get written', () => {
       write: { 'b.ts': 'b\n' },
     })
 
-    const service = new LineLordService(repo.path, 50 * 1024, {
+    const service = lineLord(repo.path, 50 * 1024, {
       authorPolicy: 'loose',
     })
     await service.initialize()
@@ -228,7 +251,7 @@ describe('the guesses that get written', () => {
       write: { 'b.ts': 'b\n' },
     })
 
-    const service = new LineLordService(repo.path)
+    const service = lineLord(repo.path)
     await service.initialize()
 
     expect(service.getIdentityMerges()).toHaveLength(1)

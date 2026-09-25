@@ -1,13 +1,12 @@
 import { createHash } from 'node:crypto'
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { SCHEMA_VERSION } from '../adapters/sqlite/database'
+import type { FileSystemPort } from '../ports/files'
 import { BLAME_OPTIONS } from '../ports/git'
 import {
   ignoredFileExtensions,
   ignoredFilePatterns,
 } from '../resources/ignoreFiles'
 import { ANALYSIS_VERSION } from './analysisVersion'
+import type { AuthorPolicy } from './identity'
 
 /**
  * Whether a stored analysis may be reused, and if not, why not.
@@ -20,10 +19,15 @@ import { ANALYSIS_VERSION } from './analysisVersion'
  * be decided falls to a full analysis.
  */
 
-export type AuthorPolicy = 'strict' | 'loose'
+export type { AuthorPolicy }
 
 export interface FingerprintInputs {
   repositoryRoot: string
+  /**
+   * How the store lays its tables out, as the storage adapter reports it.
+   * A cache written under a different layout is thrown out rather than read.
+   */
+  layoutVersion: string
   headSha: string
   thresholdBytes: number
   authorPolicy: AuthorPolicy
@@ -58,23 +62,17 @@ const EMPTY_IGNORE_REVS = sha256('')
  *
  * Absent hashes differently from any content: a repository that never had a
  * .mailmap and one whose .mailmap was deleted are in the same position, and
- * both differ from one that has one.
- *
- * Only "not there" counts as absent. A file that exists but cannot be read --
- * permissions, a failing disk -- is not the same thing, and treating it as
- * absent would let a cache written while the file was genuinely missing be
- * reused now that it exists and says something unknown. That is the one
- * outcome this whole mechanism is for avoiding, so the error propagates and
- * the caller falls back to a full analysis.
+ * both differ from one that has one. A file that exists but cannot be read
+ * is not absent, and the port throws for it: treating it as absent would
+ * let a cache written while the file was genuinely missing be reused now
+ * that it exists and says something unknown.
  */
-async function hashFileIfPresent(path: string): Promise<string> {
-  try {
-    return sha256(await readFile(path, 'utf8'))
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code
-    if (code === 'ENOENT' || code === 'ENOTDIR') return ''
-    throw error
-  }
+async function hashFileIfPresent(
+  files: FileSystemPort,
+  path: string,
+): Promise<string> {
+  const contents = await files.readText(path)
+  return contents === null ? '' : sha256(contents)
 }
 
 /**
@@ -88,9 +86,11 @@ async function hashFileIfPresent(path: string): Promise<string> {
  */
 export async function computeFingerprint(
   inputs: FingerprintInputs,
+  files: FileSystemPort,
 ): Promise<Fingerprint> {
   const {
     repositoryRoot,
+    layoutVersion,
     headSha,
     thresholdBytes,
     authorPolicy,
@@ -103,13 +103,13 @@ export async function computeFingerprint(
   })
 
   return {
-    schema_version: String(SCHEMA_VERSION),
+    schema_version: layoutVersion,
     analysis_version: String(ANALYSIS_VERSION),
     [HEAD_KEY]: headSha,
     threshold_bytes: String(thresholdBytes),
     author_policy: authorPolicy,
     blame_options: sha256(BLAME_OPTIONS.join(' ')),
-    mailmap: await hashFileIfPresent(join(repositoryRoot, '.mailmap')),
+    mailmap: await hashFileIfPresent(files, `${repositoryRoot}/.mailmap`),
     // The commits being looked past, not the file that names them. Adding one
     // moves every line it touched to a different author and a different date,
     // so a cache from before the change describes a question nobody asked --
