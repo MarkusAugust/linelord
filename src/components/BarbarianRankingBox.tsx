@@ -1,43 +1,40 @@
 import { Box, Text, useInput } from 'ink'
 import type React from 'react'
-import { useState } from 'react'
-import { BarbarianAnalysisService } from '../services/BarbarianAnalysisService'
-import type { LineLordService } from '../services/LineLordService'
+import { useMemo, useState } from 'react'
+import { barbarianRankings } from '../core/barbarian'
+import type { AnalysisData } from '../core/model'
 import type { WarriorSource } from '../services/WarriorSource'
-import { useAsyncData } from '../utility/useAsyncData'
 import BarbarianRankings, { WARRIORS_SHOWN } from './BarbarianRankings'
 import { WarriorDetail } from './WarriorDetail'
 
 interface BarbarianRankingBoxProps {
+  analysis: AnalysisData
+  warriorSource: WarriorSource
   onBack: () => void
-  lineLordService?: LineLordService | null
-  warriorSource?: WarriorSource | null
+  /** The instant ancient code is measured against. Injected so a test can fix it. */
+  now?: Date
 }
 
 /**
- * Container component for the Brutal Barbarian Ranking System
+ * The Brutal Barbarian Ranking System, with a cursor.
+ *
+ * Drawn from the analysis as values: the rankings are computed once per
+ * analysis and nothing here waits.
  */
 export const BarbarianRankingBox: React.FC<BarbarianRankingBoxProps> = ({
-  onBack,
-  lineLordService,
+  analysis,
   warriorSource,
+  onBack,
+  now,
 }) => {
   const [selected, setSelected] = useState(0)
   const [inDetail, setInDetail] = useState(false)
 
-  const loaded = useAsyncData(async () => {
-    if (!lineLordService?.isInitialized()) {
-      throw new Error('LineLord service is unavailable or not initialized')
-    }
-    const barbarianService = new BarbarianAnalysisService(
-      lineLordService.getDatabase(),
-    )
-    return barbarianService.getBarbarianRankings()
-  }, [lineLordService])
-
-  const error = loaded.status === 'failed' ? loaded.error : null
-  const isLoading = loaded.status === 'loading'
-  const rankings = loaded.status === 'ready' ? loaded.data : []
+  const measuredAt = useMemo(() => now ?? new Date(), [now])
+  const rankings = useMemo(
+    () => barbarianRankings(analysis, measuredAt),
+    [analysis, measuredAt],
+  )
   const shown = rankings.slice(0, WARRIORS_SHOWN)
   const chosen = shown[selected]
 
@@ -51,10 +48,10 @@ export const BarbarianRankingBox: React.FC<BarbarianRankingBoxProps> = ({
     if (key.downArrow) {
       setSelected((at) => Math.min(shown.length - 1, at + 1))
     }
-    if (key.return && chosen && warriorSource) setInDetail(true)
+    if (key.return && chosen) setInDetail(true)
   })
 
-  if (inDetail && chosen && warriorSource) {
+  if (inDetail && chosen) {
     return (
       <WarriorDetail
         source={warriorSource}
@@ -68,33 +65,15 @@ export const BarbarianRankingBox: React.FC<BarbarianRankingBoxProps> = ({
     )
   }
 
-  if (error) {
-    return (
-      <Box flexDirection="column" padding={1}>
-        <Text color="red" bold>
-          ⚔️ ERROR IN THE BARBARIC HALLS ⚔️
-        </Text>
-        <Text color="yellow">Error: {error}</Text>
-        <Text color="gray">Press 'q' to return to menu</Text>
-      </Box>
-    )
-  }
-
   return (
     <Box flexDirection="column">
-      <BarbarianRankings
-        rankings={rankings}
-        isLoading={isLoading}
-        selected={selected}
-      />
+      <BarbarianRankings rankings={rankings} selected={selected} />
 
-      {!isLoading && (
-        <Box marginTop={1}>
-          <Text color="gray">
-            ↑↓ and Enter for one warrior · q to return to the main menu
-          </Text>
-        </Box>
-      )}
+      <Box marginTop={1}>
+        <Text color="gray">
+          ↑↓ and Enter for one warrior · q to return to the main menu
+        </Text>
+      </Box>
     </Box>
   )
 }
