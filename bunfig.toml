@@ -10,4 +10,4 @@ coverageThreshold = { lines = 0.90, functions = 0.80 }
 
 # Schema and migration files declare tables rather than run logic; Bun counts
 # them as zero functions, which no meaningful threshold can survive.
-coveragePathIgnorePatterns = ["src/db/schema.ts"]
+coveragePathIgnorePatterns = ["src/adapters/sqlite/schema.ts"]
