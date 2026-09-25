@@ -59,20 +59,24 @@ describe('useAsyncData', () => {
     expect(lastFrame()).toBe('failed: a bare string')
   })
 
-  it('forgets an answer that arrives after the screen has been left', async () => {
-    const answer = deferred<string>()
-    const { lastFrame, unmount } = render(
-      <Screen load={() => answer.promise} />,
-    )
-
-    unmount()
-    answer.resolve('too late')
+  it('forgets an answer that arrives after a newer load has begun', async () => {
+    // The guard is for this case, not for the unmount: React drops a state
+    // update into an unmounted component on its own. What it does not drop
+    // is a slow first answer landing after a fast second one, which without
+    // the guard overwrites the screen with data about the previous
+    // dependency -- the old repository, the previously selected warrior.
+    const slow = deferred<string>()
+    const { lastFrame, rerender } = render(<Screen load={() => slow.promise} />)
     await settle()
 
-    // The last frame drawn was the loading one, and nothing was drawn after
-    // the unmount: a result written into a dead component would show up as a
-    // React warning at best and a corrupted terminal at worst.
-    expect(lastFrame()).toBe('loading')
+    rerender(<Screen load={() => Promise.resolve('second')} />)
+    await settle()
+    expect(lastFrame()).toBe('ready: second')
+
+    slow.resolve('first, late')
+    await settle()
+
+    expect(lastFrame()).toBe('ready: second')
   })
 
   it('loads again when what it depends on changes', async () => {
