@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import type { SnapshotInterval } from '../core/snapshots'
 import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
 import { LineLordService } from '../services/LineLordService'
-import type { SnapshotInterval } from '../services/snapshotSelection'
 
 interface InitProgress {
   current: number

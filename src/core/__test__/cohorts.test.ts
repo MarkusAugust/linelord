@@ -5,7 +5,7 @@ import {
   countBlame,
   countKey,
   readCountKey,
-} from '../revisionBlame'
+} from '../cohorts'
 
 /**
  * Reading a revision that is not HEAD.

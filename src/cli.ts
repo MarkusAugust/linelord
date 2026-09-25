@@ -12,9 +12,9 @@ import {
   removeCacheFor,
 } from './adapters/sqlite/cacheMaintenance'
 import { DEFAULT_CONCURRENCY } from './core/concurrency'
+import { DEFAULT_MAX_SNAPSHOTS } from './core/snapshots'
 import { CLI_HELP } from './resources/cliHelp'
 import { LineLordService } from './services/LineLordService'
-import { DEFAULT_MAX_SNAPSHOTS } from './services/snapshotSelection'
 import {
   expandTilde,
   validateConcurrency,

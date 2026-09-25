@@ -13,7 +13,7 @@ import { Overview } from './components/Overview'
 import RepoPathInput from './components/RepoPathInput'
 
 import type { HistoryReading } from './core/longevity'
-import type { SnapshotInterval } from './services/snapshotSelection'
+import type { SnapshotInterval } from './core/snapshots'
 import { type WarriorSource, warriorSourceFor } from './services/WarriorSource'
 import { menuOptions } from './utility/menuOptions'
 import { clearTerminal } from './utility/terminal'

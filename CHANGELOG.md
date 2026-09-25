@@ -57,6 +57,12 @@ because the earlier answer was wrong.
   at a time. `GitService` is gone. The same files are read, classified and
   stored as before; a file about to be read again loses its old lines first
   on every kind of run, not only the incremental one.
+- **The history walk, as functions over the ports.** Choosing the
+  snapshots, reading each one, carrying untouched files across and
+  summing the cohorts are functions over the git and storage ports;
+  `HistoryService` is gone. The test that reached into a private method to
+  check the walk drops its claim before reading now does it by handing the
+  walk a git that dies on the first tree and checking nothing is claimed.
 
 ## [0.11.0] — 2026-09-25
 

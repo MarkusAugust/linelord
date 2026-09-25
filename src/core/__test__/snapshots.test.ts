@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import {
-  type HistoryCommit,
-  intervalKey,
-  selectSnapshots,
-} from '../snapshotSelection'
+import { type HistoryCommit, intervalKey, selectSnapshots } from '../snapshots'
 
 /**
  * Which revisions the survival curve is drawn through.
