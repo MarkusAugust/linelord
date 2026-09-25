@@ -27,6 +27,11 @@ import {
   updateAnalysis,
 } from '../core/analyse'
 import {
+  type HistoryFailure,
+  type HistoryRun,
+  walkHistory,
+} from '../core/history'
+import {
   describeExistingMerges,
   findIdentityGuesses,
   type IdentityMerge,
@@ -36,6 +41,7 @@ import type { HistoryReading } from '../core/longevity'
 import type { AnalysisData } from '../core/model'
 import { wasAnalysed } from '../core/ownership'
 import { rankAuthors } from '../core/ranking'
+import type { SnapshotInterval } from '../core/snapshots'
 import type { GitPort } from '../ports/git'
 import type { AnalysisStore } from '../ports/storage'
 import { type IgnoreRevs, resolveIgnoreRevs } from '../utility/ignoreRevs'
@@ -45,12 +51,6 @@ import {
   decideCacheUse,
   HEAD_KEY,
 } from './CacheService'
-import {
-  type HistoryFailure,
-  type HistoryRun,
-  HistoryService,
-} from './HistoryService'
-import type { SnapshotInterval } from './snapshotSelection'
 
 /** What the run did, and why, so the interface can say so rather than imply it. */
 export interface CacheStatus {
@@ -556,13 +556,17 @@ export class LineLordService {
     }
 
     try {
-      const run = await new HistoryService(root, this.db, {
-        thresholdBytes: this.largeFileThresholdBytes,
-        ignoredRevisions: this.ignoredRevisions.revisions,
-        concurrency: this.concurrency,
-        interval: this.history.interval,
-        maxSnapshots: this.history.maxSnapshots,
-      }).analyse(onProgress)
+      const run = await walkHistory(
+        { git: this.git, store: this.store },
+        {
+          thresholdBytes: this.largeFileThresholdBytes,
+          ignoredRevisions: this.ignoredRevisions.revisions,
+          concurrency: this.concurrency,
+          interval: this.history.interval,
+          maxSnapshots: this.history.maxSnapshots,
+        },
+        onProgress,
+      )
       this.historyRun = run
       this.historyReading = await this.readHistory()
       return run

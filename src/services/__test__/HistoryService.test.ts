@@ -4,12 +4,13 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { createGit } from '../../adapters/git/spawnGit'
 import { clearDatabase, createDatabase } from '../../adapters/sqlite/database'
 import { HISTORY_HEAD_KEY, readMeta } from '../../adapters/sqlite/meta'
 import { authors, cohortLines, snapshots } from '../../adapters/sqlite/schema'
 import { createSqliteStore } from '../../adapters/sqlite/store'
+import { walkHistory } from '../../core/history'
 import { survivalByAuthor } from '../../core/longevity'
-import { HistoryService } from '../HistoryService'
 import { LineLordService } from '../LineLordService'
 
 /**
@@ -23,6 +24,12 @@ import { LineLordService } from '../LineLordService'
  */
 
 /** The same threshold the analysis of HEAD uses by default. */
+/** Real git and real SQLite, which is what these tests are about. */
+const portsFor = (repoPath: string, db: ReturnType<typeof createDatabase>) => ({
+  git: createGit(repoPath),
+  store: createSqliteStore(db),
+})
+
 const THRESHOLD = 50 * 1024
 
 const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
@@ -119,17 +126,17 @@ describe('HistoryService', () => {
     repo = await repoWithAYear()
 
     const incremental = createDatabase()
-    await new HistoryService(repo.path, incremental, {
+    await walkHistory(portsFor(repo.path, incremental), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
-    }).analyse()
+    })
 
     const exhaustive = createDatabase()
-    await new HistoryService(repo.path, exhaustive, {
+    await walkHistory(portsFor(repo.path, exhaustive), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
       reuseBetweenSnapshots: false,
-    }).analyse()
+    })
 
     expect(await cohortRows(incremental)).toEqual(await cohortRows(exhaustive))
   }, 120000)
@@ -139,10 +146,10 @@ describe('HistoryService', () => {
     repo = await repoWithAYear()
     const db = createDatabase()
 
-    const run = await new HistoryService(repo.path, db, {
+    const run = await walkHistory(portsFor(repo.path, db), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
-    }).analyse()
+    })
 
     expect(run.filesCarried).toBeGreaterThan(0)
     expect(run.snapshots).toBeGreaterThan(1)
@@ -152,10 +159,10 @@ describe('HistoryService', () => {
     repo = await repoWithAYear()
     const db = createDatabase()
 
-    await new HistoryService(repo.path, db, {
+    await walkHistory(portsFor(repo.path, db), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
-    }).analyse()
+    })
 
     const stored = await db.select().from(snapshots)
     // January, March, May, August and November saw commits; no others did.
@@ -169,10 +176,10 @@ describe('HistoryService', () => {
     repo = await repoWithAYear()
     const db = createDatabase()
 
-    await new HistoryService(repo.path, db, {
+    await walkHistory(portsFor(repo.path, db), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
-    }).analyse()
+    })
 
     const stored = await db.select().from(snapshots)
     const first = stored[0]
@@ -190,10 +197,10 @@ describe('HistoryService', () => {
     repo = await repoWithAYear()
     const db = createDatabase()
 
-    await new HistoryService(repo.path, db, {
+    await walkHistory(portsFor(repo.path, db), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
-    }).analyse()
+    })
 
     const stored = await db.select({ email: authors.email }).from(authors)
     expect(stored.map((one) => one.email)).toContain(ZYGOFER.email)
@@ -203,11 +210,11 @@ describe('HistoryService', () => {
     repo = await repoWithAYear()
     const db = createDatabase()
 
-    await new HistoryService(repo.path, db, {
+    await walkHistory(portsFor(repo.path, db), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
       maxSnapshots: 2,
-    }).analyse()
+    })
 
     expect(await db.select().from(snapshots)).toHaveLength(2)
   }, 120000)
@@ -215,14 +222,13 @@ describe('HistoryService', () => {
   it('forgets an earlier history rather than adding to it', async () => {
     repo = await repoWithAYear()
     const db = createDatabase()
-    const service = new HistoryService(repo.path, db, {
-      interval: 'month',
-      thresholdBytes: THRESHOLD,
-    })
+    const ports = portsFor(repo.path, db)
+    const walk = () =>
+      walkHistory(ports, { interval: 'month', thresholdBytes: THRESHOLD })
 
-    await service.analyse()
+    await walk()
     const after = await cohortRows(db)
-    await service.analyse()
+    await walk()
 
     expect(await cohortRows(db)).toEqual(after)
   }, 120000)
@@ -247,16 +253,16 @@ describe('HistoryService', () => {
     })
 
     const incremental = createDatabase()
-    await new HistoryService(repo.path, incremental, {
+    await walkHistory(portsFor(repo.path, incremental), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
-    }).analyse()
+    })
     const exhaustive = createDatabase()
-    await new HistoryService(repo.path, exhaustive, {
+    await walkHistory(portsFor(repo.path, exhaustive), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
       reuseBetweenSnapshots: false,
-    }).analyse()
+    })
 
     expect(await cohortRows(incremental)).toEqual(await cohortRows(exhaustive))
 
@@ -276,11 +282,11 @@ describe('HistoryService', () => {
     repo = await repoWithAYear()
     const db = createDatabase()
 
-    const run = await new HistoryService(repo.path, db, {
+    const run = await walkHistory(portsFor(repo.path, db), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
       concurrency: Number.NaN,
-    }).analyse()
+    })
 
     expect(run.filesBlamed).toBeGreaterThan(0)
     const [first] = await db.select().from(snapshots)
@@ -291,10 +297,10 @@ describe('HistoryService', () => {
     repo = await repoWithAYear()
     const db = createDatabase()
 
-    await new HistoryService(repo.path, db, {
+    await walkHistory(portsFor(repo.path, db), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
-    }).analyse()
+    })
 
     const [zygofer] = await db
       .select({ name: authors.displayName })
@@ -311,10 +317,10 @@ describe('HistoryService', () => {
     repo = await repoWithAYear()
     const db = createDatabase()
 
-    await new HistoryService(repo.path, db, {
+    await walkHistory(portsFor(repo.path, db), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
-    }).analyse()
+    })
 
     expect(readMeta(db, HISTORY_HEAD_KEY)).toBe(await repo.head())
   }, 120000)
@@ -343,10 +349,10 @@ describe('HistoryService', () => {
     })
     await service.initialize()
     const db = service.getDatabase()
-    await new HistoryService(repo.path, db, {
+    await walkHistory(portsFor(repo.path, db), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
-    }).analyse()
+    })
 
     const merged = await db
       .select({ id: authors.id })
@@ -389,10 +395,10 @@ describe('HistoryService', () => {
     })
 
     const db = createDatabase()
-    await new HistoryService(repo.path, db, {
+    await walkHistory(portsFor(repo.path, db), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
-    }).analyse()
+    })
 
     const january = Math.floor(
       new Date('2025-01-01T00:00:00Z').getTime() / 1000,
@@ -419,17 +425,26 @@ describe('HistoryService', () => {
     // Clearing the rows while leaving the marker behind says the database
     // holds a history of one revision while holding none -- for the whole of
     // a run that may take minutes, and for good if that run is interrupted.
+    // So the claim goes before the first snapshot is read, and a walk that
+    // dies on that first read leaves nothing that says otherwise.
     repo = await repoWithAYear()
     const db = createDatabase()
-    const service = new HistoryService(repo.path, db, {
-      interval: 'month',
-      thresholdBytes: THRESHOLD,
-    })
-    await service.analyse()
+    const ports = portsFor(repo.path, db)
+    await walkHistory(ports, { interval: 'month', thresholdBytes: THRESHOLD })
     expect(readMeta(db, HISTORY_HEAD_KEY)).toBeTruthy()
 
-    // What a run does before it has anything of its own to say.
-    ;(service as unknown as { forgetPreviousRun(): void }).forgetPreviousRun()
+    const dying = {
+      ...ports,
+      git: {
+        ...ports.git,
+        listTree: async () => {
+          throw new Error('the archive burned')
+        },
+      },
+    }
+    await expect(
+      walkHistory(dying, { interval: 'month', thresholdBytes: THRESHOLD }),
+    ).rejects.toThrow('the archive burned')
 
     expect(readMeta(db, HISTORY_HEAD_KEY)).toBe(null)
     expect(await db.select().from(snapshots)).toHaveLength(0)
@@ -442,10 +457,10 @@ describe('HistoryService', () => {
     // curve is drawn from revisions the new analysis knows nothing about.
     repo = await repoWithAYear()
     const db = createDatabase()
-    await new HistoryService(repo.path, db, {
+    await walkHistory(portsFor(repo.path, db), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
-    }).analyse()
+    })
 
     clearDatabase(db)
 
@@ -479,10 +494,10 @@ describe('HistoryService', () => {
     await service.initialize()
     const db = service.getDatabase()
 
-    const run = await new HistoryService(repo.path, db, {
+    const run = await walkHistory(portsFor(repo.path, db), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
-    }).analyse()
+    })
 
     expect(run.snapshots).toBe(1)
     const rows = await db
@@ -523,10 +538,10 @@ describe('HistoryService', () => {
     const service = new LineLordService(repo.path, 50 * 1024)
     await service.initialize()
     const db = service.getDatabase()
-    await new HistoryService(repo.path, db, {
+    await walkHistory(portsFor(repo.path, db), {
       interval: 'month',
       thresholdBytes: THRESHOLD,
-    }).analyse()
+    })
 
     const store = createSqliteStore(db)
     expect((await store.readMeta())[HISTORY_HEAD_KEY]).toBe(await repo.head())
@@ -572,9 +587,9 @@ describe('HistoryService', () => {
     repo = await createTestRepo()
     const db = createDatabase()
 
-    const run = await new HistoryService(repo.path, db, {
+    const run = await walkHistory(portsFor(repo.path, db), {
       thresholdBytes: THRESHOLD,
-    }).analyse()
+    })
 
     expect(run.snapshots).toBe(0)
   }, 60000)
