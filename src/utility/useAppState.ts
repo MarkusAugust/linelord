@@ -5,7 +5,6 @@ export type AppState =
   | 'input-path'
   | 'menu'
   | 'overview'
-  | 'singledevrepostats'
   | 'barbarianrankings'
   | 'mailmap'
   | 'longevity'

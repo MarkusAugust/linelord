@@ -3,6 +3,7 @@ import { render } from 'ink-testing-library'
 import { Overview } from '../Overview'
 import {
   fakeAnalysisService,
+  fakeWarriorSource,
   GORVEK,
   KEY,
   NIGHTSHROUD,
@@ -18,6 +19,7 @@ describe('Overview', () => {
     const { lastFrame } = render(
       <Overview
         analysisService={fakeAnalysisService()}
+        warriorSource={fakeWarriorSource()}
         largeFileThresholdKB={50}
         onBack={noop}
       />,
@@ -43,6 +45,7 @@ describe('Overview', () => {
     const { lastFrame } = render(
       <Overview
         analysisService={fakeAnalysisService()}
+        warriorSource={fakeWarriorSource()}
         largeFileThresholdKB={50}
         onBack={noop}
       />,
@@ -57,6 +60,7 @@ describe('Overview', () => {
     const { lastFrame, stdin } = render(
       <Overview
         analysisService={fakeAnalysisService()}
+        warriorSource={fakeWarriorSource()}
         largeFileThresholdKB={50}
         onBack={noop}
       />,
@@ -69,7 +73,8 @@ describe('Overview', () => {
     await settle()
     const frame = stripAnsi(lastFrame() ?? '')
 
-    expect(frame).toContain(`Statistics for warrior ${NIGHTSHROUD.displayName}`)
+    expect(frame).toContain(NIGHTSHROUD.displayName)
+    expect(frame).toContain('Holds 250 lines in 5 files')
     // The repository box is gone: the detail has the screen to itself.
     expect(frame).not.toContain('Files analyzed')
   })
@@ -78,6 +83,7 @@ describe('Overview', () => {
     const { lastFrame, stdin } = render(
       <Overview
         analysisService={fakeAnalysisService()}
+        warriorSource={fakeWarriorSource()}
         largeFileThresholdKB={50}
         onBack={noop}
       />,
@@ -92,7 +98,7 @@ describe('Overview', () => {
     await settle()
 
     expect(stripAnsi(lastFrame() ?? '')).toContain(
-      `Statistics for stable boy ${STABLE_BOY.displayName}`,
+      `Holds ${STABLE_BOY.totalLines} lines in 1 file`,
     )
   })
 
@@ -101,6 +107,7 @@ describe('Overview', () => {
     const { lastFrame, stdin } = render(
       <Overview
         analysisService={fakeAnalysisService()}
+        warriorSource={fakeWarriorSource()}
         largeFileThresholdKB={50}
         onBack={() => {
           left += 1
@@ -111,7 +118,7 @@ describe('Overview', () => {
 
     stdin.write(KEY.enter)
     await settle()
-    expect(stripAnsi(lastFrame() ?? '')).toContain('Statistics for legend')
+    expect(stripAnsi(lastFrame() ?? '')).toContain('Holds 700 lines')
 
     stdin.write('q')
     await settle()
@@ -131,6 +138,7 @@ describe('Overview', () => {
             throw new Error('the scrolls are burnt')
           },
         })}
+        warriorSource={fakeWarriorSource()}
         largeFileThresholdKB={50}
         onBack={noop}
       />,
@@ -146,6 +154,7 @@ describe('Overview', () => {
         analysisService={fakeAnalysisService({
           getAuthorContributions: async () => [],
         })}
+        warriorSource={fakeWarriorSource()}
         largeFileThresholdKB={50}
         onBack={noop}
       />,

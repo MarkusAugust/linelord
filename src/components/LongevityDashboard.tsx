@@ -7,6 +7,7 @@ import {
   type AuthorSurvivalWithIdentity,
   LongevityService,
 } from '../services/LongevityService'
+import type { WarriorSource } from '../services/WarriorSource'
 import {
   formatAge,
   formatSpread,
@@ -14,10 +15,11 @@ import {
 } from '../utility/ageFormatting'
 import { useAsyncData } from '../utility/useAsyncData'
 import { HonestyNote } from './HonestyNote'
-import LongevityDetail from './LongevityDetail'
+import { WarriorDetail } from './WarriorDetail'
 
 type LongevityDashboardProps = {
   lineLordService: LineLordService | null
+  warriorSource: WarriorSource | null
   onBack: () => void
 }
 
@@ -161,6 +163,7 @@ function halfLifeColumn(
  */
 export default function LongevityDashboard({
   lineLordService,
+  warriorSource,
   onBack,
 }: LongevityDashboardProps) {
   const [sortKey, setSortKey] = useState<SortKey>('median')
@@ -237,16 +240,15 @@ export default function LongevityDashboard({
     if (input === 's' && historyState.kind === 'current') setSortKey('survival')
   })
 
-  if (inDetail && chosen && lineLordService) {
+  if (inDetail && chosen && warriorSource) {
     return (
-      <LongevityDetail
-        lineLordService={lineLordService}
-        warrior={chosen}
-        survival={
-          historyState.kind === 'current'
-            ? survival.get(chosen.authorId)
-            : undefined
-        }
+      <WarriorDetail
+        source={warriorSource}
+        warrior={{
+          authorId: chosen.authorId,
+          name: chosen.name,
+          email: chosen.email,
+        }}
         onBack={() => setInDetail(false)}
       />
     )
