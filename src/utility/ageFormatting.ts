@@ -1,4 +1,4 @@
-import type { AgeHistogram } from '../services/LongevityService'
+import type { AgeHistogram } from '../core/longevity'
 
 /**
  * Turning ages into something readable at a glance.

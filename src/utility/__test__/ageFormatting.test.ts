@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import type { AgeHistogram } from '../../services/LongevityService'
+import type { AgeHistogram } from '../../core/longevity'
 import { formatAge, formatSpread, renderAgeSparkline } from '../ageFormatting'
 
 const EMPTY: AgeHistogram = {

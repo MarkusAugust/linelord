@@ -1,4 +1,4 @@
-import type { SurvivalPoint } from '../services/LongevityService'
+import type { SurvivalPoint } from '../core/survival'
 
 /**
  * Drawing a survival curve in a terminal.

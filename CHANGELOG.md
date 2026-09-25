@@ -25,6 +25,13 @@ because the earlier answer was wrong.
   by functions in the core, and tested on values rather than on a seeded
   database. The screens read the analysis once; nothing on them waits on a
   query any more. Same numbers, same order.
+- **The age of the code, as plain functions.** Median, mean, percentiles,
+  the histogram, the oldest and newest line, the files where the oldest code
+  sits, and the survival figures are now computed from the loaded analysis
+  and history by functions in the core, with `now` handed in. The longevity
+  screen draws from values and no longer waits on a query. Nearest-rank
+  medians, bucket edges and tie-breaks are exactly as they were, and the
+  tests say so on values rather than on a seeded database.
 
 ## [0.11.0] — 2026-09-25
 

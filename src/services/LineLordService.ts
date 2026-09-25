@@ -10,8 +10,13 @@ import {
   createDatabase,
   type LineLordDatabase,
 } from '../adapters/sqlite/database'
-import { readAllMeta, writeMeta } from '../adapters/sqlite/meta'
+import {
+  HISTORY_HEAD_KEY,
+  readAllMeta,
+  writeMeta,
+} from '../adapters/sqlite/meta'
 import { createSqliteStore } from '../adapters/sqlite/store'
+import type { HistoryReading } from '../core/longevity'
 import type { AnalysisData } from '../core/model'
 import { wasAnalysed } from '../core/ownership'
 import { rankAuthors } from '../core/ranking'
@@ -108,6 +113,11 @@ export class LineLordService {
   private store: AnalysisStore
   /** The analysis as values, loaded once initialization is complete. */
   private analysis: AnalysisData | null = null
+  /** The history as values, and which revision it claims to describe. */
+  private historyReading: HistoryReading = {
+    history: { snapshots: [], cohortLines: [] },
+    describes: null,
+  }
   private initialized = false
   private currentRepoPath: string
   private useCache: boolean
@@ -265,6 +275,7 @@ export class LineLordService {
         await this.gitService.describeAnalysisWithoutRunning()
         this.identityMerges = await this.collectIdentityMerges()
         this.analysis = await this.store.loadAnalysis()
+        this.historyReading = await this.readHistory()
         this.initialized = true
         return
       }
@@ -301,6 +312,7 @@ export class LineLordService {
         rankAuthors(await this.store.loadAnalysis()),
       )
       this.analysis = await this.store.loadAnalysis()
+      this.historyReading = await this.readHistory()
 
       if (cachePath && headSha) {
         await this.recordFingerprint(root, headSha)
@@ -536,10 +548,25 @@ export class LineLordService {
         maxSnapshots: this.history.maxSnapshots,
       }).analyse(onProgress)
       this.historyRun = run
+      this.historyReading = await this.readHistory()
       return run
     } finally {
       lock?.release()
     }
+  }
+
+  /** What the store holds of the history, and which revision it says it is about. */
+  private async readHistory(): Promise<HistoryReading> {
+    const meta = await this.store.readMeta()
+    return {
+      history: await this.store.loadHistory(),
+      describes: meta[HISTORY_HEAD_KEY] ?? null,
+    }
+  }
+
+  /** The history as values, for the core's functions to answer questions over. */
+  getHistory(): HistoryReading {
+    return this.historyReading
   }
 
   /**

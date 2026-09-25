@@ -1,6 +1,6 @@
 import { Box, Text, useInput } from 'ink'
 import pc from 'picocolors'
-import type { AuthorSurvivalWithIdentity } from '../services/LongevityService'
+import type { AuthorSurvivalWithIdentity } from '../core/longevity'
 import type { WarriorSource } from '../services/WarriorSource'
 import { formatAge, HISTOGRAM_BUCKETS } from '../utility/ageFormatting'
 import { renderSimplePercentageBar } from '../utility/simplePercentageBar'
