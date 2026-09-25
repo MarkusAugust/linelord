@@ -1,16 +1,9 @@
-import { afterEach, describe, expect, it } from 'bun:test'
-import {
-  createTestRepo,
-  type TestRepo,
-} from '../../__test__/helpers/createTestRepo'
+import { describe, expect, it } from 'bun:test'
 import {
   analysablePathsAtRevision,
-  blameFileAtRevision,
   cohortMonth,
   countBlame,
   countKey,
-  listFilesAtRevision,
-  listTextFilesAtRevision,
   readCountKey,
 } from '../revisionBlame'
 
@@ -23,54 +16,7 @@ import {
  * beside it.
  */
 
-const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
-
-describe('reading a tree at a revision', () => {
-  let repo: TestRepo | undefined
-
-  afterEach(async () => {
-    await repo?.cleanup()
-    repo = undefined
-  })
-
-  it('lists what was there then, not what is there now', async () => {
-    repo = await createTestRepo()
-    const first = await repo.commit({
-      message: 'the old shape',
-      author: GORVEK,
-      write: { 'kept.ts': 'a\n', 'removed.ts': 'b\n' },
-    })
-    await repo.commit({
-      message: 'the new shape',
-      author: GORVEK,
-      remove: ['removed.ts'],
-      write: { 'added.ts': 'c\n' },
-    })
-
-    const then = await listFilesAtRevision(repo.path, first)
-    const now = await listFilesAtRevision(repo.path, await repo.head())
-
-    expect(then.map((f) => f.path).sort()).toEqual(['kept.ts', 'removed.ts'])
-    expect(now.map((f) => f.path).sort()).toEqual(['added.ts', 'kept.ts'])
-  })
-
-  it('tells text from binary at that revision', async () => {
-    repo = await createTestRepo()
-    await repo.commit({
-      message: 'one of each',
-      author: GORVEK,
-      write: {
-        'code.ts': 'const a = 1\n',
-        'blob.bin': new Uint8Array([0, 1, 2, 0, 3]),
-      },
-    })
-
-    const text = await listTextFilesAtRevision(repo.path, await repo.head())
-
-    expect(text.has('code.ts')).toBe(true)
-    expect(text.has('blob.bin')).toBe(false)
-  })
-
+describe('the rules a revision is read under', () => {
   it('applies the same three rules the present is analysed under', async () => {
     const files = [
       { path: 'src/code.ts', size: 100 },
@@ -86,26 +32,6 @@ describe('reading a tree at a revision', () => {
       'src/code.ts',
       'src/empty.ts',
     ])
-  })
-
-  it('blames the file as it stood at that revision', async () => {
-    repo = await createTestRepo()
-    const first = await repo.commit({
-      message: 'two lines',
-      author: GORVEK,
-      date: new Date('2024-05-06T00:00:00Z'),
-      write: { 'f.ts': 'one\ntwo\n' },
-    })
-    await repo.commit({
-      message: 'three lines',
-      author: GORVEK,
-      date: new Date('2025-05-06T00:00:00Z'),
-      write: { 'f.ts': 'one\ntwo\nthree\n' },
-    })
-
-    const then = await blameFileAtRevision(repo.path, first, 'f.ts')
-
-    expect(then).toHaveLength(2)
   })
 })
 

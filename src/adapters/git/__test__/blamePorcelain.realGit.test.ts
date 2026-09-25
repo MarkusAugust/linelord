@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import {
   createTestRepo,
   type TestRepo,
-} from '../../__test__/helpers/createTestRepo'
+} from '../../../__test__/helpers/createTestRepo'
 import { parseBlamePorcelain } from '../blamePorcelain'
 
 /**

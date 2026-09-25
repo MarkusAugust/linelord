@@ -1,3 +1,4 @@
+import { createGit, findRepositoryRoot } from '../adapters/git/spawnGit'
 import { resolveCachePath } from '../adapters/sqlite/cacheLocation'
 import {
   acquireCacheLock,
@@ -26,13 +27,8 @@ import type { HistoryReading } from '../core/longevity'
 import type { AnalysisData } from '../core/model'
 import { wasAnalysed } from '../core/ownership'
 import { rankAuthors } from '../core/ranking'
+import type { GitPort } from '../ports/git'
 import type { AnalysisStore } from '../ports/storage'
-import {
-  findRepositoryRoot,
-  isAncestor,
-  pathsTouchedBetween,
-  resolveHead,
-} from '../utility/gitRepository'
 import { type IgnoreRevs, resolveIgnoreRevs } from '../utility/ignoreRevs'
 import {
   type AuthorPolicy,
@@ -159,6 +155,7 @@ export class LineLordService {
       this.db,
       this.largeFileThresholdBytes,
       options.concurrency,
+      createGit(repoPath),
     )
     this.store = createSqliteStore(this.db)
   }
@@ -176,6 +173,7 @@ export class LineLordService {
       db,
       this.largeFileThresholdBytes,
       this.concurrency,
+      createGit(repoPath),
     )
     this.store = createSqliteStore(db)
   }
@@ -254,7 +252,8 @@ export class LineLordService {
           lookup.found ? lookup.root : null,
         )) ?? this.currentRepoPath
       const cachePath = this.openCache(root)
-      const headSha = await resolveHead(root)
+      const git = createGit(root)
+      const headSha = await git.resolveHead()
 
       // Before the cache decision, because which commits are being looked
       // past is part of what a stored analysis is an answer to; and before any
@@ -266,7 +265,7 @@ export class LineLordService {
       )
       this.gitService.lookPast(this.ignoredRevisions)
 
-      const decision = await this.decideWhatToDo(root, headSha)
+      const decision = await this.decideWhatToDo(root, headSha, git)
       this.cacheStatus = { ...decision.status, path: cachePath }
 
       if (decision.plan === 'reuse') {
@@ -350,6 +349,7 @@ export class LineLordService {
   private async decideWhatToDo(
     root: string,
     headSha: string | null,
+    git: GitPort,
   ): Promise<
     | { plan: 'reuse'; status: CacheStatus }
     | { plan: 'full'; status: CacheStatus }
@@ -409,7 +409,7 @@ export class LineLordService {
 
     // The revision moved. Only forwards can be updated: a rebase, a force-push
     // or a branch switch leaves no way to tell what survived.
-    const ancestry = await isAncestor(root, decision.storedHeadSha, headSha)
+    const ancestry = await git.isAncestor(decision.storedHeadSha, headSha)
     if (ancestry !== true) {
       // Two different situations, and the message should not assert the wrong
       // one. Either history genuinely moved sideways, or git could not answer
@@ -423,8 +423,7 @@ export class LineLordService {
     }
 
     try {
-      const touched = await pathsTouchedBetween(
-        root,
+      const touched = await git.pathsTouchedBetween(
         decision.storedHeadSha,
         headSha,
       )

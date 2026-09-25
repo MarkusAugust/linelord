@@ -5,6 +5,7 @@ import { render } from 'ink'
 import meow from 'meow'
 import React from 'react'
 import App from './App'
+import { findRepositoryRoot } from './adapters/git/spawnGit'
 import { resolveCachePath } from './adapters/sqlite/cacheLocation'
 import {
   removeAllCaches,
@@ -21,7 +22,6 @@ import {
   validateSnapshotInterval,
   validateThresholdKB,
 } from './utility/cliValidation'
-import { findRepositoryRoot } from './utility/gitRepository'
 import { writeMailmap } from './utility/mailmap'
 
 const cli = meow(CLI_HELP, {

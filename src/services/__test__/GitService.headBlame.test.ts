@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { readFileSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { createGit } from '../../adapters/git/spawnGit'
 import { createDatabase } from '../../adapters/sqlite/database'
 import { authors, blameLines, files } from '../../adapters/sqlite/schema'
+import type { GitPort } from '../../ports/git'
 import { GitService } from '../GitService'
 
 const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
@@ -258,18 +259,43 @@ describe('GitService - the whole run is pinned to one revision', () => {
   it('passes a resolved commit to git, never the symbolic ref', async () => {
     // The race this guards against -- HEAD moving partway through a run that
     // takes minutes on a large repository -- cannot be triggered
-    // deterministically from a test, so the guard is on the source instead.
-    // Blame runs once per file, so a symbolic ref could have straddled two
-    // revisions inside a single analysis.
-    const source = readFileSync(
-      join(import.meta.dir, '..', 'GitService.ts'),
-      'utf8',
-    )
+    // deterministically from a test, so every revision handed to git is
+    // recorded instead. Blame runs once per file, so a symbolic ref could
+    // have straddled two revisions inside a single analysis.
+    repo = await createTestRepo()
+    const head = await repo.commit({
+      message: 'first',
+      author: GORVEK,
+      write: { 'a.ts': 'const a = 1\n', 'src/b.ts': 'const b = 2\n' },
+    })
 
-    // Resolving HEAD once is the point; passing it onward is not.
-    expect(source).toContain('git rev-parse HEAD')
-    expect(source).not.toMatch(/'ls-tree',[\s\S]{0,80}'HEAD'/)
-    expect(source).not.toMatch(/'blame',[\s\S]{0,80}'HEAD'/)
-    expect(source).toContain('this.analysedRevision()')
+    const real = createGit(repo.path)
+    const revisions: string[] = []
+    const recording: GitPort = {
+      ...real,
+      listTree: (revision) => {
+        revisions.push(revision)
+        return real.listTree(revision)
+      },
+      listTextPaths: (revision) => {
+        revisions.push(revision)
+        return real.listTextPaths(revision)
+      },
+      blame: (revision, path, ignored) => {
+        revisions.push(revision)
+        return real.blame(revision, path, ignored)
+      },
+    }
+
+    await new GitService(
+      repo.path,
+      createDatabase(),
+      50 * 1024,
+      12,
+      recording,
+    ).initialize()
+
+    expect(revisions.length).toBeGreaterThan(0)
+    expect(new Set(revisions)).toEqual(new Set([head]))
   })
 })

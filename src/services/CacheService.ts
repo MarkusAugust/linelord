@@ -2,12 +2,12 @@ import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { SCHEMA_VERSION } from '../adapters/sqlite/database'
+import { BLAME_OPTIONS } from '../ports/git'
 import {
   ignoredFileExtensions,
   ignoredFilePatterns,
 } from '../resources/ignoreFiles'
 import { ANALYSIS_VERSION } from './analysisVersion'
-import { BLAME_OPTIONS } from './GitService'
 
 /**
  * Whether a stored analysis may be reused, and if not, why not.

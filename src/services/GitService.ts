@@ -1,21 +1,14 @@
-import { exec, spawn } from 'node:child_process'
 import path from 'node:path'
-import { promisify } from 'node:util'
 import { eq, sql } from 'drizzle-orm'
+import { createGit } from '../adapters/git/spawnGit'
 import type { LineLordDatabase } from '../adapters/sqlite/database'
 import { authors, blameLines, files } from '../adapters/sqlite/schema'
+import type { GitPort, TreeEntry } from '../ports/git'
 import {
   ignoredFileExtensions,
   isIgnoredByPattern,
 } from '../resources/ignoreFiles'
-import {
-  type IgnoreRevs,
-  ignoreRevArguments,
-  type UnresolvedIgnoreRev,
-} from '../utility/ignoreRevs'
-import { parseBlamePorcelain } from './blamePorcelain'
-
-const execAsync = promisify(exec)
+import type { IgnoreRevs, UnresolvedIgnoreRev } from '../utility/ignoreRevs'
 
 /** A commit hash of all zeroes is git's marker for a line that is not committed. */
 const UNCOMMITTED_SHA = /^0+$/
@@ -34,12 +27,6 @@ export interface AnalysisContext {
   ignoreRevSources: { file: boolean; flag: boolean }
   /** Entries that name no commit here, with where each was named. */
   unresolvedIgnoreRevs: UnresolvedIgnoreRev[]
-}
-
-/** One blob in the HEAD tree: the path it is stored under, and its size there. */
-interface HeadFile {
-  path: string
-  size: number
 }
 
 /**
@@ -69,21 +56,6 @@ type BlameLineInsert = {
   commitHash: string | null
   commitTimestamp: number | null
 }
-
-/**
- * The options every blame invocation uses, apart from the revision and path.
- *
- * Exported so the cache fingerprint can hash what is actually run rather than
- * a copy of it. Adding `-M` or `-C` here changes who owns which line, and a
- * cache built before the change must not survive it -- which happens on its
- * own as long as this stays the single source of the arguments.
- *
- * `--porcelain` rather than `--line-porcelain`: the compact form writes the
- * commit header once per commit instead of once per line, which is about
- * three quarters less output to read and parse on this repository. The two
- * are the same answer, and there is a test over real git output that says so.
- */
-export const BLAME_OPTIONS = ['-w', '--porcelain'] as const
 
 /**
  * Files blamed at once by default.
@@ -160,10 +132,12 @@ export class GitService {
   private failures: AnalysisFailure[] = []
 
   constructor(
-    private repoPath: string,
+    repoPath: string,
     private db: LineLordDatabase,
     private largeFileThresholdBytes: number = 50 * 1024,
     concurrency: number = DEFAULT_CONCURRENCY,
+    /** How git is reached. Injected so a test can answer for it. */
+    private git: GitPort = createGit(repoPath),
   ) {
     this.concurrency = normaliseConcurrency(concurrency)
   }
@@ -281,7 +255,7 @@ export class GitService {
    * incremental update exists to keep.
    */
   private async reconcileFiles(
-    headFiles: HeadFile[],
+    headFiles: TreeEntry[],
     textPaths: Set<string>,
     onProgress?: (current: number, total: number, message: string) => void,
   ): Promise<string[]> {
@@ -470,7 +444,7 @@ export class GitService {
    * unreadable file as both binary and ignored, hiding it with no trace.
    */
   private classifyFile(
-    file: HeadFile,
+    file: TreeEntry,
     textPaths: Set<string>,
   ): {
     isBinary: boolean
@@ -511,14 +485,22 @@ export class GitService {
 
   private async processFileBlame(filePath: string) {
     try {
-      const stdout = await this.execGitBlame(filePath)
+      const entries = await this.git.blame(
+        // The resolved SHA rather than the symbolic ref, so that every file
+        // in the run is blamed against the same tree even if HEAD moves
+        // meanwhile -- this runs once per file, so a symbolic ref could
+        // straddle revisions within a single analysis.
+        this.analysedRevision(),
+        filePath,
+        this.ignoredRevisions,
+      )
 
       const fileId = this.fileIdCache.get(filePath)
       if (!fileId) return
 
       const blameData: BlameLineInsert[] = []
 
-      for (const entry of parseBlamePorcelain(stdout)) {
+      for (const entry of entries) {
         // Blank and whitespace-only lines belong to nobody. They are still
         // lines of the file, which is why the number comes from git and not
         // from counting the ones kept.
@@ -624,129 +606,15 @@ export class GitService {
     return headSha
   }
 
-  /**
-   * Run git and return its stdout, streamed rather than buffered through a
-   * shell. `ls-tree` on a large repository can exceed exec's buffer, and a
-   * shell would mangle awkward paths on the way back regardless.
-   *
-   * `successCodes` exists because not every non-zero exit is a failure: git
-   * grep reports "nothing matched" as exit 1, which for this caller is an
-   * answer rather than an error.
-   */
-  private runGit(args: string[], successCodes = [0]): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const child = spawn('git', args, {
-        cwd: this.repoPath,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      })
-
-      const chunks: Buffer[] = []
-      let stderr = ''
-
-      child.stdout.on('data', (chunk) => chunks.push(chunk))
-      child.stderr.on('data', (chunk) => {
-        stderr += chunk.toString()
-      })
-      child.on('error', reject)
-      child.on('close', (code) => {
-        if (code !== null && successCodes.includes(code)) {
-          resolve(Buffer.concat(chunks).toString())
-        } else {
-          reject(
-            new Error(
-              `git ${args.join(' ')} failed with code ${code}: ${stderr.trim()}`,
-            ),
-          )
-        }
-      })
-    })
-  }
-
-  /**
-   * The files in HEAD, each with the size its blob has there.
-   *
-   * `git ls-files` lists the index, which is a different set of files. A file
-   * staged for deletion leaves the index while remaining part of HEAD, so it
-   * vanished from an analysis that claims to describe HEAD; a newly staged
-   * file appears in the index with no content in HEAD to blame. Enumerating
-   * HEAD directly settles both.
-   *
-   * -z separates records with NUL, so paths containing spaces, non-ASCII
-   * characters or newlines arrive intact rather than quoted or split. -l
-   * carries the blob size, which replaces a stat() per file against the
-   * working copy -- the wrong content to measure, and absent entirely for a
-   * file staged for deletion.
-   */
-  /**
-   * The paths git itself considers text at the given revision.
-   *
-   * Binary detection used to be extension matching against a fixed list, and
-   * it was wrong in both directions. A binary file with an unknown extension,
-   * or no extension at all, was blamed as text and contributed invented lines
-   * to a real author: a 3 KB blob produced thirteen of them. Meanwhile .svg
-   * sat on the list, so every SVG -- which is XML somebody wrote -- was thrown
-   * out as binary.
-   *
-   * git already makes this judgement, using the same rule it applies when
-   * deciding whether to print a diff, and it honours any override in
-   * .gitattributes. Asking it costs one command; on this repository, nine
-   * milliseconds.
-   */
+  /** The paths git itself considers text at the analysed revision. */
   private async listTextFiles(): Promise<Set<string>> {
-    const revision = this.analysedRevision()
-    // -I drops what git calls binary, -e '' matches every line of what
-    // remains, and -z keeps awkward paths intact on the way back.
-    const stdout = await this.runGit(
-      ['grep', '-I', '-z', '--name-only', '--full-name', '-e', '', revision],
-      // 1 means nothing matched. A repository holding only binary blobs, or
-      // only empty files, is an ordinary repository with no text in it -- not
-      // a reason to fail the analysis, which is what treating this as an
-      // error did. Anything above 1 is a real failure and still throws.
-      [0, 1],
-    )
-
-    const prefix = `${revision}:`
-    const paths = new Set<string>()
-    for (const record of stdout.split('\0')) {
-      if (record.startsWith(prefix)) {
-        paths.add(record.slice(prefix.length))
-      }
-    }
-    return paths
+    return this.git.listTextPaths(this.analysedRevision())
   }
 
-  private async listHeadFiles(): Promise<HeadFile[]> {
+  /** The files in the analysed revision, each with the size its blob has there. */
+  private async listHeadFiles(): Promise<TreeEntry[]> {
     if (this.analysisContext.headSha === null) return []
-
-    const stdout = await this.runGit([
-      'ls-tree',
-      '-r',
-      '-l',
-      '-z',
-      this.analysedRevision(),
-    ])
-    const entries: HeadFile[] = []
-
-    for (const record of stdout.split('\0')) {
-      if (!record) continue
-
-      // "<mode> <type> <sha> <size>\t<path>", and the path may contain
-      // anything at all, so split on the first tab rather than on whitespace.
-      const tab = record.indexOf('\t')
-      if (tab === -1) continue
-
-      const [, type, , rawSize] = record.slice(0, tab).split(/\s+/)
-      // Submodules appear as commit entries with no size; they hold no lines.
-      if (type !== 'blob') continue
-
-      const size = Number.parseInt(rawSize ?? '', 10)
-      entries.push({
-        path: record.slice(tab + 1),
-        size: Number.isNaN(size) ? 0 : size,
-      })
-    }
-
-    return entries
+    return this.git.listTree(this.analysedRevision())
   }
 
   /**
@@ -762,32 +630,14 @@ export class GitService {
   private async resolveAnalysisContext(): Promise<
     Pick<AnalysisContext, 'headSha' | 'uncommittedFileCount'>
   > {
-    let headSha: string | null = null
-    try {
-      const { stdout } = await execAsync('git rev-parse HEAD', {
-        cwd: this.repoPath,
-      })
-      headSha = stdout.trim() || null
-    } catch {
-      // A repository with no commits yet has no HEAD to resolve.
-      return { headSha: null, uncommittedFileCount: 0 }
+    const headSha = await this.git.resolveHead()
+    // A repository with no commits yet has no HEAD to resolve, and nothing
+    // to count against it.
+    if (headSha === null) return { headSha: null, uncommittedFileCount: 0 }
+    return {
+      headSha,
+      uncommittedFileCount: await this.git.countUncommittedFiles(),
     }
-
-    let uncommittedFileCount = 0
-    try {
-      const { stdout } = await execAsync(
-        'git status --porcelain -z --untracked-files=no',
-        {
-          cwd: this.repoPath,
-          maxBuffer: 50 * 1024 * 1024,
-        },
-      )
-      uncommittedFileCount = stdout.split('\0').filter(Boolean).length
-    } catch {
-      // Status is advisory only; failing to read it must not fail the analysis.
-    }
-
-    return { headSha, uncommittedFileCount }
   }
 
   /**
@@ -812,49 +662,6 @@ export class GitService {
   /** Files this run could not read. Empty when everything was analysed. */
   getFailures(): AnalysisFailure[] {
     return [...this.failures]
-  }
-
-  private async execGitBlame(filePath: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const child = spawn(
-        'git',
-        // A commit, not the working copy: blaming the working copy attributes
-        // unsaved edits to the pseudo-author "Not Committed Yet". The resolved
-        // SHA rather than the symbolic ref, so that every file in the run is
-        // blamed against the same tree even if HEAD moves meanwhile -- this
-        // runs once per file, so a symbolic ref could straddle revisions
-        // within a single analysis. `--` keeps a path that starts with a dash
-        // from being read as an option.
-        [
-          'blame',
-          ...BLAME_OPTIONS,
-          ...ignoreRevArguments(this.ignoredRevisions),
-          this.analysedRevision(),
-          '--',
-          filePath,
-        ],
-        {
-          cwd: this.repoPath,
-          stdio: ['pipe', 'pipe', 'pipe'],
-        },
-      )
-
-      const chunks: Buffer[] = []
-      let stderr = ''
-
-      child.stdout.on('data', (data) => chunks.push(data))
-      child.stderr.on('data', (data) => {
-        stderr += data.toString()
-      })
-      child.on('close', (code) => {
-        if (code === 0) {
-          resolve(Buffer.concat(chunks).toString())
-        } else {
-          reject(new Error(`git blame failed with code ${code}: ${stderr}`))
-        }
-      })
-      child.on('error', reject)
-    })
   }
 
   private async getOrCreateAuthor(
