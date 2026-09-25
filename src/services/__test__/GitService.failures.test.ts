@@ -2,15 +2,17 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import { readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { eq, sql } from 'drizzle-orm'
+import { analyseInto } from '../../__test__/helpers/analyseInto'
 import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { createGit } from '../../adapters/git/spawnGit'
 import { createDatabase } from '../../adapters/sqlite/database'
 import { blameLines, files } from '../../adapters/sqlite/schema'
 import { createSqliteStore } from '../../adapters/sqlite/store'
+import { updateAnalysis } from '../../core/analyse'
 import { repositoryStats } from '../../core/ownership'
-import { GitService } from '../GitService'
 
 /** A file long enough to have overrun SQLite's parameter limit in one insert. */
 function longFile(lines: number): string {
@@ -39,15 +41,16 @@ describe('GitService - long files are stored whole', () => {
     })
 
     const db = createDatabase()
-    const gitService = new GitService(repo.path, db, 50 * 1024 * 1024)
-    await gitService.initialize()
+    const outcome = await analyseInto(repo.path, db, {
+      thresholdBytes: 50 * 1024 * 1024,
+    })
 
     const stored = await db.select({ id: blameLines.id }).from(blameLines)
     const [row] = await db.select({ total: files.totalLines }).from(files)
 
     expect(stored).toHaveLength(20000)
     expect(row?.total).toBe(20000)
-    expect(gitService.getFailures()).toEqual([])
+    expect(outcome.failures).toEqual([])
   })
 
   it('keeps the stored line count and the stored lines in agreement', async () => {
@@ -58,7 +61,7 @@ describe('GitService - long files are stored whole', () => {
     })
 
     const db = createDatabase()
-    await new GitService(repo.path, db, 50 * 1024 * 1024).initialize()
+    await analyseInto(repo.path, db, { thresholdBytes: 50 * 1024 * 1024 })
 
     // The rows and the count on the file row are written in one transaction,
     // so a file can never claim a total it does not have.
@@ -104,7 +107,7 @@ describe('GitService - failures are collected, not printed', () => {
     console.log = (...args) => calls.push(`log: ${String(args[0])}`)
 
     try {
-      await new GitService(repo.path, createDatabase()).initialize()
+      await analyseInto(repo.path, createDatabase())
     } finally {
       Object.assign(console, original)
     }
@@ -135,14 +138,13 @@ describe('GitService - failures are collected, not printed', () => {
     console.error = (...args) => calls.push(String(args[0]))
 
     const db = createDatabase()
-    const gitService = new GitService(repo.path, db)
+    let failures: Array<{ path: string; error: string }> = []
     try {
-      await gitService.initialize()
+      failures = (await analyseInto(repo.path, db)).failures
     } finally {
       Object.assign(console, original)
     }
 
-    const failures = gitService.getFailures()
     expect(failures.map((failure) => failure.path)).toEqual(['src/broken.ts'])
     expect(failures[0]?.error).toBeTruthy()
     // The point of collecting them: nothing was printed into the UI.
@@ -175,15 +177,13 @@ describe('GitService - failures are collected, not printed', () => {
     const rescued = await readFile(objectPath)
     await rm(objectPath)
 
-    const gitService = new GitService(repo.path, createDatabase())
-    await gitService.initialize()
-    expect(gitService.getFailures()).toHaveLength(1)
+    const db = createDatabase()
+    expect((await analyseInto(repo.path, db)).failures).toHaveLength(1)
 
     // Put the object back and run again: the earlier failure must not linger.
     await writeFile(objectPath, rescued)
-    await gitService.initialize()
 
-    expect(gitService.getFailures()).toEqual([])
+    expect((await analyseInto(repo.path, db)).failures).toEqual([])
   })
 })
 
@@ -214,8 +214,7 @@ describe('GitService - a failed file is not counted as analysed', () => {
     )
 
     const db = createDatabase()
-    const gitService = new GitService(repo.path, db)
-    await gitService.initialize()
+    const outcome = await analyseInto(repo.path, db)
 
     const stats = repositoryStats(await createSqliteStore(db).loadAnalysis())
 
@@ -224,7 +223,7 @@ describe('GitService - a failed file is not counted as analysed', () => {
     expect(stats.totalFailedFiles).toBe(1)
     // The count the UI warns about and the count the statistics exclude are
     // the same number.
-    expect(stats.totalFailedFiles).toBe(gitService.getFailures().length)
+    expect(stats.totalFailedFiles).toBe(outcome.failures.length)
     // And the unread file contributes no lines either.
     expect(stats.totalLines).toBe(1)
   })
@@ -238,11 +237,13 @@ describe('GitService - a partly written row is repaired, not left alone', () => 
     repo = undefined
   })
 
-  it('rewrites a file row whose flags are null rather than false', async () => {
+  it('reads a file row whose flags are null as one that is not binary', async () => {
     // The two are not the same in SQLite: `NULL = false` evaluates to NULL,
-    // not true, so a row left that way matches none of the category queries.
-    // It would disappear from analysed, binary, ignored and oversized alike,
-    // and the categories would stop adding up to the number of files.
+    // not true, and a row left that way used to match none of the category
+    // queries -- it disappeared from analysed, binary, ignored and oversized
+    // alike, and the categories stopped adding up. The categories are now
+    // counted over the records the store hands out, and the store reads a
+    // null flag as the false the column's default means.
     repo = await createTestRepo()
     await repo.commit({
       message: 'two files',
@@ -250,22 +251,23 @@ describe('GitService - a partly written row is repaired, not left alone', () => 
     })
 
     const db = createDatabase()
-    const gitService = new GitService(repo.path, db)
-    await gitService.initialize()
+    await analyseInto(repo.path, db)
 
     db.run(sql`UPDATE files SET is_binary = NULL WHERE path = 'a.ts'`)
 
     // Any later run reconciles the file table, and must notice the difference.
-    await gitService.updateIncrementally(new Set(['b.ts']))
+    await updateAnalysis(
+      { git: createGit(repo.path), store: createSqliteStore(db) },
+      { thresholdBytes: 50 * 1024 },
+      new Set(['b.ts']),
+    )
 
-    const [row] = await db
-      .select({ isBinary: files.isBinary })
-      .from(files)
-      .where(eq(files.path, 'a.ts'))
+    const data = await createSqliteStore(db).loadAnalysis()
+    expect(data.files.find((file) => file.path === 'a.ts')?.isBinary).toBe(
+      false,
+    )
 
-    expect(row?.isBinary).toBe(false)
-
-    const stats = repositoryStats(await createSqliteStore(db).loadAnalysis())
+    const stats = repositoryStats(data)
     expect(
       stats.totalAnalyzedFiles +
         stats.totalBinaryFiles +

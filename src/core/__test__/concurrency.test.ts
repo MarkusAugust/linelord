@@ -3,7 +3,7 @@ import {
   DEFAULT_CONCURRENCY,
   MAX_CONCURRENCY,
   normaliseConcurrency,
-} from '../GitService'
+} from '../concurrency'
 
 /**
  * How many files may be blamed at once, whatever the caller passes.

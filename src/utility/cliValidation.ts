@@ -1,5 +1,5 @@
 import { homedir } from 'node:os'
-import { MAX_CONCURRENCY } from '../services/GitService'
+import { MAX_CONCURRENCY } from '../core/concurrency'
 
 /** Expand a leading `~` to the user's home directory. */
 export function expandTilde(filepath: string): string {
