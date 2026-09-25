@@ -1,10 +1,10 @@
-import type { AnalysisData } from '../../core/model'
-import type { AuthorContribution, FileContribution } from '../../core/ownership'
 import type {
   AuthorFileLongevity,
   AuthorLongevity,
   AuthorSurvivalWithIdentity,
-} from '../../services/LongevityService'
+} from '../../core/longevity'
+import type { AnalysisData } from '../../core/model'
+import type { AuthorContribution, FileContribution } from '../../core/ownership'
 import type { WarriorSource } from '../../services/WarriorSource'
 
 /**

@@ -1,26 +1,33 @@
 import { Box, Text, useInput } from 'ink'
 import pc from 'picocolors'
-import { useState } from 'react'
-import type { LineLordService } from '../services/LineLordService'
+import { useMemo, useState } from 'react'
 import {
   type AuthorLongevity,
   type AuthorSurvivalWithIdentity,
-  LongevityService,
-} from '../services/LongevityService'
+  ageOfAuthors,
+  ageOfRepository,
+  type HistoryReading,
+  survivalByAuthor,
+} from '../core/longevity'
+import type { AnalysisData } from '../core/model'
 import type { WarriorSource } from '../services/WarriorSource'
 import {
   formatAge,
   formatSpread,
   renderAgeSparkline,
 } from '../utility/ageFormatting'
-import { useAsyncData } from '../utility/useAsyncData'
 import { HonestyNote } from './HonestyNote'
 import { WarriorDetail } from './WarriorDetail'
 
 type LongevityDashboardProps = {
-  lineLordService: LineLordService | null
-  warriorSource: WarriorSource | null
+  analysis: AnalysisData
+  history: HistoryReading
+  /** The revision the analysis describes, which a history must match to be drawn. */
+  analysedRevision: string | null
+  warriorSource: WarriorSource
   onBack: () => void
+  /** The instant ages are measured against. Injected so a test can fix it. */
+  now?: Date
 }
 
 type SortKey = 'median' | 'mean' | 'lines' | 'halflife' | 'survival'
@@ -34,9 +41,6 @@ const SORT_LABELS: Record<SortKey, string> = {
 }
 
 const WARRIORS_SHOWN = 10
-
-/** One empty map, so that "nothing loaded yet" is not a new object every render. */
-const EMPTY_SURVIVAL = new Map<number, AuthorSurvivalWithIdentity>()
 
 /** What the screen knows about the stored history, if anything. */
 type HistoryState =
@@ -160,56 +164,50 @@ function halfLifeColumn(
  * single ancient file somebody happens to still own. The caveats below the
  * table are not decoration: the numbers are easy to read as a judgement of
  * people, and they are not one.
+ *
+ * Drawn from the analysis and the history as values: nothing here waits.
  */
 export default function LongevityDashboard({
-  lineLordService,
+  analysis,
+  history,
+  analysedRevision,
   warriorSource,
   onBack,
+  now,
 }: LongevityDashboardProps) {
   const [sortKey, setSortKey] = useState<SortKey>('median')
   const [selected, setSelected] = useState(0)
   const [inDetail, setInDetail] = useState(false)
 
-  const loaded = useAsyncData(async () => {
-    if (!lineLordService?.isInitialized()) {
-      // Saying so is what keeps the loading message from staying on screen
-      // for good: there is no second attempt, and nothing else would ever
-      // clear it.
-      throw new Error('LineLord service is unavailable or not initialized')
-    }
-    const service = new LongevityService(lineLordService.getDatabase())
-    const [warriors, repository, bySurvival] = await Promise.all([
-      service.forAuthors(),
-      service.forRepository(),
-      service.survivalByAuthor(),
-    ])
+  const measuredAt = useMemo(() => now ?? new Date(), [now])
+  const warriors = useMemo(
+    () => ageOfAuthors(analysis, measuredAt),
+    [analysis, measuredAt],
+  )
+  const repository = useMemo(
+    () => ageOfRepository(analysis, measuredAt),
+    [analysis, measuredAt],
+  )
+  const survival = useMemo(
+    () =>
+      new Map(
+        survivalByAuthor(history.history, analysis.authors).map((one) => [
+          one.authorId,
+          one,
+        ]),
+      ),
+    [history, analysis],
+  )
 
-    // A history outlives the analysis that produced it. Saying which
-    // revision it describes is the difference between a curve about this
-    // repository and a curve about the one it used to be.
-    const describes = service.historyDescribes()
-    const analysed = lineLordService.getAnalysisContext().headSha
-    const historyState: HistoryState =
-      describes === null
-        ? { kind: 'absent' }
-        : describes === analysed
-          ? { kind: 'current' }
-          : { kind: 'stale', describes }
-
-    return {
-      warriors,
-      repository,
-      survival: new Map(bySurvival.map((one) => [one.authorId, one])),
-      historyState,
-    }
-  }, [lineLordService])
-
-  const warriors = loaded.status === 'ready' ? loaded.data.warriors : []
-  const repository = loaded.status === 'ready' ? loaded.data.repository : null
-  const survival: Map<number, AuthorSurvivalWithIdentity> =
-    loaded.status === 'ready' ? loaded.data.survival : EMPTY_SURVIVAL
+  // A history outlives the analysis that produced it. Saying which revision
+  // it describes is the difference between a curve about this repository
+  // and a curve about the one it used to be.
   const historyState: HistoryState =
-    loaded.status === 'ready' ? loaded.data.historyState : { kind: 'absent' }
+    history.describes === null
+      ? { kind: 'absent' }
+      : history.describes === analysedRevision
+        ? { kind: 'current' }
+        : { kind: 'stale', describes: history.describes }
 
   const current = historyState.kind === 'current'
   const shown = sortWarriors(
@@ -231,16 +229,14 @@ export default function LongevityDashboard({
     if (input === 'm') setSortKey('median')
     if (input === 'a') setSortKey('mean')
     if (input === 'l') setSortKey('lines')
-    // Only when there is a history to sort by: a key that silently does
-    // nothing is worse than one that is not offered.
     // Only a history about the revision in front of us. A stale one is
     // explicitly not drawn, and ranking by data the screen says it will not
     // show is the same claim by another route.
-    if (input === 'h' && historyState.kind === 'current') setSortKey('halflife')
-    if (input === 's' && historyState.kind === 'current') setSortKey('survival')
+    if (input === 'h' && current) setSortKey('halflife')
+    if (input === 's' && current) setSortKey('survival')
   })
 
-  if (inDetail && chosen && warriorSource) {
+  if (inDetail && chosen) {
     return (
       <WarriorDetail
         source={warriorSource}
@@ -254,21 +250,11 @@ export default function LongevityDashboard({
     )
   }
 
-  if (loaded.status === 'loading') {
-    return <Text color="gray">Reading the age of the stones…</Text>
-  }
-
-  if (loaded.status === 'failed') {
-    return (
-      <Text color="red">Could not measure the code's age: {loaded.error}</Text>
-    )
-  }
-
   return (
     <Box flexDirection="column">
       <Text>{pc.bold(pc.green('⏳ Code Longevity'))}</Text>
 
-      {repository && repository.survivingLines > 0 && (
+      {repository.survivingLines > 0 && (
         <Box flexDirection="column" marginY={1}>
           <Text>
             The codebase is {pc.bold(formatAge(repository.medianAgeDays ?? 0))}{' '}
@@ -362,8 +348,8 @@ export default function LongevityDashboard({
       <Box marginTop={1}>
         <Text dimColor>
           Sorted by {SORT_LABELS[sortKey]} · m median · a mean · l lines
-          {historyState.kind === 'current' ? ' · h half-life · s survival' : ''}{' '}
-          · ↑↓ and Enter for one warrior · q to go back
+          {current ? ' · h half-life · s survival' : ''} · ↑↓ and Enter for one
+          warrior · q to go back
         </Text>
       </Box>
     </Box>

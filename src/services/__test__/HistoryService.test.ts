@@ -7,9 +7,10 @@ import {
 import { clearDatabase, createDatabase } from '../../adapters/sqlite/database'
 import { HISTORY_HEAD_KEY, readMeta } from '../../adapters/sqlite/meta'
 import { authors, cohortLines, snapshots } from '../../adapters/sqlite/schema'
+import { createSqliteStore } from '../../adapters/sqlite/store'
+import { survivalByAuthor } from '../../core/longevity'
 import { HistoryService } from '../HistoryService'
 import { LineLordService } from '../LineLordService'
-import { LongevityService } from '../LongevityService'
 
 /**
  * Walking the history, and the one thing that must be true about it.
@@ -527,10 +528,13 @@ describe('HistoryService', () => {
       thresholdBytes: THRESHOLD,
     }).analyse()
 
-    const longevity = new LongevityService(db)
-    expect(longevity.historyDescribes()).toBe(await repo.head())
+    const store = createSqliteStore(db)
+    expect((await store.readMeta())[HISTORY_HEAD_KEY]).toBe(await repo.head())
 
-    const survival = await longevity.survivalByAuthor()
+    const survival = survivalByAuthor(
+      await store.loadHistory(),
+      (await store.loadAnalysis()).authors,
+    )
     const gorvek = survival.find((one) => one.email === GORVEK.email)
     const nightshroud = survival.find((one) => one.email === NIGHTSHROUD.email)
 
@@ -553,10 +557,15 @@ describe('HistoryService', () => {
     const service = new LineLordService(repo.path, 50 * 1024)
     await service.initialize()
 
-    const longevity = new LongevityService(service.getDatabase())
+    const store = createSqliteStore(service.getDatabase())
 
-    expect(await longevity.survivalByAuthor()).toEqual([])
-    expect(longevity.historyDescribes()).toBe(null)
+    expect(
+      survivalByAuthor(
+        await store.loadHistory(),
+        (await store.loadAnalysis()).authors,
+      ),
+    ).toEqual([])
+    expect((await store.readMeta())[HISTORY_HEAD_KEY]).toBeUndefined()
   }, 120000)
 
   it('has nothing to walk in a repository with no commits', async () => {

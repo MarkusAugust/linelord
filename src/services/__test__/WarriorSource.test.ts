@@ -9,7 +9,7 @@ import {
   snapshots,
 } from '../../adapters/sqlite/schema'
 import { createSqliteStore } from '../../adapters/sqlite/store'
-import { LongevityService } from '../LongevityService'
+import { ageOfAuthors } from '../../core/longevity'
 import { warriorSourceFor } from '../WarriorSource'
 
 /**
@@ -104,9 +104,14 @@ async function seedHistory(db: Db, describes: string) {
 
 /** The source over a database, with the analysis loaded from it. */
 async function sourceFor(db: Db, analysedRevision: string | null) {
+  const store = createSqliteStore(db)
+  const data = await store.loadAnalysis()
   return warriorSourceFor({
-    data: await createSqliteStore(db).loadAnalysis(),
-    db,
+    data,
+    history: {
+      history: await store.loadHistory(),
+      describes: (await store.readMeta())[HISTORY_HEAD_KEY] ?? null,
+    },
     analysedRevision,
     now: NOW,
   })
@@ -143,7 +148,7 @@ describe('warriorSourceFor', () => {
     const source = await sourceFor(db, HEAD)
 
     const age = await source.age(GORVEK)
-    const [own] = await new LongevityService(db, NOW).forAuthors()
+    const [own] = ageOfAuthors(await createSqliteStore(db).loadAnalysis(), NOW)
     expect(age?.medianAgeDays).toBe(own?.medianAgeDays ?? Number.NaN)
     expect(age?.oldestLine?.path).toBe('src/old.ts')
     expect(age?.newestLine?.path).toBe('src/new.ts')

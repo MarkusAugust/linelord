@@ -12,6 +12,7 @@ import Menu, { type MenuOption } from './components/Menu'
 import { Overview } from './components/Overview'
 import RepoPathInput from './components/RepoPathInput'
 
+import type { HistoryReading } from './core/longevity'
 import type { SnapshotInterval } from './services/snapshotSelection'
 import { type WarriorSource, warriorSourceFor } from './services/WarriorSource'
 import { menuOptions } from './utility/menuOptions'
@@ -36,6 +37,12 @@ type AppProps = {
   concurrency?: number
   /** Walk the history as well, and how. */
   history?: { interval: SnapshotInterval; maxSnapshots: number }
+}
+
+/** Nothing walked, which is what a history looks like until --history is given. */
+const EMPTY_HISTORY: HistoryReading = {
+  history: { snapshots: [], cohortLines: [] },
+  describes: null,
 }
 
 /**
@@ -123,7 +130,7 @@ export default function App({
       isInitialized && lineLordService
         ? warriorSourceFor({
             data: lineLordService.getAnalysis(),
-            db: lineLordService.getDatabase(),
+            history: lineLordService.getHistory(),
             analysedRevision: lineLordService.getAnalysisContext().headSha,
           })
         : null,
@@ -387,9 +394,11 @@ export default function App({
         </Box>
       )}
 
-      {state === 'longevity' && (
+      {state === 'longevity' && analysis && warriorSource && (
         <LongevityDashboard
-          lineLordService={lineLordService}
+          analysis={analysis}
+          history={lineLordService?.getHistory() ?? EMPTY_HISTORY}
+          analysedRevision={analysisContext?.headSha ?? null}
           warriorSource={warriorSource}
           onBack={returnToMenu}
         />

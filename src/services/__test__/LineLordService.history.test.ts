@@ -11,7 +11,6 @@ import { acquireCacheLock } from '../../adapters/sqlite/cacheMaintenance'
 import { snapshots } from '../../adapters/sqlite/schema'
 import { findRepositoryRoot } from '../../utility/gitRepository'
 import { LineLordService } from '../LineLordService'
-import { LongevityService } from '../LongevityService'
 
 /**
  * Walking the history through the service the interface uses.
@@ -75,9 +74,7 @@ describe('gatherHistory', () => {
 
     expect(service.wantsHistory()).toBe(true)
     expect(run?.snapshots).toBe(1)
-    expect(new LongevityService(service.getDatabase()).historyDescribes()).toBe(
-      await repo.head(),
-    )
+    expect(service.getHistory().describes).toBe(await repo.head())
   }, 60000)
 
   it('reads the past under the threshold the present was read with', async () => {

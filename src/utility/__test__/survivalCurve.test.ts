@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import type { SurvivalPoint } from '../../services/LongevityService'
+import type { SurvivalPoint } from '../../core/survival'
 import { curveSpanDays, renderSurvivalCurve } from '../survivalCurve'
 
 const point = (ageDays: number, fractionAlive: number): SurvivalPoint => ({

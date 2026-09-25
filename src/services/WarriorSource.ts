@@ -1,4 +1,12 @@
-import type { LineLordDatabase } from '../adapters/sqlite/database'
+import {
+  type AuthorFileLongevity,
+  type AuthorLongevity,
+  type AuthorSurvivalWithIdentity,
+  ageOfAuthors,
+  filesByAge,
+  type HistoryReading,
+  survivalByAuthor,
+} from '../core/longevity'
 import type { AnalysisData } from '../core/model'
 import {
   type AuthorContribution,
@@ -6,20 +14,14 @@ import {
   type FileContribution,
   fileContributions,
 } from '../core/ownership'
-import {
-  type AuthorFileLongevity,
-  type AuthorLongevity,
-  type AuthorSurvivalWithIdentity,
-  LongevityService,
-} from './LongevityService'
 
 /**
  * Everything the warrior screen wants to know about one person.
  *
- * An interface rather than the two services themselves, so that the screen
- * can be drawn from fixed answers in a test, and so that the three screens
- * that open a warrior -- the overview, the longevity table and the rankings
- * -- hand over the same thing.
+ * An interface rather than the functions themselves, so that the screen can
+ * be drawn from fixed answers in a test, and so that the three screens that
+ * open a warrior -- the overview, the longevity table and the rankings --
+ * hand over the same thing.
  */
 export interface WarriorSource {
   /** Their share of the analysed revision, or null if they hold nothing in it. */
@@ -39,9 +41,9 @@ export interface WarriorSource {
 }
 
 export function warriorSourceFor(options: {
-  /** The analysis as values, which share and files are read off. */
+  /** The analysis as values, which everything here is read off. */
   data: AnalysisData
-  db: LineLordDatabase
+  history: HistoryReading
   /**
    * The revision the analysis describes, which the history must match. Null
    * when the analysis named none, and then no history can be about it.
@@ -49,7 +51,7 @@ export function warriorSourceFor(options: {
   analysedRevision: string | null
   now?: Date
 }): WarriorSource {
-  const longevity = new LongevityService(options.db, options.now)
+  const now = options.now ?? new Date()
 
   return {
     async share(authorId) {
@@ -64,23 +66,29 @@ export function warriorSourceFor(options: {
     },
 
     async age(authorId) {
-      const all = await longevity.forAuthors()
-      return all.find((one) => one.authorId === authorId) ?? null
+      return (
+        ageOfAuthors(options.data, now).find(
+          (one) => one.authorId === authorId,
+        ) ?? null
+      )
     },
 
-    oldestFiles(authorId) {
-      return longevity.filesForAuthor(authorId)
+    async oldestFiles(authorId) {
+      return filesByAge(options.data, authorId, now)
     },
 
     async survival(authorId) {
       if (
         options.analysedRevision === null ||
-        longevity.historyDescribes() !== options.analysedRevision
+        options.history.describes !== options.analysedRevision
       ) {
         return null
       }
-      const all = await longevity.survivalByAuthor()
-      return all.find((one) => one.authorId === authorId) ?? null
+      return (
+        survivalByAuthor(options.history.history, options.data.authors).find(
+          (one) => one.authorId === authorId,
+        ) ?? null
+      )
     },
   }
 }
