@@ -12,6 +12,14 @@ because the earlier answer was wrong.
 
 ### Changed
 
+- **The barbarian rankings are a table.** The champion sat in a box with
+  every metric spelled out, and everyone below got a line of seven emoji and
+  seven numbers with the key two screens further down — the same figures,
+  laid out so that only the first person's could be read. Every warrior is
+  now one row under named columns, the achievements are listed beneath, and
+  the legend turns each short column name into what it counts. ↑↓ and Enter
+  open a warrior, as on the other tables.
+
 - **One title per warrior.** The overview handed out titles by share of the
   surviving lines, and the barbarian rankings handed out a second set from
   the same word list by Gorvek score — so the same person was *legend* on one
