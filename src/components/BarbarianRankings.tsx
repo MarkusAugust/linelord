@@ -15,62 +15,94 @@ interface BarbarianRankingsProps {
 
 export const WARRIORS_SHOWN = 10
 
-/** Every line in the legend names what is actually counted, not what it is called. */
+// 2 + 2 + 1 + 14 + 8 + 8 + 7 × 6 = 77 columns, which is what an 80-column
+// terminal leaves after the layout's own margin. The name pays for it.
+const NAME_WIDTH = 14
+const SCORE_WIDTH = 8
+const LINES_WIDTH = 8
+const METRIC_WIDTH = 6
+
+/**
+ * Every column names what is actually counted, not what it is called.
+ *
+ * `short` is the column header, and the legend below the table is what turns
+ * the short name back into the long one and the long one into a definition.
+ */
 const METRIC_LEGEND: Array<{
+  short: string
   label: string
   explanation: string
   read: (metrics: BarbarianWarriorMetrics) => number
-  unit: string
 }> = [
   {
+    short: 'Scars',
     label: 'Battle Scars',
     explanation: 'surviving lines in large or legacy-looking files',
     read: (m) => m.battleScars,
-    unit: 'lines',
   },
   {
+    short: 'Terr',
     label: 'Territory Conquered',
     explanation: 'files where this warrior owns more than half the lines',
     read: (m) => m.territoryConquered,
-    unit: 'files',
   },
   {
+    short: 'Solo',
     label: 'Solo Quests',
     explanation: 'files where every surviving line is theirs',
     read: (m) => m.soloQuestVictories,
-    unit: 'files',
   },
   {
+    short: 'Types',
     label: 'Weapon Mastery',
     explanation: 'distinct file types they hold lines in',
     read: (m) => m.weaponMastery,
-    unit: 'types',
   },
   {
+    short: 'Anc',
     label: 'Ancient Code',
     explanation: 'surviving lines last touched more than a year ago',
     read: (m) => m.ancientCodeSurvival,
-    unit: 'lines',
   },
   {
+    short: 'Mass',
     label: 'Massive Battles',
-    explanation: `days when over 100 of their surviving lines were last touched`,
+    explanation:
+      'days when over 100 of their surviving lines were last touched',
     read: (m) => m.massiveBattles,
-    unit: 'days',
   },
   {
+    short: 'Camp',
     label: 'Campaigns',
     explanation: 'distinct days their surviving lines were last touched',
     read: (m) => m.totalCampaigns,
-    unit: 'days',
   },
 ]
 
 /**
- * Gorvek's brutal barbarian rankings display.
+ * A number in a column, never wider than the column allows for.
  *
- * "Behold! The mightiest warriors of the digital realm,
- *  ranked by their brutal conquests and barbaric deeds!"
+ * Two numbers that run together read as one number, and a table where that
+ * can happen is a table that lies at exactly the size where it matters. So
+ * a value that would fill the column is written as thousands or millions
+ * instead, keeping at least one space to its neighbour.
+ */
+export function fit(n: number, width: number): string {
+  const whole = Math.round(n)
+  const plain = whole.toLocaleString('en-GB')
+  if (plain.length < width) return plain.padStart(width)
+  if (whole < 1_000_000) return `${Math.round(whole / 1000)}k`.padStart(width)
+  return `${(whole / 1_000_000).toFixed(1)}M`.padStart(width)
+}
+
+/**
+ * Gorvek's brutal barbarian rankings.
+ *
+ * One table, every warrior a row, every column named. The previous shape
+ * boxed the champion with the metrics spelled out, then gave everyone else
+ * a line of seven emoji and seven numbers with the key two screens' worth
+ * of scrolling below — the same figures, laid out so that only the first
+ * person's could be read.
  */
 export const BarbarianRankings: React.FC<BarbarianRankingsProps> = ({
   rankings,
@@ -103,120 +135,74 @@ export const BarbarianRankings: React.FC<BarbarianRankingsProps> = ({
     )
   }
 
-  const [topWarrior, ...challengers] = rankings
-  const remainingWarriors = challengers.slice(0, WARRIORS_SHOWN - 1)
+  const shown = rankings.slice(0, WARRIORS_SHOWN)
+  const decorated = shown.filter((one) => one.specialAchievements.length > 0)
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <Box flexDirection="column" paddingY={1}>
       <Box marginBottom={1}>
         <Text color="cyanBright" bold>
           GORVEK'S BRUTAL BARBARIAN RANKINGS
         </Text>
       </Box>
 
-      {topWarrior && (
-        <Box flexDirection="column" padding={1} borderStyle="single">
-          <Text color="redBright" bold>
-            CHAMPION OF THE RANKINGS
-          </Text>
-          <Text color={selected === 0 ? 'green' : 'cyan'} bold>
-            {selected === 0 ? '› ' : ''}
-            {topWarrior.displayName}
-            {topWarrior.title && (
-              <Text color="yellow" bold={false}>
-                {'  '}
-                {topWarrior.title}
-              </Text>
-            )}
-          </Text>
-          <Text color="green">
-            Gorvek Score: {topWarrior.gorvekScore.toLocaleString()}
-            <Text color="gray">
-              {'  '}({topWarrior.metrics.survivingLines.toLocaleString()} lines
-              held)
+      <Text bold>
+        {'   # '}
+        {'Warrior'.padEnd(NAME_WIDTH)}
+        {'Score'.padStart(SCORE_WIDTH)}
+        {'Lines'.padStart(LINES_WIDTH)}
+        {METRIC_LEGEND.map(({ short }) => short.padStart(METRIC_WIDTH)).join(
+          '',
+        )}
+      </Text>
+
+      {shown.map((warrior, index) => {
+        const highlighted = index === selected
+        return (
+          <Box key={warrior.authorId} flexDirection="column">
+            <Text color={highlighted ? 'green' : undefined}>
+              {highlighted ? '› ' : '  '}
+              {String(warrior.rank + 1).padStart(2)}{' '}
+              {warrior.displayName.slice(0, NAME_WIDTH - 1).padEnd(NAME_WIDTH)}
+              {fit(warrior.gorvekScore, SCORE_WIDTH)}
+              {fit(warrior.metrics.survivingLines, LINES_WIDTH)}
+              {METRIC_LEGEND.map(({ read }) =>
+                fit(read(warrior.metrics), METRIC_WIDTH),
+              ).join('')}
             </Text>
-          </Text>
-
-          <Box flexDirection="column" marginTop={1}>
-            <Text color="gray">Battle Statistics:</Text>
-            {METRIC_LEGEND.map(({ label, read, unit }) => (
-              <Text key={label}>
-                {'  '}
-                {label}: {read(topWarrior.metrics).toLocaleString()} {unit}
-              </Text>
-            ))}
+            <Text color="gray">
+              {'     '}
+              {index === 0 ? '👑 ' : ''}
+              {warrior.title ? `${warrior.title} · ` : ''}
+              {warrior.email}
+            </Text>
           </Box>
+        )
+      })}
 
-          {topWarrior.specialAchievements.length > 0 && (
-            <Box flexDirection="column" marginTop={1}>
-              <Text color="yellow">Legendary Achievements:</Text>
-              {topWarrior.specialAchievements.map((achievement) => (
+      {rankings.length > WARRIORS_SHOWN && (
+        <Text color="gray">
+          {'     '}… and {rankings.length - WARRIORS_SHOWN} more who hold ground
+        </Text>
+      )}
+
+      {decorated.length > 0 && (
+        <Box flexDirection="column" marginTop={1}>
+          <Text color="yellow" bold>
+            LEGENDARY ACHIEVEMENTS
+          </Text>
+          {decorated.map((warrior) => (
+            <Box key={warrior.authorId} flexDirection="column">
+              <Text>
+                {'  '}
+                {warrior.displayName}
+              </Text>
+              {warrior.specialAchievements.map((achievement) => (
                 <Text key={achievement} color="magenta">
-                  {'  '}
+                  {'    '}
                   {achievement}
                 </Text>
               ))}
-            </Box>
-          )}
-        </Box>
-      )}
-
-      {remainingWarriors.length > 0 && (
-        <Box flexDirection="column" marginTop={1}>
-          <Text color="cyan" bold>
-            🏆 OTHER MIGHTY WARRIORS 🏆
-          </Text>
-          {remainingWarriors.map((warrior, index) => (
-            <Box key={warrior.authorId} flexDirection="column" marginTop={1}>
-              <Box flexDirection="row">
-                <Text color={selected === index + 1 ? 'green' : 'white'} bold>
-                  {selected === index + 1 ? '› ' : ''}#{warrior.rank + 1}{' '}
-                </Text>
-                <Text color="cyan">{warrior.displayName}</Text>
-                {warrior.title && (
-                  <Text color="yellow">
-                    {'  '}
-                    {warrior.title}
-                  </Text>
-                )}
-              </Box>
-
-              <Box flexDirection="row">
-                <Text color="gray">{'  '}Score: </Text>
-                <Text color="green">
-                  {warrior.gorvekScore.toLocaleString()}
-                </Text>
-                <Text color="gray">
-                  {' '}
-                  | {warrior.metrics.survivingLines.toLocaleString()} lines
-                </Text>
-              </Box>
-
-              <Box flexDirection="row">
-                <Text color="gray">
-                  {'  '}🗡️ {warrior.metrics.battleScars} 🏰{' '}
-                  {warrior.metrics.territoryConquered} 🛡️{' '}
-                  {warrior.metrics.soloQuestVictories} ⚡{' '}
-                  {warrior.metrics.weaponMastery} 🏺{' '}
-                  {warrior.metrics.ancientCodeSurvival} 💥{' '}
-                  {warrior.metrics.massiveBattles} 🔥{' '}
-                  {warrior.metrics.totalCampaigns}
-                </Text>
-              </Box>
-
-              {warrior.specialAchievements.length > 0 && (
-                <Box flexDirection="column">
-                  {warrior.specialAchievements.map((achievement) => (
-                    <Text
-                      key={`${warrior.authorId}-${achievement}`}
-                      color="magenta"
-                    >
-                      {'  '}
-                      {achievement}
-                    </Text>
-                  ))}
-                </Box>
-              )}
             </Box>
           ))}
         </Box>
@@ -224,7 +210,7 @@ export const BarbarianRankings: React.FC<BarbarianRankingsProps> = ({
 
       <Box
         flexDirection="column"
-        marginTop={2}
+        marginTop={1}
         borderStyle="single"
         borderColor="gray"
         padding={1}
@@ -233,9 +219,16 @@ export const BarbarianRankings: React.FC<BarbarianRankingsProps> = ({
           LEGEND OF THE BARBARIAN METRICS
         </Text>
         <Box marginTop={1} flexDirection="column">
-          {METRIC_LEGEND.map(({ label, explanation }) => (
+          <Text color="gray">
+            {'Score'.padEnd(7)} Gorvek score: conquest, endurance and intensity,
+            weighed together
+          </Text>
+          <Text color="gray">
+            {'Lines'.padEnd(7)} surviving lines this warrior holds in HEAD
+          </Text>
+          {METRIC_LEGEND.map(({ short, label, explanation }) => (
             <Text key={label} color="gray">
-              {label}: {explanation}
+              {short.padEnd(7)} {label}: {explanation}
             </Text>
           ))}
         </Box>
