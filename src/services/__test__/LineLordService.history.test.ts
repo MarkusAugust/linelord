@@ -6,9 +6,9 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
-import { resolveCachePath } from '../../db/cacheLocation'
-import { acquireCacheLock } from '../../db/cacheMaintenance'
-import { snapshots } from '../../db/schema'
+import { resolveCachePath } from '../../adapters/sqlite/cacheLocation'
+import { acquireCacheLock } from '../../adapters/sqlite/cacheMaintenance'
+import { snapshots } from '../../adapters/sqlite/schema'
 import { findRepositoryRoot } from '../../utility/gitRepository'
 import { LineLordService } from '../LineLordService'
 import { LongevityService } from '../LongevityService'

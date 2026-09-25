@@ -1,6 +1,6 @@
 import { desc, eq, sql } from 'drizzle-orm'
-import type { LineLordDatabase } from '../db/database'
-import { authors, blameLines } from '../db/schema'
+import type { LineLordDatabase } from '../adapters/sqlite/database'
+import { authors, blameLines } from '../adapters/sqlite/schema'
 import { getDistributedTitlesWithAssignment } from '../resources/rankedTitles'
 
 export class AuthorRankingService {

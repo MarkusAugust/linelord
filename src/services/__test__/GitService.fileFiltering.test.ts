@@ -3,8 +3,8 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
-import { createDatabase } from '../../db/database'
-import { blameLines, files } from '../../db/schema'
+import { createDatabase } from '../../adapters/sqlite/database'
+import { blameLines, files } from '../../adapters/sqlite/schema'
 import { GitService } from '../GitService'
 
 type FileRow = {

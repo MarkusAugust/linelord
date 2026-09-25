@@ -6,7 +6,7 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
-import { SCHEMA_VERSION } from '../../db/database'
+import { SCHEMA_VERSION } from '../../adapters/sqlite/database'
 import { ANALYSIS_VERSION } from '../analysisVersion'
 import {
   computeFingerprint,

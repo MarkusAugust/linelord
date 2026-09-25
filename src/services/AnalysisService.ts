@@ -1,6 +1,11 @@
 import { desc, eq, inArray, sql } from 'drizzle-orm'
-import type { LineLordDatabase } from '../db/database'
-import { authorAliases, authors, blameLines, files } from '../db/schema'
+import type { LineLordDatabase } from '../adapters/sqlite/database'
+import {
+  authorAliases,
+  authors,
+  blameLines,
+  files,
+} from '../adapters/sqlite/schema'
 
 export interface FileContribution {
   filename: string

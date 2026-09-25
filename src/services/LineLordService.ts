@@ -1,16 +1,16 @@
-import { resolveCachePath } from '../db/cacheLocation'
+import { resolveCachePath } from '../adapters/sqlite/cacheLocation'
 import {
   acquireCacheLock,
   type CacheLock,
   markCacheUsed,
   tidyCacheDirectory,
-} from '../db/cacheMaintenance'
+} from '../adapters/sqlite/cacheMaintenance'
 import {
   clearDatabase,
   createDatabase,
   type LineLordDatabase,
-} from '../db/database'
-import { readAllMeta, writeMeta } from '../db/meta'
+} from '../adapters/sqlite/database'
+import { readAllMeta, writeMeta } from '../adapters/sqlite/meta'
 import {
   findRepositoryRoot,
   isAncestor,

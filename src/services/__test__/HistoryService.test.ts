@@ -4,9 +4,9 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
-import { clearDatabase, createDatabase } from '../../db/database'
-import { HISTORY_HEAD_KEY, readMeta } from '../../db/meta'
-import { authors, cohortLines, snapshots } from '../../db/schema'
+import { clearDatabase, createDatabase } from '../../adapters/sqlite/database'
+import { HISTORY_HEAD_KEY, readMeta } from '../../adapters/sqlite/meta'
+import { authors, cohortLines, snapshots } from '../../adapters/sqlite/schema'
 import { HistoryService } from '../HistoryService'
 import { LineLordService } from '../LineLordService'
 import { LongevityService } from '../LongevityService'

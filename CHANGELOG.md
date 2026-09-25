@@ -10,7 +10,15 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **Towards ports and adapters.** The analysis now has a storage port: an
+  interface for keeping an analysis between runs and writing one during a
+  run, with the SQLite database behind it as one adapter and a handful of
+  arrays as another, for tests. One contract test says what both must do,
+  and both pass it. Nothing on screen changes; this is the first step of
+  moving every calculation out of SQL and into plain functions over values,
+  so that the core can be tested without a database at all.
 
 ## [0.11.0] — 2026-09-25
 

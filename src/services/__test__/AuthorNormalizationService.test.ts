@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'bun:test'
-import { createDatabase } from '../../db/database'
-import { authorAliases, authors, blameLines, files } from '../../db/schema'
+import { createDatabase } from '../../adapters/sqlite/database'
+import {
+  authorAliases,
+  authors,
+  blameLines,
+  files,
+} from '../../adapters/sqlite/schema'
 import { AuthorNormalizationService } from '../AuthorNormalizationService'
 
 type Person = { name: string; email: string; displayName?: string }

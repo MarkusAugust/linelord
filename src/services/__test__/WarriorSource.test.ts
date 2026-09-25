@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from 'bun:test'
-import { createDatabase } from '../../db/database'
-import { HISTORY_HEAD_KEY, writeMeta } from '../../db/meta'
+import { createDatabase } from '../../adapters/sqlite/database'
+import { HISTORY_HEAD_KEY, writeMeta } from '../../adapters/sqlite/meta'
 import {
   authors,
   blameLines,
   cohortLines,
   files,
   snapshots,
-} from '../../db/schema'
+} from '../../adapters/sqlite/schema'
 import { LongevityService } from '../LongevityService'
 import { warriorSourceFor } from '../WarriorSource'
 

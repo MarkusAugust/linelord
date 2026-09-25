@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm'
-import type { LineLordDatabase } from '../db/database'
-import { HISTORY_HEAD_KEY, readMeta } from '../db/meta'
-import { authors, cohortLines, snapshots } from '../db/schema'
+import type { LineLordDatabase } from '../adapters/sqlite/database'
+import { HISTORY_HEAD_KEY, readMeta } from '../adapters/sqlite/meta'
+import { authors, cohortLines, snapshots } from '../adapters/sqlite/schema'
 import {
   type AuthorSurvival,
   computeSurvival,

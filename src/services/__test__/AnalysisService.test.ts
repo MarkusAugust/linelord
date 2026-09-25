@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'bun:test'
-import { createDatabase } from '../../db/database'
-import { authorAliases, authors, blameLines, files } from '../../db/schema'
+import { createDatabase } from '../../adapters/sqlite/database'
+import {
+  authorAliases,
+  authors,
+  blameLines,
+  files,
+} from '../../adapters/sqlite/schema'
 import { AnalysisService } from '../AnalysisService'
 
 type Db = ReturnType<typeof createDatabase>

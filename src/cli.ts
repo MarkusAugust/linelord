@@ -5,8 +5,11 @@ import { render } from 'ink'
 import meow from 'meow'
 import React from 'react'
 import App from './App'
-import { resolveCachePath } from './db/cacheLocation'
-import { removeAllCaches, removeCacheFor } from './db/cacheMaintenance'
+import { resolveCachePath } from './adapters/sqlite/cacheLocation'
+import {
+  removeAllCaches,
+  removeCacheFor,
+} from './adapters/sqlite/cacheMaintenance'
 import { CLI_HELP } from './resources/cliHelp'
 import { DEFAULT_CONCURRENCY } from './services/GitService'
 import { LineLordService } from './services/LineLordService'
