@@ -504,6 +504,81 @@ as here.
   moved opens at once, and one that has moved re-reads only the files that
   changed. `--no-cache` and `--refresh` turn that off; see [Cache control](#advanced-usage---master-the-battlefield)
 
+## 🏗️ Architecture — Ports and Adapters
+
+LineLord is built as a hexagon. The core knows how to count lines and who
+holds them; it does not know that git is a program, that the cache is a
+SQLite file, or that the screen is a terminal. Everything at the edge reaches
+the core through a **port** — a TypeScript interface the core declares — and
+an **adapter** implements the port for the real thing. There are no classes
+anywhere: the core is modules of functions, and where a run needs state it is
+closed over by `createLineLord`.
+
+```
+                        ┌───────────────────────────────────────────────┐
+                        │                   src/app                     │
+                        │  cli.ts · ports.ts (composition root)         │
+                        │  cliHelp · cliValidation · thresholdConverter │
+                        └───────────────┬──────────────┬────────────────┘
+                                        │ builds       │ renders
+                                        ▼              ▼
+   ┌──────────────────┐   ┌───────────────────────┐   ┌──────────────────────┐
+   │ adapters/git     │   │       src/core        │   │    adapters/ink      │
+   │  spawnGit        │──▶│                       │◀──│  App · components    │
+   │  blamePorcelain  │   │  model  ownership     │   │  hooks · format      │
+   └────────┬─────────┘   │  ranking  longevity   │   │  resources · menu    │
+            │ GitPort     │  barbarian  identity  │   └──────────────────────┘
+            │ GitFactory  │  analyse  history     │            reads values,
+   ┌────────┴─────────┐   │  cohorts  snapshots   │            calls functions
+   │  ports/git       │   │  survival  cache      │
+   └──────────────────┘   │  ignoreRevs  mailmap  │   ┌──────────────────────┐
+   ┌──────────────────┐   │  warrior  lineLord ◀──┼───│  ports/files         │
+   │  ports/storage   │──▶│                       │   └──────────┬───────────┘
+   │  ports/stores    │   └───────────────────────┘              │ FileSystemPort
+   └───────┬──────────┘                                ┌─────────┴────────────┐
+           │ AnalysisStore · StoreProvider             │  adapters/fs         │
+   ┌───────┴──────────┐   ┌──────────────────┐         │  nodeFiles           │
+   │ adapters/sqlite  │   │ adapters/memory  │         └──────────────────────┘
+   │  store · provider│   │  store · provider│
+   │  database · meta │   │  (for tests)     │
+   │  cacheLocation   │   └──────────────────┘
+   │  cacheMaintenance│
+   └──────────────────┘
+```
+
+**The core** (`src/core`) holds every decision LineLord makes and every number
+it reports. `model.ts` is the analysis as plain values: files, authors,
+aliases, blame lines, snapshots, cohorts. `ownership`, `ranking`, `longevity`,
+`barbarian` and `identity` are functions over those values — a median is a
+median whether the rows came from disk or a test fixture. `analyse` and
+`history` are the two use cases that read a repository; they ask the git port
+for trees and blame and hand the results to the storage port a batch at a
+time. `lineLord.ts` is the orchestration: given the ports, it decides whether
+to reuse a cache, update it or rebuild, and returns the operations the
+interface uses as a record of functions.
+
+**The ports** (`src/ports`) are the four interfaces the core is written
+against: `GitPort` and `GitFactory` (a tree, a blame, ancestry, the history),
+`AnalysisStore` (load an analysis, write files and lines, update authors,
+meta, snapshots), `StoreProvider` (a store on disk or in memory, and the lock
+for it) and `FileSystemPort` (read a text file or learn it is absent; append).
+
+**The adapters** (`src/adapters`) implement them. `git` spawns the git
+binary and parses its output at the edge. `sqlite` keeps the analysis in the
+database LineLord has always used, on disk under the cache directory or in
+memory; `memory` keeps it in arrays for tests, and one contract test in
+`src/ports/__test__` is run against both so they cannot drift apart. `fs` is
+Node's file system. `ink` is the terminal interface: screens that read the
+analysis as values and call the core's functions, and nothing else.
+
+**The app** (`src/app`) is the composition root. `ports.ts` is the one place
+the real adapters are chosen; `cli.ts` parses the flags, resolves the
+repository and renders the interface with those ports.
+
+The rule that follows from the shape: the numbers are computed once, in the
+core, from values. A screen never runs a query, and a test of a calculation
+never needs a database.
+
 ## 🗡️ Contributing to the Saga
 
 Want to forge improvements to LineLord? Contact the maintainer!

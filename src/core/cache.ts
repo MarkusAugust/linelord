@@ -1,12 +1,9 @@
 import { createHash } from 'node:crypto'
 import type { FileSystemPort } from '../ports/files'
 import { BLAME_OPTIONS } from '../ports/git'
-import {
-  ignoredFileExtensions,
-  ignoredFilePatterns,
-} from '../resources/ignoreFiles'
 import { ANALYSIS_VERSION } from './analysisVersion'
 import type { AuthorPolicy } from './identity'
+import { ignoredFileExtensions, ignoredFilePatterns } from './ignoreFiles'
 
 /**
  * Whether a stored analysis may be reused, and if not, why not.

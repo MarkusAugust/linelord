@@ -1,6 +1,6 @@
 import type { AuthorChanges } from '../ports/storage'
-import { getDistributedTitlesWithAssignment } from '../resources/rankedTitles'
 import type { AnalysisData } from './model'
+import { getDistributedTitlesWithAssignment } from './rankedTitles'
 
 /**
  * Rank, share and title for every canonical author, as changes to store.

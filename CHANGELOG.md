@@ -71,6 +71,12 @@ because the earlier answer was wrong.
   `.mailmap` writing move into the core and reach files through the port;
   the composition root in `src/app/ports.ts` is the one place the real
   adapters are chosen. No class remains in the source.
+- **The source is laid out as the architecture.** `src/core` holds the
+  model and every calculation, `src/ports` the four interfaces, `src/adapters`
+  the git, SQLite, memory, file-system and Ink implementations, and `src/app`
+  the CLI and the composition root. The `services`, `utility`, `resources`
+  and `types` directories are gone, and the entry point is `src/app/cli.ts`.
+  The README has an architecture section with a drawing of the whole.
 
 ## [0.11.0] — 2026-09-25
 
