@@ -174,57 +174,6 @@ export class AnalysisService {
     return results.map((result) => this.toFileContribution(result))
   }
 
-  /**
-   * The files each canonical author holds the most lines in, for everyone at
-   * once.
-   *
-   * One query in place of one per author: a screen that lists every
-   * contributor's top files was asking the database once per person, which on
-   * a repository with a hundred of them is a hundred round trips for what a
-   * window function answers in one. Aliases are folded into their canonical
-   * author, the same as the one-author query does, and a tie in line count is
-   * broken by path so that the answer is the same on every run.
-   */
-  async getTopFilesForAuthors(
-    limit: number,
-  ): Promise<Map<number, FileContribution[]>> {
-    const rows = await this.db.all<{
-      canonicalId: number
-      path: string
-      totalLines: number | null
-      authorLines: number
-    }>(sql`
-      SELECT canonical_id AS canonicalId,
-             path,
-             total_lines AS totalLines,
-             author_lines AS authorLines
-      FROM (
-        SELECT a.canonical_id AS canonical_id,
-               f.path AS path,
-               f.total_lines AS total_lines,
-               count(b.id) AS author_lines,
-               row_number() OVER (
-                 PARTITION BY a.canonical_id
-                 ORDER BY count(b.id) DESC, f.path ASC
-               ) AS position
-        FROM blame_lines b
-        JOIN files f ON f.id = b.file_id
-        JOIN authors a ON a.id = b.author_id
-        GROUP BY a.canonical_id, f.id
-      )
-      WHERE position <= ${limit}
-      ORDER BY canonical_id, position
-    `)
-
-    const byAuthor = new Map<number, FileContribution[]>()
-    for (const row of rows) {
-      const list = byAuthor.get(row.canonicalId) ?? []
-      list.push(this.toFileContribution(row))
-      byAuthor.set(row.canonicalId, list)
-    }
-    return byAuthor
-  }
-
   private toFileContribution(row: {
     path: string
     authorLines: number
