@@ -1,6 +1,6 @@
 import { distance } from 'fastest-levenshtein'
-import type { AliasRecord, AuthorRecord } from '../core/model'
 import type { AnalysisStore, AuthorChanges } from '../ports/storage'
+import type { AliasRecord, AuthorRecord } from './model'
 
 /**
  * Who is one person, and why.

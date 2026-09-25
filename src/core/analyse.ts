@@ -5,11 +5,8 @@ import type {
   FilePlan,
   NewBlameLine,
 } from '../ports/storage'
-import {
-  ignoredFileExtensions,
-  isIgnoredByPattern,
-} from '../resources/ignoreFiles'
 import { normaliseConcurrency } from './concurrency'
+import { ignoredFileExtensions, isIgnoredByPattern } from './ignoreFiles'
 import type { IgnoreRevs, UnresolvedIgnoreRev } from './ignoreRevs'
 import type { FileRecord } from './model'
 

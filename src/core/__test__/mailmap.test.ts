@@ -7,9 +7,9 @@ import {
 } from '../../__test__/helpers/createTestRepo'
 import { lineLord } from '../../__test__/helpers/lineLord'
 import { createNodeFiles } from '../../adapters/fs/nodeFiles'
-import type { IdentityMerge } from '../../core/identity'
-import { canonicalAuthors } from '../../core/ownership'
+import type { IdentityMerge } from '../identity'
 import { mailmapLines, writeMailmap } from '../mailmap'
+import { canonicalAuthors } from '../ownership'
 
 const files = createNodeFiles()
 
