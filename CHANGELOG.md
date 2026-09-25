@@ -42,6 +42,14 @@ because the earlier answer was wrong.
   now functions from the author rows to a plan, and the plan is what the
   storage port writes. The same guesses, the same reasons, the same
   thresholds; tested on values and on the in-memory store.
+- **A git port.** Every git command LineLord runs -- resolving HEAD, listing
+  a tree, telling text from binary, blame, ancestry, the paths touched
+  between two revisions, the first-parent history -- is now one method on
+  one interface, with the process-spawning adapter behind it and the output
+  parsed at the edge. The analysis, the history walk and the ignore-revs
+  resolution ask the port; a test can answer for git. The test that guarded
+  against blaming the symbolic ref by reading the source now records what
+  the port is asked and checks every revision is the resolved one.
 
 ## [0.11.0] — 2026-09-25
 

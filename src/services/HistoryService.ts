@@ -1,5 +1,5 @@
-import { spawn } from 'node:child_process'
 import { eq, sql } from 'drizzle-orm'
+import { createGit } from '../adapters/git/spawnGit'
 import type { LineLordDatabase } from '../adapters/sqlite/database'
 import {
   HISTORY_HEAD_KEY,
@@ -12,20 +12,16 @@ import {
   meta,
   snapshots,
 } from '../adapters/sqlite/schema'
-import { isAncestor, pathsTouchedBetween } from '../utility/gitRepository'
+import type { GitPort } from '../ports/git'
 import { normaliseConcurrency } from './GitService'
 import {
   analysablePathsAtRevision,
-  blameFileAtRevision,
   countBlame,
-  listFilesAtRevision,
-  listTextFilesAtRevision,
   type PathCounts,
   readCountKey,
 } from './revisionBlame'
 import {
   DEFAULT_MAX_SNAPSHOTS,
-  type HistoryCommit,
   type Snapshot,
   type SnapshotInterval,
   selectSnapshots,
@@ -115,9 +111,11 @@ export class HistoryService {
   private namesByEmail = new Map<string, string>()
 
   constructor(
-    private repoPath: string,
+    repoPath: string,
     private db: LineLordDatabase,
     options: HistoryOptions,
+    /** How git is reached. Injected so a test can answer for it. */
+    private git: GitPort = createGit(repoPath),
   ) {
     this.interval = options.interval ?? 'month'
     this.maxSnapshots = options.maxSnapshots ?? DEFAULT_MAX_SNAPSHOTS
@@ -133,7 +131,7 @@ export class HistoryService {
   /** The revisions this run would sample, without sampling them. */
   async plannedSnapshots(): Promise<Snapshot[]> {
     return selectSnapshots(
-      await this.firstParentHistory(),
+      await this.git.firstParentHistory(),
       this.interval,
       this.maxSnapshots,
     )
@@ -211,8 +209,8 @@ export class HistoryService {
   /** Which paths at this revision are worth blaming. */
   private async analysablePaths(revision: string): Promise<string[]> {
     const [files, textPaths] = await Promise.all([
-      listFilesAtRevision(this.repoPath, revision),
-      listTextFilesAtRevision(this.repoPath, revision),
+      this.git.listTree(revision),
+      this.git.listTextPaths(revision),
     ])
     return analysablePathsAtRevision(files, textPaths, this.thresholdBytes)
   }
@@ -248,13 +246,13 @@ export class HistoryService {
       // the failure it guards against is a survival curve that is wrong
       // without looking wrong. Null means git could not answer, which is not
       // a yes.
-      const ancestral = await isAncestor(this.repoPath, previousSha, revision)
+      const ancestral = await this.git.isAncestor(previousSha, revision)
       if (ancestral !== true) {
         return this.blameAll(revision, analysable)
       }
 
       const touched = new Set(
-        await pathsTouchedBetween(this.repoPath, previousSha, revision),
+        await this.git.pathsTouchedBetween(previousSha, revision),
       )
       const stale: string[] = []
       for (const path of analysable) {
@@ -300,12 +298,7 @@ export class HistoryService {
         batch.map(async (path) => ({
           path,
           counts: countBlame(
-            await blameFileAtRevision(
-              this.repoPath,
-              revision,
-              path,
-              this.ignoredRevisions,
-            ),
+            await this.git.blame(revision, path, this.ignoredRevisions),
             this.namesByEmail,
           ),
         })),
@@ -450,46 +443,5 @@ export class HistoryService {
       tx.delete(meta).where(eq(meta.key, HISTORY_HEAD_KEY)).run()
       tx.delete(meta).where(eq(meta.key, HISTORY_SNAPSHOTS_KEY)).run()
     })
-  }
-
-  /** The first-parent history, newest first, as git reports it. */
-  private async firstParentHistory(): Promise<HistoryCommit[]> {
-    const stdout = await new Promise<string>((resolve, reject) => {
-      const child = spawn(
-        'git',
-        ['log', '--first-parent', '--format=%H %ct', 'HEAD'],
-        { cwd: this.repoPath, stdio: ['ignore', 'pipe', 'pipe'] },
-      )
-      const chunks: Buffer[] = []
-      let stderr = ''
-      child.stdout.on('data', (data) => chunks.push(data))
-      child.stderr.on('data', (data) => {
-        stderr += String(data)
-      })
-      child.on('error', reject)
-      child.on('close', (code) => {
-        if (code === 0) {
-          resolve(Buffer.concat(chunks).toString())
-          return
-        }
-        // A repository with no commits has no history, which is not an
-        // error. git says so in two different ways depending on how HEAD
-        // fails to resolve, and neither is a reason to fail an analysis.
-        if (/unknown revision|does not have any commits/.test(stderr)) {
-          resolve('')
-          return
-        }
-        reject(new Error(stderr.trim() || `git exited with ${code}`))
-      })
-    })
-
-    const commits: HistoryCommit[] = []
-    for (const line of stdout.split('\n')) {
-      if (!line) continue
-      const [sha, seconds] = line.split(' ')
-      const timestamp = Number.parseInt(seconds ?? '', 10)
-      if (sha && Number.isFinite(timestamp)) commits.push({ sha, timestamp })
-    }
-    return commits
   }
 }

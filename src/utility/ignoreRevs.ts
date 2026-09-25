@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { runGit } from './gitRepository'
+import { createGit } from '../adapters/git/spawnGit'
+import type { GitPort } from '../ports/git'
 
 /**
  * Which commits blame should look past.
@@ -76,6 +77,7 @@ export function parseIgnoreRevsFile(contents: string): string[] {
 export async function resolveIgnoreRevs(
   repositoryRoot: string,
   extraRevisions: string[] = [],
+  git: GitPort = createGit(repositoryRoot),
 ): Promise<IgnoreRevs> {
   let fromFile: string[] = []
 
@@ -118,7 +120,7 @@ export async function resolveIgnoreRevs(
   const sources = { file: false, flag: false }
 
   for (const { entry, source } of named) {
-    const resolved = await resolveCommit(repositoryRoot, entry)
+    const resolved = await git.resolveCommit(entry)
     if (resolved) {
       revisions.add(resolved)
       sources[source] = true
@@ -132,27 +134,6 @@ export async function resolveIgnoreRevs(
     sources,
     unresolved,
   }
-}
-
-async function resolveCommit(
-  repositoryRoot: string,
-  entry: string,
-): Promise<string | null> {
-  // `^{commit}` so that a tag resolves to what it points at, and so that a
-  // name that exists but is not a commit is refused rather than passed on.
-  const result = await runGit(
-    [
-      'rev-parse',
-      '--verify',
-      '--quiet',
-      '--end-of-options',
-      `${entry}^{commit}`,
-    ],
-    repositoryRoot,
-  )
-  if (!result.spawned || result.code !== 0) return null
-  const sha = result.stdout.trim()
-  return /^[0-9a-f]{40}$|^[0-9a-f]{64}$/.test(sha) ? sha : null
 }
 
 /** The arguments blame needs in order to look past these commits. */

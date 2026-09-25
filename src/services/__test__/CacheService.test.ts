@@ -7,13 +7,13 @@ import {
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
 import { SCHEMA_VERSION } from '../../adapters/sqlite/database'
+import { BLAME_OPTIONS } from '../../ports/git'
 import { ANALYSIS_VERSION } from '../analysisVersion'
 import {
   computeFingerprint,
   decideCacheUse,
   type Fingerprint,
 } from '../CacheService'
-import { BLAME_OPTIONS } from '../GitService'
 
 const INPUTS = {
   repositoryRoot: '/nowhere-in-particular',

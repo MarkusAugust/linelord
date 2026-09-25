@@ -6,11 +6,11 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { findRepositoryRoot } from '../../adapters/git/spawnGit'
 import { resolveCachePath } from '../../adapters/sqlite/cacheLocation'
 import { acquireCacheLock } from '../../adapters/sqlite/cacheMaintenance'
 import { writeMeta } from '../../adapters/sqlite/meta'
 import { authorContributions } from '../../core/ownership'
-import { findRepositoryRoot } from '../../utility/gitRepository'
 import { LineLordService } from '../LineLordService'
 
 /**

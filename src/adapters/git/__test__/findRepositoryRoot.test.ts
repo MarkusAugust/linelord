@@ -5,8 +5,8 @@ import { delimiter, join } from 'node:path'
 import {
   createTestRepo,
   type TestRepo,
-} from '../../__test__/helpers/createTestRepo'
-import { findRepositoryRoot } from '../gitRepository'
+} from '../../../__test__/helpers/createTestRepo'
+import { findRepositoryRoot } from '../spawnGit'
 
 describe('findRepositoryRoot', () => {
   let repo: TestRepo | undefined

@@ -1,3 +1,5 @@
+import type { BlameEntry } from '../../ports/git'
+
 /**
  * Reading what `git blame --porcelain` says.
  *
@@ -8,26 +10,7 @@
  * hash -- had no way to be checked at all.
  */
 
-/** One line of a file, and the commit that last touched it. */
-export interface BlameEntry {
-  /** The commit the line is attributed to. */
-  sha: string
-  /** Line number in the revision that was blamed, counting from 1. */
-  lineNumber: number
-  /** Line number in the commit the line came from. */
-  originalLineNumber: number
-  author: string
-  /** Angle brackets stripped, as git writes them. */
-  authorEmail: string
-  /**
-   * Author time, in whole seconds since the epoch, or null if git did not
-   * report one. Null rather than zero: zero is a real instant, and a commit
-   * dated to it would otherwise be indistinguishable from a missing field.
-   */
-  authorTime: number | null
-  /** The line itself, without the tab git puts in front of it. */
-  content: string
-}
+export type { BlameEntry }
 
 interface CommitHeader {
   author: string
