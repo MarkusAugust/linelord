@@ -5,8 +5,8 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import type { IdentityMerge } from '../../core/identity'
 import { canonicalAuthors } from '../../core/ownership'
-import type { IdentityMerge } from '../../services/AuthorNormalizationService'
 import { LineLordService } from '../../services/LineLordService'
 import { mailmapLines, writeMailmap } from '../mailmap'
 

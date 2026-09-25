@@ -37,6 +37,11 @@ because the earlier answer was wrong.
   functions in the core, with `now` handed in. The rankings screen draws
   from values. The legacy-file rule, the day boundaries and the tie-breaks
   match what the SQL did, and the tests say so on values.
+- **Who is one person, as plain functions.** The guessing, the reasons it
+  gives, the choice of which identity to keep and what a merge moves are
+  now functions from the author rows to a plan, and the plan is what the
+  storage port writes. The same guesses, the same reasons, the same
+  thresholds; tested on values and on the in-memory store.
 
 ## [0.11.0] — 2026-09-25
 

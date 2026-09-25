@@ -1,26 +1,28 @@
 import { describe, expect, it } from 'bun:test'
-import { createDatabase } from '../../adapters/sqlite/database'
+import { createMemoryStore } from '../../adapters/memory/store'
+import type { AnalysisStore } from '../../ports/storage'
 import {
-  authorAliases,
-  authors,
-  blameLines,
-  files,
-} from '../../adapters/sqlite/schema'
-import { AuthorNormalizationService } from '../AuthorNormalizationService'
+  type AuthorPolicy,
+  describeExistingMerges,
+  findIdentityGuesses,
+  normalizeAuthors,
+  planNormalization,
+  whyAuthorsMatch,
+} from '../identity'
+import { author } from './fixtures'
 
 type Person = { name: string; email: string; displayName?: string }
 
-type Db = ReturnType<typeof createDatabase>
-
-async function seedAuthors(db: Db, people: Person[]) {
-  await db.insert(authors).values(
-    people.map((person, index) => ({
-      id: index + 1,
+async function storeWith(people: Person[]): Promise<AnalysisStore> {
+  const store = createMemoryStore()
+  await store.ensureAuthors(
+    people.map((person) => ({
       name: person.name,
       email: person.email,
       displayName: person.displayName ?? person.name,
     })),
   )
+  return store
 }
 
 /**
@@ -29,13 +31,12 @@ async function seedAuthors(db: Db, people: Person[]) {
  */
 async function mergeGroups(
   people: Person[],
-  policy: 'strict' | 'loose' = 'strict',
+  policy: AuthorPolicy = 'strict',
 ): Promise<{ groups: string[][]; canonicalDisplayNames: string[] }> {
-  const db = createDatabase()
-  await seedAuthors(db, people)
-  await new AuthorNormalizationService(db).normalizeAllAuthors(policy)
+  const store = await storeWith(people)
+  await normalizeAuthors(store, policy)
 
-  const rows = await db.select().from(authors)
+  const rows = await store.listAuthors()
   const byCanonical = new Map<number, string[]>()
   for (const row of rows) {
     const key = row.canonicalId ?? row.id
@@ -53,7 +54,7 @@ async function mergeGroups(
 const GORVEK = 'Gorvek the Ironbane'
 const NIGHTSHROUD = 'Sister Nightshroud'
 
-describe('AuthorNormalizationService - who gets merged', () => {
+describe('who gets merged', () => {
   it('merges identities that differ only in the case of the email', async () => {
     const { groups } = await mergeGroups([
       { name: 'Gorvek', email: 'Gorvek@Ashendale.Realm' },
@@ -103,15 +104,14 @@ describe('AuthorNormalizationService - who gets merged', () => {
       { name: 'Gorvek Ironbane', email: 'b@y.com' },
     ])
 
-    // Recorded as current behaviour rather than endorsed: N2 lists this
-    // reordering as a case the matcher ought to catch. It does not.
+    // Recorded as current behaviour rather than endorsed.
     expect(groups).toHaveLength(2)
   })
 
   it('does not merge two people because one name resembles the other', async () => {
-    // Guessing from names treats any substring relation as a match, so Ann was
-    // absorbed into Annabelle despite different names, different addresses and
-    // different domains. Matching by address alone cannot make that mistake.
+    // Guessing from names treats any substring relation as a match, so Ann
+    // was absorbed into Annabelle despite different names, addresses and
+    // domains. Matching by address alone cannot make that mistake.
     const { groups } = await mergeGroups([
       { name: 'Ann', email: 'ann@example.com' },
       { name: 'Annabelle', email: 'annabelle@other.com' },
@@ -121,11 +121,7 @@ describe('AuthorNormalizationService - who gets merged', () => {
   })
 
   it('keeps colleagues apart who share a domain and little else', async () => {
-    // Every pair below was merged into one person by the old default. The
-    // address threshold is one character in a prefix of six or fewer, which in
-    // a company where everyone shares a domain is not an edge case -- one of
-    // the two then disappears from the ranking entirely while the other is
-    // credited with their work.
+    // Every pair below was merged into one person by the old default.
     const pairs: Array<[Person, Person]> = [
       [
         { name: 'Marius Kvam', email: 'mk@firma.no' },
@@ -148,10 +144,6 @@ describe('AuthorNormalizationService - who gets merged', () => {
   })
 
   it('still merges one person under two spellings when asked to guess', async () => {
-    // The guessing is kept behind a flag rather than deleted: a repository
-    // whose history genuinely holds one person under several addresses needs
-    // a way out, and seeing the guesses is how you learn what to write in a
-    // .mailmap.
     const { groups } = await mergeGroups(
       [
         { name: 'Alpha', email: 'g.ironbane@corp.com' },
@@ -164,10 +156,7 @@ describe('AuthorNormalizationService - who gets merged', () => {
   })
 })
 
-describe('AuthorNormalizationService - choosing the canonical identity', () => {
-  // Which identity wins only matters once two rows are being merged, and under
-  // the default that happens when one address is written two ways -- which is
-  // what a repository with inconsistent capitalisation actually contains.
+describe('choosing the canonical identity', () => {
   it('prefers a readable name over encoded gibberish', async () => {
     const { canonicalDisplayNames } = await mergeGroups([
       { name: 'R29ydmVrIFRoZUlyb25iYW5l', email: 'Gorvek@Ashendale.Realm' },
@@ -187,9 +176,6 @@ describe('AuthorNormalizationService - choosing the canonical identity', () => {
   })
 
   it('does not mistake an ordinary single-word name for encoded data', async () => {
-    // The base64 test is what once swallowed every ASCII name. A long
-    // camel-case name has the interior capitals but none of the digits or
-    // padding, and must stay readable.
     const { canonicalDisplayNames } = await mergeGroups([
       { name: 'GorvekTheIronbane', email: 'Gorvek@Ashendale.Realm' },
       { name: 'Gorvek', email: 'gorvek@ashendale.realm' },
@@ -208,70 +194,99 @@ describe('AuthorNormalizationService - choosing the canonical identity', () => {
   })
 
   it('leaves exactly one canonical author per merged group', async () => {
-    const db = createDatabase()
-    await seedAuthors(db, [
+    const store = await storeWith([
       { name: 'Gorvek', email: 'Gorvek@Ashendale.Realm' },
       { name: GORVEK, email: 'gorvek@ashendale.realm' },
       { name: NIGHTSHROUD, email: 'nightshroud@alderstone.realm' },
     ])
-    await new AuthorNormalizationService(db).normalizeAllAuthors()
+    await normalizeAuthors(store, 'strict')
 
-    const rows = await db.select().from(authors)
+    const rows = await store.listAuthors()
     expect(rows.filter((row) => row.isCanonical)).toHaveLength(2)
     // Every row points at a canonical author, including the canonical ones.
     expect(rows.every((row) => row.canonicalId !== null)).toBe(true)
   })
 })
 
-describe('AuthorNormalizationService - what a merge moves', () => {
+describe('what a merge moves', () => {
   it('reattributes blame lines to the canonical author and records the alias', async () => {
-    const db = createDatabase()
-    await seedAuthors(db, [
+    const store = await storeWith([
       { name: 'Gorvek', email: 'Gorvek@Ashendale.Realm' },
       { name: GORVEK, email: 'gorvek@ashendale.realm' },
     ])
-    await db
-      .insert(files)
-      .values([{ id: 1, path: 'a.ts', extension: '.ts', size: 10 }])
-    await db.insert(blameLines).values([
-      { fileId: 1, authorId: 1, lineNumber: 1 },
-      { fileId: 1, authorId: 2, lineNumber: 2 },
-      { fileId: 1, authorId: 2, lineNumber: 3 },
+    await store.reconcileFiles({
+      insert: [
+        {
+          path: 'a.ts',
+          extension: '.ts',
+          size: 10,
+          isBinary: false,
+          isIgnored: false,
+          isLargerThanThreshold: false,
+        },
+      ],
+      update: [],
+      remove: [],
+    })
+    const [file] = await store.listFiles()
+    const fileId = file?.id ?? -1
+    await store.storeBlame(fileId, [
+      { authorId: 1, lineNumber: 1, commitHash: null, commitTimestamp: null },
+      { authorId: 2, lineNumber: 2, commitHash: null, commitTimestamp: null },
+      { authorId: 2, lineNumber: 3, commitHash: null, commitTimestamp: null },
     ])
 
-    await new AuthorNormalizationService(db).normalizeAllAuthors()
+    await normalizeAuthors(store, 'strict')
 
-    const canonical = (await db.select().from(authors)).find(
-      (row) => row.isCanonical,
-    )
+    const data = await store.loadAnalysis()
+    const canonical = data.authors.find((row) => row.isCanonical)
     expect(canonical).toBeDefined()
     const canonicalId = canonical?.id ?? -1
 
-    const lines = await db.select().from(blameLines)
-    const aliases = await db.select().from(authorAliases)
-
     // No line may be left pointing at a merged-away identity.
-    expect(new Set(lines.map((line) => line.authorId))).toEqual(
+    expect(new Set(data.lines.map((line) => line.authorId))).toEqual(
       new Set([canonicalId]),
     )
-    expect(lines).toHaveLength(3)
-    expect(aliases).toHaveLength(1)
-    expect(aliases[0]?.canonicalAuthorId).toBe(canonicalId)
+    expect(data.lines).toHaveLength(3)
+    expect(data.aliases).toHaveLength(1)
+    expect(data.aliases[0]?.canonicalAuthorId).toBe(canonicalId)
   })
 
   it('records no aliases when nobody is merged', async () => {
-    const db = createDatabase()
-    await seedAuthors(db, [
+    const store = await storeWith([
       { name: GORVEK, email: 'gorvek@ashendale.realm' },
       { name: NIGHTSHROUD, email: 'nightshroud@alderstone.realm' },
     ])
-    await new AuthorNormalizationService(db).normalizeAllAuthors()
+    await normalizeAuthors(store, 'strict')
 
-    expect(await db.select().from(authorAliases)).toHaveLength(0)
+    expect((await store.loadAnalysis()).aliases).toHaveLength(0)
+  })
+
+  it('is a plan before it is a write', () => {
+    const plan = planNormalization(
+      [
+        author(1, { name: 'Gorvek', email: 'Gorvek@Ashendale.Realm' }),
+        author(2, { name: GORVEK, email: 'gorvek@ashendale.realm' }),
+      ],
+      'strict',
+    )
+
+    expect(plan.reassign).toEqual([{ from: 1, to: 2 }])
+    expect(plan.aliases).toEqual([
+      {
+        canonicalAuthorId: 2,
+        aliasName: 'Gorvek',
+        aliasEmail: 'Gorvek@Ashendale.Realm',
+      },
+    ])
+    expect(plan.authors.find((one) => one.id === 1)?.changes).toEqual({
+      isCanonical: false,
+      canonicalId: 2,
+    })
   })
 })
 
-describe('AuthorNormalizationService - strict policy', () => {
+describe('strict policy', () => {
   it('merges only on exact email, ignoring how alike the names are', async () => {
     const { groups } = await mergeGroups(
       [
@@ -283,8 +298,6 @@ describe('AuthorNormalizationService - strict policy', () => {
       'strict',
     )
 
-    // Ann and Annabelle stay apart here, which is precisely the argument for
-    // making an address-based policy the default (N1).
     expect(groups).toHaveLength(3)
     expect(groups.find((group) => group.length === 2)).toEqual([
       'Gorvek',
@@ -304,8 +317,78 @@ describe('AuthorNormalizationService - strict policy', () => {
   })
 
   it('does nothing to an empty author table', async () => {
-    const db = createDatabase()
-    await new AuthorNormalizationService(db).normalizeAllAuthors()
-    expect(await db.select().from(authors)).toHaveLength(0)
+    const store = createMemoryStore()
+    await normalizeAuthors(store, 'strict')
+    expect(await store.listAuthors()).toHaveLength(0)
+  })
+})
+
+describe('the guesses, and their reasons', () => {
+  const short = author(1, { name: 'Gorvek', email: 'gorvek@privat.no' })
+  const long = author(2, {
+    name: 'Gorvek the Ironbane',
+    email: 'gorvek@firma.no',
+  })
+  const other = author(3, {
+    name: 'Sister Nightshroud',
+    email: 'night@alderstone.realm',
+  })
+
+  it('reports what a loose run would merge, having merged nothing', () => {
+    const guesses = findIdentityGuesses([short, long, other])
+
+    expect(guesses).toHaveLength(1)
+    expect(guesses[0]?.canonical.email).toBe(long.email)
+    expect(guesses[0]?.absorbed.map((one) => one.email)).toEqual([short.email])
+  })
+
+  it('explains every guess, including the one that was the seed of the group', () => {
+    // The identity kept is the longest readable name, which need not be the
+    // one the grouping started from. A generic reason for that case is a
+    // reason nobody can check.
+    for (const merge of findIdentityGuesses([short, long, other])) {
+      for (const absorbed of merge.absorbed) {
+        expect(absorbed.reason).not.toBe('they were taken to be one')
+        expect(absorbed.reason.length).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('ignores identities already folded into another', () => {
+    const folded = { ...short, isCanonical: false, canonicalId: long.id }
+    expect(findIdentityGuesses([folded, long, other])).toEqual([])
+  })
+
+  it('reads a merge back from the aliases it left behind', () => {
+    const merges = describeExistingMerges(
+      [long, other],
+      [
+        {
+          canonicalAuthorId: long.id,
+          aliasName: short.name,
+          aliasEmail: short.email,
+        },
+      ],
+    )
+
+    expect(merges).toHaveLength(1)
+    expect(merges[0]?.canonical.email).toBe(long.email)
+    expect(merges[0]?.absorbed[0]?.email).toBe(short.email)
+    expect(merges[0]?.absorbed[0]?.reason).toBe(
+      whyAuthorsMatch(long, {
+        name: short.name,
+        displayName: short.name,
+        email: short.email,
+      }) ?? '',
+    )
+  })
+
+  it('says why two addresses at one domain are alike', () => {
+    expect(
+      whyAuthorsMatch(
+        { name: 'Alpha', displayName: 'Alpha', email: 'g.ironbane@corp.com' },
+        { name: 'Beta', displayName: 'Beta', email: 'gironbane@corp.com' },
+      ),
+    ).toBe('the addresses "g.ironbane" and "gironbane" are alike at corp.com')
   })
 })
