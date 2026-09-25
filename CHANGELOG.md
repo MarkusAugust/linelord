@@ -63,6 +63,14 @@ because the earlier answer was wrong.
   `HistoryService` is gone. The test that reached into a private method to
   check the walk drops its claim before reading now does it by handing the
   walk a git that dies on the first tree and checking nothing is claimed.
+- **The orchestration, as a record of functions.** `LineLordService` is
+  gone; `createLineLord(ports, …)` returns the same operations as closures
+  over the run's state, built from three ports: git, the file system and a
+  store provider that decides between the cache on disk and memory. The
+  cache decision, the `.git-blame-ignore-revs` resolution and the
+  `.mailmap` writing move into the core and reach files through the port;
+  the composition root in `src/app/ports.ts` is the one place the real
+  adapters are chosen. No class remains in the source.
 
 ## [0.11.0] — 2026-09-25
 

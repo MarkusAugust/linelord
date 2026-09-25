@@ -5,10 +5,9 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
-import { blameLines } from '../../adapters/sqlite/schema'
+import { type LineLord, lineLord } from '../../__test__/helpers/lineLord'
+import { IGNORE_REVS_FILENAME } from '../../core/ignoreRevs'
 import { authorContributions } from '../../core/ownership'
-import { IGNORE_REVS_FILENAME } from '../../utility/ignoreRevs'
-import { LineLordService } from '../LineLordService'
 
 /**
  * A repository-wide reformatting, and what it does to the numbers.
@@ -48,9 +47,7 @@ async function repoWithAReformatting() {
 }
 
 /** Lines owned in HEAD, by email. */
-async function ownership(
-  service: LineLordService,
-): Promise<Map<string, number>> {
+async function ownership(service: LineLord): Promise<Map<string, number>> {
   const contributions = authorContributions(service.getAnalysis())
   return new Map(
     contributions.map((one) => [one.email, one.totalLines] as const),
@@ -69,7 +66,7 @@ describe('a commit blame is told to look past', () => {
     const made = await repoWithAReformatting()
     repo = made.repo
 
-    const service = new LineLordService(repo.path, 50 * 1024)
+    const service = lineLord(repo.path, 50 * 1024)
     await service.initialize()
 
     expect((await ownership(service)).get(BOT.email)).toBe(3)
@@ -84,7 +81,7 @@ describe('a commit blame is told to look past', () => {
       `# reformatting, not authorship\n${made.reformat}\n`,
     )
 
-    const service = new LineLordService(repo.path, 50 * 1024)
+    const service = lineLord(repo.path, 50 * 1024)
     await service.initialize()
 
     expect((await ownership(service)).get(GORVEK.email)).toBe(3)
@@ -95,7 +92,7 @@ describe('a commit blame is told to look past', () => {
     const made = await repoWithAReformatting()
     repo = made.repo
 
-    const service = new LineLordService(repo.path, 50 * 1024, {
+    const service = lineLord(repo.path, 50 * 1024, {
       ignoreRevisions: [made.reformat],
     })
     await service.initialize()
@@ -111,13 +108,10 @@ describe('a commit blame is told to look past', () => {
     repo = made.repo
     await writeFile(join(repo.path, IGNORE_REVS_FILENAME), `${made.reformat}\n`)
 
-    const service = new LineLordService(repo.path, 50 * 1024)
+    const service = lineLord(repo.path, 50 * 1024)
     await service.initialize()
 
-    const rows = await service
-      .getDatabase()
-      .select({ commitTimestamp: blameLines.commitTimestamp })
-      .from(blameLines)
+    const rows = service.getAnalysis().lines
 
     expect(rows).toHaveLength(3)
     for (const row of rows) {
@@ -130,7 +124,7 @@ describe('a commit blame is told to look past', () => {
     repo = made.repo
     await writeFile(join(repo.path, IGNORE_REVS_FILENAME), `${made.reformat}\n`)
 
-    const service = new LineLordService(repo.path, 50 * 1024)
+    const service = lineLord(repo.path, 50 * 1024)
     await service.initialize()
 
     const context = service.getAnalysisContext()
@@ -149,7 +143,7 @@ describe('a commit blame is told to look past', () => {
       `${made.reformat}\nnot a commit at all\n`,
     )
 
-    const service = new LineLordService(repo.path, 50 * 1024)
+    const service = lineLord(repo.path, 50 * 1024)
     await service.initialize()
 
     expect(service.getFailures()).toEqual([])

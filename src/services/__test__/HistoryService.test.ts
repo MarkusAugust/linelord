@@ -4,6 +4,7 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { lineLord } from '../../__test__/helpers/lineLord'
 import { createGit } from '../../adapters/git/spawnGit'
 import { clearDatabase, createDatabase } from '../../adapters/sqlite/database'
 import { HISTORY_HEAD_KEY, readMeta } from '../../adapters/sqlite/meta'
@@ -11,7 +12,6 @@ import { authors, cohortLines, snapshots } from '../../adapters/sqlite/schema'
 import { createSqliteStore } from '../../adapters/sqlite/store'
 import { walkHistory } from '../../core/history'
 import { survivalByAuthor } from '../../core/longevity'
-import { LineLordService } from '../LineLordService'
 
 /**
  * Walking the history, and the one thing that must be true about it.
@@ -344,23 +344,19 @@ describe('HistoryService', () => {
       write: { 'b.ts': 'three\n' },
     })
 
-    const service = new LineLordService(repo.path, 50 * 1024, {
+    const service = lineLord(repo.path, 50 * 1024, {
       authorPolicy: 'loose',
     })
     await service.initialize()
-    const db = service.getDatabase()
-    await walkHistory(portsFor(repo.path, db), {
+    const ports = { git: createGit(repo.path), store: service.getStore() }
+    await walkHistory(ports, {
       interval: 'month',
       thresholdBytes: THRESHOLD,
     })
 
-    const merged = await db
-      .select({ id: authors.id })
-      .from(authors)
-      .where(eq(authors.isCanonical, false))
-    const used = await db
-      .select({ authorId: cohortLines.authorId })
-      .from(cohortLines)
+    const data = await ports.store.loadAnalysis()
+    const merged = data.authors.filter((one) => !one.isCanonical)
+    const used = (await ports.store.loadHistory()).cohortLines
     const mergedIds = new Set(merged.map((one) => one.id))
 
     expect(merged.length).toBeGreaterThan(0)
@@ -488,24 +484,22 @@ describe('HistoryService', () => {
       write: { 'b.ts': 'three\n' },
     })
 
-    const service = new LineLordService(repo.path, 50 * 1024, {
+    const service = lineLord(repo.path, 50 * 1024, {
       authorPolicy: 'loose',
     })
     await service.initialize()
-    const db = service.getDatabase()
+    const ports = { git: createGit(repo.path), store: service.getStore() }
 
-    const run = await walkHistory(portsFor(repo.path, db), {
+    const run = await walkHistory(ports, {
       interval: 'month',
       thresholdBytes: THRESHOLD,
     })
 
     expect(run.snapshots).toBe(1)
-    const rows = await db
-      .select({ lines: cohortLines.lineCount })
-      .from(cohortLines)
+    const rows = (await ports.store.loadHistory()).cohortLines
     // One row for the person, holding all three lines.
     expect(rows).toHaveLength(1)
-    expect(rows[0]?.lines).toBe(3)
+    expect(rows[0]?.lineCount).toBe(3)
   }, 120000)
 
   it('reads back through the service the interface will use', async () => {
@@ -535,15 +529,15 @@ describe('HistoryService', () => {
       },
     })
 
-    const service = new LineLordService(repo.path, 50 * 1024)
+    const service = lineLord(repo.path, 50 * 1024)
     await service.initialize()
-    const db = service.getDatabase()
-    await walkHistory(portsFor(repo.path, db), {
+    const ports = { git: createGit(repo.path), store: service.getStore() }
+    await walkHistory(ports, {
       interval: 'month',
       thresholdBytes: THRESHOLD,
     })
 
-    const store = createSqliteStore(db)
+    const store = ports.store
     expect((await store.readMeta())[HISTORY_HEAD_KEY]).toBe(await repo.head())
 
     const survival = survivalByAuthor(
@@ -569,10 +563,10 @@ describe('HistoryService', () => {
 
   it('reports no survival figures when no history was gathered', async () => {
     repo = await repoWithAYear()
-    const service = new LineLordService(repo.path, 50 * 1024)
+    const service = lineLord(repo.path, 50 * 1024)
     await service.initialize()
 
-    const store = createSqliteStore(service.getDatabase())
+    const store = service.getStore()
 
     expect(
       survivalByAuthor(

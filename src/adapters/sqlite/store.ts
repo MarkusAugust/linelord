@@ -7,7 +7,11 @@ import type {
   HistoryData,
 } from '../../core/model'
 import type { AnalysisStore } from '../../ports/storage'
-import { clearDatabase, type LineLordDatabase } from './database'
+import {
+  clearDatabase,
+  type LineLordDatabase,
+  SCHEMA_VERSION,
+} from './database'
 import { readAllMeta, writeMeta } from './meta'
 import {
   authorAliases,
@@ -81,6 +85,8 @@ export function createSqliteStore(db: LineLordDatabase): AnalysisStore {
     }))
 
   return {
+    layoutVersion: String(SCHEMA_VERSION),
+
     async loadAnalysis(): Promise<AnalysisData> {
       const lines = (
         await db.select().from(blameLines).orderBy(blameLines.id)

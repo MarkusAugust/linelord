@@ -2,15 +2,12 @@ import { Box, Text, useInput } from 'ink'
 import pc from 'picocolors'
 import { useState } from 'react'
 import type { IdentityMerge } from '../core/identity'
-import {
-  type MailmapWrite,
-  mailmapLines,
-  writeMailmap,
-} from '../utility/mailmap'
+import { type MailmapWrite, mailmapLines } from '../core/mailmap'
 
 type MailmapDraftProps = {
-  repoPath: string
   merges: IdentityMerge[]
+  /** Write these merges to the repository's .mailmap. */
+  write: (merges: IdentityMerge[]) => Promise<MailmapWrite>
   onBack: () => void
 }
 
@@ -28,8 +25,8 @@ type WriteState =
  * into a decision, which is why it takes a keypress and not a default.
  */
 export default function MailmapDraft({
-  repoPath,
   merges,
+  write: writeToRepository,
   onBack,
 }: MailmapDraftProps) {
   const [write, setWrite] = useState<WriteState>({ status: 'idle' })
@@ -43,7 +40,7 @@ export default function MailmapDraft({
 
     if (input === 'w' && write.status === 'idle' && lines.length > 0) {
       setWrite({ status: 'writing' })
-      writeMailmap(repoPath, merges)
+      writeToRepository(merges)
         .then((result) => setWrite({ status: 'written', result }))
         .catch((error: unknown) =>
           setWrite({

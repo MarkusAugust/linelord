@@ -50,6 +50,11 @@ export function describeAnalysisStore(
       return { a, png }
     }
 
+    it('says how its tables are laid out', () => {
+      expect(typeof store.layoutVersion).toBe('string')
+      expect(store.layoutVersion.length).toBeGreaterThan(0)
+    })
+
     it('starts empty', async () => {
       expect(await store.loadAnalysis()).toEqual({
         files: [],

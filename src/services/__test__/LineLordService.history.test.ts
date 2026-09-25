@@ -6,11 +6,10 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { lineLord } from '../../__test__/helpers/lineLord'
 import { findRepositoryRoot } from '../../adapters/git/spawnGit'
 import { resolveCachePath } from '../../adapters/sqlite/cacheLocation'
 import { acquireCacheLock } from '../../adapters/sqlite/cacheMaintenance'
-import { snapshots } from '../../adapters/sqlite/schema'
-import { LineLordService } from '../LineLordService'
 
 /**
  * Walking the history through the service the interface uses.
@@ -49,12 +48,12 @@ describe('gatherHistory', () => {
     repo = await createTestRepo()
     await repo.commit({ message: 'one', write: { 'a.ts': 'a\n' } })
 
-    const service = new LineLordService(repo.path, 50 * 1024)
+    const service = lineLord(repo.path, 50 * 1024)
     await service.initialize()
 
     expect(service.wantsHistory()).toBe(false)
     expect(await service.gatherHistory()).toBe(null)
-    expect(await service.getDatabase().select().from(snapshots)).toEqual([])
+    expect((await service.getStore().loadHistory()).snapshots).toEqual([])
   }, 60000)
 
   it('walks it when asked, and says so', async () => {
@@ -66,7 +65,7 @@ describe('gatherHistory', () => {
       write: { 'a.ts': 'a\nb\n' },
     })
 
-    const service = new LineLordService(repo.path, 50 * 1024, {
+    const service = lineLord(repo.path, 50 * 1024, {
       history: MONTHLY,
     })
     await service.initialize()
@@ -83,18 +82,18 @@ describe('gatherHistory', () => {
     // would be two answers to two questions, presented as one.
     repo = await repoWithABigFile()
 
-    const generous = new LineLordService(repo.path, 50 * 1024, {
+    const generous = lineLord(repo.path, 50 * 1024, {
       history: MONTHLY,
     })
     await generous.initialize()
     await generous.gatherHistory()
 
-    const strict = new LineLordService(repo.path, 1024, { history: MONTHLY })
+    const strict = lineLord(repo.path, 1024, { history: MONTHLY })
     await strict.initialize()
     await strict.gatherHistory()
 
-    const [withBigFile] = await generous.getDatabase().select().from(snapshots)
-    const [withoutBigFile] = await strict.getDatabase().select().from(snapshots)
+    const [withBigFile] = (await generous.getStore().loadHistory()).snapshots
+    const [withoutBigFile] = (await strict.getStore().loadHistory()).snapshots
 
     // The large file is 8,000 bytes: inside the generous threshold and
     // outside the strict one, so the two histories cannot agree.
@@ -119,7 +118,7 @@ describe('gatherHistory', () => {
     const cacheHome = await mkdtemp(join(tmpdir(), 'linelord-history-lock-'))
     process.env.XDG_CACHE_HOME = cacheHome
     try {
-      const service = new LineLordService(repo.path, 50 * 1024, {
+      const service = lineLord(repo.path, 50 * 1024, {
         useCache: true,
         history: MONTHLY,
       })
@@ -136,14 +135,12 @@ describe('gatherHistory', () => {
       expect(held).not.toBe(null)
 
       await expect(service.gatherHistory()).rejects.toThrow()
-      expect(await service.getDatabase().select().from(snapshots)).toEqual([])
+      expect((await service.getStore().loadHistory()).snapshots).toEqual([])
 
       held?.release()
       // And once it is free, the walk goes ahead.
       await service.gatherHistory()
-      expect(await service.getDatabase().select().from(snapshots)).toHaveLength(
-        1,
-      )
+      expect((await service.getStore().loadHistory()).snapshots).toHaveLength(1)
     } finally {
       delete process.env.XDG_CACHE_HOME
       await rm(cacheHome, { force: true, recursive: true })
@@ -159,7 +156,7 @@ describe('gatherHistory', () => {
       write: { 'a.ts': 'a\n' },
     })
 
-    const service = new LineLordService(repo.path, 50 * 1024, {
+    const service = lineLord(repo.path, 50 * 1024, {
       history: MONTHLY,
     })
     await service.initialize()

@@ -9,8 +9,8 @@ import {
   ignoredFileExtensions,
   isIgnoredByPattern,
 } from '../resources/ignoreFiles'
-import type { IgnoreRevs, UnresolvedIgnoreRev } from '../utility/ignoreRevs'
 import { normaliseConcurrency } from './concurrency'
+import type { IgnoreRevs, UnresolvedIgnoreRev } from './ignoreRevs'
 import type { FileRecord } from './model'
 
 /**

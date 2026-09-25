@@ -6,8 +6,8 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { lineLord } from '../../__test__/helpers/lineLord'
 import { canonicalAuthors } from '../../core/ownership'
-import { LineLordService } from '../LineLordService'
 
 /**
  * What LineLord says about one person committing under several addresses.
@@ -57,7 +57,7 @@ describe('identity guesses under the default policy', () => {
     // that the two entries in front of them may be one person.
     repo = await repoWithOnePersonTwice()
 
-    const service = new LineLordService(repo.path, 50 * 1024)
+    const service = lineLord(repo.path, 50 * 1024)
     await service.initialize()
 
     const guesses = service.getIdentityMerges()
@@ -75,7 +75,7 @@ describe('identity guesses under the default policy', () => {
     // that case is a reason nobody can check.
     repo = await repoWithOnePersonTwice()
 
-    const service = new LineLordService(repo.path, 50 * 1024)
+    const service = lineLord(repo.path, 50 * 1024)
     await service.initialize()
 
     for (const merge of service.getIdentityMerges()) {
@@ -99,7 +99,7 @@ describe('identity guesses under the default policy', () => {
       write: { 'b.ts': 'b\n' },
     })
 
-    const service = new LineLordService(repo.path, 50 * 1024)
+    const service = lineLord(repo.path, 50 * 1024)
     await service.initialize()
 
     expect(service.getIdentityMerges()).toEqual([])
@@ -127,11 +127,11 @@ describe('identity guesses when the analysis came out of the cache', () => {
     // disappears on every run after it -- the state it describes unchanged.
     repo = await repoWithOnePersonTwice()
 
-    const first = new LineLordService(repo.path, 50 * 1024, { useCache: true })
+    const first = lineLord(repo.path, 50 * 1024, { useCache: true })
     await first.initialize()
     expect(first.getIdentityMerges()).toHaveLength(1)
 
-    const second = new LineLordService(repo.path, 50 * 1024, { useCache: true })
+    const second = lineLord(repo.path, 50 * 1024, { useCache: true })
     await second.initialize()
 
     expect(second.getCacheStatus()?.mode).toBe('reused')
@@ -141,14 +141,14 @@ describe('identity guesses when the analysis came out of the cache', () => {
   it('reports what a guessing run actually merged, reused or not', async () => {
     repo = await repoWithOnePersonTwice()
 
-    const first = new LineLordService(repo.path, 50 * 1024, {
+    const first = lineLord(repo.path, 50 * 1024, {
       useCache: true,
       authorPolicy: 'loose',
     })
     await first.initialize()
     expect(first.getIdentityMerges()).toHaveLength(1)
 
-    const second = new LineLordService(repo.path, 50 * 1024, {
+    const second = lineLord(repo.path, 50 * 1024, {
       useCache: true,
       authorPolicy: 'loose',
     })

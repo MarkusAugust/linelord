@@ -3,8 +3,8 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { lineLord } from '../../__test__/helpers/lineLord'
 import { barbarianRankings } from '../../core/barbarian'
-import { LineLordService } from '../LineLordService'
 
 /**
  * Battle scars and the size threshold, over a real repository.
@@ -26,7 +26,7 @@ describe('battle scars and the size threshold', () => {
   const WIDE_FILE = `${'const filler = "aaaaaaaaaaaaaaaaaaaa"\n'.repeat(200)}`
 
   async function scarsFor(repoPath: string, thresholdBytes: number) {
-    const service = new LineLordService(repoPath, thresholdBytes)
+    const service = lineLord(repoPath, thresholdBytes)
     await service.initialize()
     const rankings = barbarianRankings(service.getAnalysis())
     return rankings[0]?.metrics.battleScars ?? 0

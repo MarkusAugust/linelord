@@ -1,6 +1,5 @@
-import { appendFile, readFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import type { IdentityMerge } from '../core/identity'
+import type { FileSystemPort } from '../ports/files'
+import type { IdentityMerge } from './identity'
 
 /**
  * Turning guesses into something git can read.
@@ -57,22 +56,17 @@ export interface MailmapWrite {
 export async function writeMailmap(
   repositoryRoot: string,
   merges: IdentityMerge[],
+  files: FileSystemPort,
 ): Promise<MailmapWrite> {
-  const path = join(repositoryRoot, '.mailmap')
+  const path = `${repositoryRoot}/.mailmap`
   const proposed = mailmapLines(merges)
 
-  let existing = ''
-  try {
-    existing = await readFile(path, 'utf8')
-  } catch (error) {
-    // "Not there" is the usual case the first time, and means there is
-    // nothing to preserve. Anything else -- a file that exists but cannot be
-    // read, which on most systems can still be appended to -- is not the same
-    // thing at all: carrying on would append lines the file may already have,
-    // duplicating the entries this promises to leave alone. Better to say so.
-    const code = (error as NodeJS.ErrnoException)?.code
-    if (code !== 'ENOENT' && code !== 'ENOTDIR') throw error
-  }
+  // "Not there" is the usual case the first time, and means there is
+  // nothing to preserve. A file that exists but cannot be read -- which on
+  // most systems can still be appended to -- is not the same thing at all:
+  // carrying on would append lines the file may already have, duplicating
+  // the entries this promises to leave alone. The port throws for it.
+  const existing = (await files.readText(path)) ?? ''
 
   const present = new Set(
     existing
@@ -86,7 +80,10 @@ export async function writeMailmap(
 
   if (added.length > 0) {
     const needsNewline = existing.length > 0 && !existing.endsWith('\n')
-    await appendFile(path, `${needsNewline ? '\n' : ''}${added.join('\n')}\n`)
+    await files.appendText(
+      path,
+      `${needsNewline ? '\n' : ''}${added.join('\n')}\n`,
+    )
   }
 
   return { path, added, alreadyPresent }

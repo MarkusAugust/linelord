@@ -6,12 +6,11 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
+import { type LineLord, lineLord } from '../../__test__/helpers/lineLord'
 import { findRepositoryRoot } from '../../adapters/git/spawnGit'
 import { resolveCachePath } from '../../adapters/sqlite/cacheLocation'
 import { acquireCacheLock } from '../../adapters/sqlite/cacheMaintenance'
-import { writeMeta } from '../../adapters/sqlite/meta'
 import { authorContributions } from '../../core/ownership'
-import { LineLordService } from '../LineLordService'
 
 /**
  * The cache has one job beyond going faster: never to answer differently from
@@ -26,7 +25,7 @@ const NIGHTSHROUD = {
 }
 
 /** Ownership per contributor, which is what every comparison here is about. */
-async function ownership(service: LineLordService) {
+async function ownership(service: LineLord) {
   const contributions = authorContributions(service.getAnalysis())
   return contributions
     .map((c) => `${c.email}:${c.totalLines}`)
@@ -34,7 +33,7 @@ async function ownership(service: LineLordService) {
     .join(' ')
 }
 
-describe('LineLordService - the cache', () => {
+describe('LineLord - the cache', () => {
   let repo: TestRepo | undefined
   let cacheHome: string
 
@@ -52,7 +51,7 @@ describe('LineLordService - the cache', () => {
 
   /** Run with the cache, and report what it decided to do. */
   async function cached(repoPath: string, thresholdBytes = 50 * 1024) {
-    const service = new LineLordService(repoPath, thresholdBytes, {
+    const service = lineLord(repoPath, thresholdBytes, {
       useCache: true,
     })
     await service.initialize()
@@ -61,7 +60,7 @@ describe('LineLordService - the cache', () => {
 
   /** Run without any cache at all: the answer everything is measured against. */
   async function fromScratch(repoPath: string, thresholdBytes = 50 * 1024) {
-    const service = new LineLordService(repoPath, thresholdBytes)
+    const service = lineLord(repoPath, thresholdBytes)
     await service.initialize()
     return service
   }
@@ -267,11 +266,11 @@ describe('LineLordService - the cache', () => {
       // analysis. This was a real bug when one service was pointed at a new
       // path: it emptied the database it was holding, which was the previous
       // repository's cache file.
-      const first = new LineLordService(repo.path, 50 * 1024, {
+      const first = lineLord(repo.path, 50 * 1024, {
         useCache: true,
       })
       await first.initialize()
-      const second = new LineLordService(other.path, 50 * 1024, {
+      const second = lineLord(other.path, 50 * 1024, {
         useCache: true,
       })
       await second.initialize()
@@ -292,12 +291,12 @@ describe('LineLordService - the cache', () => {
     repo = await baseRepo()
     await cached(repo.path)
 
-    const service = new LineLordService(repo.path, 50 * 1024, {
+    const service = lineLord(repo.path, 50 * 1024, {
       useCache: true,
     })
     await service.initialize()
     // Point the stored fingerprint at a commit that does not exist.
-    writeMeta(service.getDatabase(), { head_sha: 'f'.repeat(40) })
+    await service.getStore().writeMeta({ head_sha: 'f'.repeat(40) })
 
     const { status } = await cached(repo.path)
 
@@ -311,7 +310,7 @@ describe('LineLordService - the cache', () => {
     repo = await baseRepo()
     await cached(repo.path)
 
-    const service = new LineLordService(repo.path, 50 * 1024, {
+    const service = lineLord(repo.path, 50 * 1024, {
       useCache: true,
       refresh: true,
     })
@@ -333,7 +332,7 @@ describe('LineLordService - the cache', () => {
     // memory, which costs it its cache and nothing else.
     repo = await baseRepo()
 
-    const holder = new LineLordService(repo.path, 50 * 1024, { useCache: true })
+    const holder = lineLord(repo.path, 50 * 1024, { useCache: true })
     const lookup = await findRepositoryRoot(repo.path)
     const lock = acquireCacheLock(
       resolveCachePath(lookup.found ? lookup.root : repo.path),
@@ -368,7 +367,7 @@ describe('LineLordService - the cache', () => {
   })
 })
 
-describe('LineLordService - incremental and full agree, whatever the history', () => {
+describe('LineLord - incremental and full agree, whatever the history', () => {
   let repo: TestRepo | undefined
   let cacheHome: string
 
@@ -398,7 +397,7 @@ describe('LineLordService - incremental and full agree, whatever the history', (
       write: { 'a.txt': 'a1\na2\na3\n', 'b.txt': 'b1\nb2\n' },
     })
 
-    const service = new LineLordService(repo.path, 50 * 1024, {
+    const service = lineLord(repo.path, 50 * 1024, {
       useCache: true,
     })
     await service.initialize()
@@ -424,7 +423,7 @@ describe('LineLordService - incremental and full agree, whatever the history', (
     }
 
     const incremental = await ownership(service)
-    const scratch = new LineLordService(repo.path)
+    const scratch = lineLord(repo.path)
     await scratch.initialize()
 
     expect(incremental).toBe(await ownership(scratch))
@@ -456,10 +455,10 @@ describe('what a reused run knows about itself', () => {
     await repo.commit({ message: 'one', write: { 'a.ts': 'const a = 1\n' } })
     const head = await repo.head()
 
-    const first = new LineLordService(repo.path, 50 * 1024, { useCache: true })
+    const first = lineLord(repo.path, 50 * 1024, { useCache: true })
     await first.initialize()
 
-    const second = new LineLordService(repo.path, 50 * 1024, { useCache: true })
+    const second = lineLord(repo.path, 50 * 1024, { useCache: true })
     await second.initialize()
 
     expect(second.getCacheStatus()?.mode).toBe('reused')
@@ -470,12 +469,12 @@ describe('what a reused run knows about itself', () => {
     repo = await createTestRepo()
     await repo.commit({ message: 'one', write: { 'a.ts': 'const a = 1\n' } })
 
-    const first = new LineLordService(repo.path, 50 * 1024, { useCache: true })
+    const first = lineLord(repo.path, 50 * 1024, { useCache: true })
     await first.initialize()
 
     await repo.writeFiles({ 'a.ts': 'const a = 2\n' })
 
-    const second = new LineLordService(repo.path, 50 * 1024, { useCache: true })
+    const second = lineLord(repo.path, 50 * 1024, { useCache: true })
     await second.initialize()
 
     expect(second.getAnalysisContext().uncommittedFileCount).toBe(1)
