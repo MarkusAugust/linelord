@@ -16,6 +16,12 @@ import {
   writeMeta,
 } from '../adapters/sqlite/meta'
 import { createSqliteStore } from '../adapters/sqlite/store'
+import {
+  describeExistingMerges,
+  findIdentityGuesses,
+  type IdentityMerge,
+  normalizeAuthors,
+} from '../core/identity'
 import type { HistoryReading } from '../core/longevity'
 import type { AnalysisData } from '../core/model'
 import { wasAnalysed } from '../core/ownership'
@@ -28,10 +34,6 @@ import {
   resolveHead,
 } from '../utility/gitRepository'
 import { type IgnoreRevs, resolveIgnoreRevs } from '../utility/ignoreRevs'
-import {
-  AuthorNormalizationService,
-  type IdentityMerge,
-} from './AuthorNormalizationService'
 import {
   type AuthorPolicy,
   computeFingerprint,
@@ -109,7 +111,6 @@ export interface LineLordOptions {
 export class LineLordService {
   private db: LineLordDatabase
   private gitService: GitService
-  private normalizationService: AuthorNormalizationService
   private store: AnalysisStore
   /** The analysis as values, loaded once initialization is complete. */
   private analysis: AnalysisData | null = null
@@ -159,7 +160,6 @@ export class LineLordService {
       this.largeFileThresholdBytes,
       options.concurrency,
     )
-    this.normalizationService = new AuthorNormalizationService(this.db)
     this.store = createSqliteStore(this.db)
   }
 
@@ -177,7 +177,6 @@ export class LineLordService {
       this.largeFileThresholdBytes,
       this.concurrency,
     )
-    this.normalizationService = new AuthorNormalizationService(db)
     this.store = createSqliteStore(db)
   }
 
@@ -304,7 +303,7 @@ export class LineLordService {
       // Merging identities and ranking them are decisions about the whole
       // repository, so they cannot be updated in part: both run again after
       // any change, however small.
-      await this.normalizationService.normalizeAllAuthors(this.authorPolicy)
+      await normalizeAuthors(this.store, this.authorPolicy)
       this.identityMerges = await this.collectIdentityMerges()
 
       onProgress?.(80, 100, 'Calculating ranks and percentages...')
@@ -611,9 +610,13 @@ export class LineLordService {
    */
   private async collectIdentityMerges(): Promise<IdentityMerge[]> {
     try {
+      const authors = await this.store.listAuthors()
       return this.authorPolicy === 'loose'
-        ? await this.normalizationService.describeExistingMerges()
-        : await this.normalizationService.findIdentityGuesses()
+        ? describeExistingMerges(
+            authors,
+            (await this.store.loadAnalysis()).aliases,
+          )
+        : findIdentityGuesses(authors)
     } catch {
       // A warning nobody can render is not worth failing an analysis over.
       return []

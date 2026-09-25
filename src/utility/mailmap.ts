@@ -1,6 +1,6 @@
 import { appendFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { IdentityMerge } from '../services/AuthorNormalizationService'
+import type { IdentityMerge } from '../core/identity'
 
 /**
  * Turning guesses into something git can read.

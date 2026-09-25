@@ -1,7 +1,7 @@
 import { Box, Text, useInput } from 'ink'
 import pc from 'picocolors'
 import { useState } from 'react'
-import type { IdentityMerge } from '../services/AuthorNormalizationService'
+import type { IdentityMerge } from '../core/identity'
 import {
   type MailmapWrite,
   mailmapLines,
