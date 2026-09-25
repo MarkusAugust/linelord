@@ -1,18 +1,19 @@
 import { Box, Text, useInput } from 'ink'
 import pc from 'picocolors'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { LineLordService } from '../services/LineLordService'
 import {
   type AuthorLongevity,
   type AuthorSurvivalWithIdentity,
   LongevityService,
-  type RepositoryLongevity,
 } from '../services/LongevityService'
 import {
   formatAge,
   formatSpread,
   renderAgeSparkline,
 } from '../utility/ageFormatting'
+import { useAsyncData } from '../utility/useAsyncData'
+import { HonestyNote } from './HonestyNote'
 import LongevityDetail from './LongevityDetail'
 
 type LongevityDashboardProps = {
@@ -31,6 +32,9 @@ const SORT_LABELS: Record<SortKey, string> = {
 }
 
 const WARRIORS_SHOWN = 10
+
+/** One empty map, so that "nothing loaded yet" is not a new object every render. */
+const EMPTY_SURVIVAL = new Map<number, AuthorSurvivalWithIdentity>()
 
 /** What the screen knows about the stored history, if anything. */
 type HistoryState =
@@ -159,74 +163,50 @@ export default function LongevityDashboard({
   lineLordService,
   onBack,
 }: LongevityDashboardProps) {
-  const [warriors, setWarriors] = useState<AuthorLongevity[]>([])
-  const [survival, setSurvival] = useState<
-    Map<number, AuthorSurvivalWithIdentity>
-  >(new Map())
-  const [historyState, setHistoryState] = useState<HistoryState>({
-    kind: 'absent',
-  })
-  const [repository, setRepository] = useState<RepositoryLongevity | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>('median')
   const [selected, setSelected] = useState(0)
   const [inDetail, setInDetail] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-
-    const load = async () => {
-      if (!lineLordService?.isInitialized()) {
-        // Returning here without saying so leaves the loading message on
-        // screen for good: there is no second attempt, and nothing else will
-        // ever clear it. The one state this screen must not reach is one it
-        // cannot explain.
-        if (cancelled) return
-        setError('LineLord service is unavailable or not initialized')
-        setIsLoading(false)
-        return
-      }
-
-      try {
-        setIsLoading(true)
-        setError(null)
-        const service = new LongevityService(lineLordService.getDatabase())
-        const [byAuthor, wholeRepository, bySurvival] = await Promise.all([
-          service.forAuthors(),
-          service.forRepository(),
-          service.survivalByAuthor(),
-        ])
-        if (cancelled) return
-        setWarriors(byAuthor)
-        setRepository(wholeRepository)
-        setSurvival(new Map(bySurvival.map((one) => [one.authorId, one])))
-
-        // A history outlives the analysis that produced it. Saying which
-        // revision it describes is the difference between a curve about this
-        // repository and a curve about the one it used to be.
-        const describes = service.historyDescribes()
-        const analysed = lineLordService.getAnalysisContext().headSha
-        setHistoryState(
-          describes === null
-            ? { kind: 'absent' }
-            : describes === analysed
-              ? { kind: 'current' }
-              : { kind: 'stale', describes },
-        )
-      } catch (caught) {
-        if (cancelled) return
-        setError(caught instanceof Error ? caught.message : String(caught))
-      } finally {
-        if (!cancelled) setIsLoading(false)
-      }
+  const loaded = useAsyncData(async () => {
+    if (!lineLordService?.isInitialized()) {
+      // Saying so is what keeps the loading message from staying on screen
+      // for good: there is no second attempt, and nothing else would ever
+      // clear it.
+      throw new Error('LineLord service is unavailable or not initialized')
     }
+    const service = new LongevityService(lineLordService.getDatabase())
+    const [warriors, repository, bySurvival] = await Promise.all([
+      service.forAuthors(),
+      service.forRepository(),
+      service.survivalByAuthor(),
+    ])
 
-    void load()
-    return () => {
-      cancelled = true
+    // A history outlives the analysis that produced it. Saying which
+    // revision it describes is the difference between a curve about this
+    // repository and a curve about the one it used to be.
+    const describes = service.historyDescribes()
+    const analysed = lineLordService.getAnalysisContext().headSha
+    const historyState: HistoryState =
+      describes === null
+        ? { kind: 'absent' }
+        : describes === analysed
+          ? { kind: 'current' }
+          : { kind: 'stale', describes }
+
+    return {
+      warriors,
+      repository,
+      survival: new Map(bySurvival.map((one) => [one.authorId, one])),
+      historyState,
     }
   }, [lineLordService])
+
+  const warriors = loaded.status === 'ready' ? loaded.data.warriors : []
+  const repository = loaded.status === 'ready' ? loaded.data.repository : null
+  const survival: Map<number, AuthorSurvivalWithIdentity> =
+    loaded.status === 'ready' ? loaded.data.survival : EMPTY_SURVIVAL
+  const historyState: HistoryState =
+    loaded.status === 'ready' ? loaded.data.historyState : { kind: 'absent' }
 
   const current = historyState.kind === 'current'
   const shown = sortWarriors(
@@ -272,12 +252,14 @@ export default function LongevityDashboard({
     )
   }
 
-  if (isLoading) {
+  if (loaded.status === 'loading') {
     return <Text color="gray">Reading the age of the stones…</Text>
   }
 
-  if (error) {
-    return <Text color="red">Could not measure the code's age: {error}</Text>
+  if (loaded.status === 'failed') {
+    return (
+      <Text color="red">Could not measure the code's age: {loaded.error}</Text>
+    )
   }
 
   return (
@@ -349,31 +331,10 @@ export default function LongevityDashboard({
 
       {/*
         L6. The numbers above are easy to read as a ranking of people, and a
-        table sorted by "oldest first" invites exactly that. These are the
-        things that are actually true about them.
+        table sorted by "oldest first" invites exactly that.
       */}
-      <Box flexDirection="column" marginTop={1}>
-        <Text color="yellow">What these numbers are, and are not</Text>
-        <Text color="gray">
-          {'  '}Age is when a line was last changed, not when it was written.
-        </Text>
-        <Text color="gray">
-          {'  '}A reformatting resets it — see .git-blame-ignore-revs.
-        </Text>
-        <Text color="gray">
-          {'  '}Old code is stable code, which is not the same as good code.
-          Untouched
-        </Text>
-        <Text color="gray">
-          {'  '}code may simply be dead code nobody dares to move.
-        </Text>
-        <Text color="gray">
-          {'  '}New code usually means working where the work is, not working
-          badly.
-        </Text>
-        <Text color="gray">
-          {'  '}None of this measures anyone's worth. Do not use it that way.
-        </Text>
+      <Box marginTop={1}>
+        <HonestyNote topic="age" />
       </Box>
 
       {historyState.kind === 'absent' && shown.length > 0 && (

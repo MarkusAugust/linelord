@@ -169,23 +169,76 @@ export class AnalysisService {
       .innerJoin(blameLines, eq(files.id, blameLines.fileId))
       .where(inArray(blameLines.authorId, authorIdsList))
       .groupBy(files.id)
-      .orderBy(desc(sql`count(${blameLines.id})`))
+      .orderBy(desc(sql`count(${blameLines.id})`), files.path)
 
-    return results.map((result) => {
-      // Extract filename from path
-      const filename = result.path.split('/').pop() || result.path
+    return results.map((result) => this.toFileContribution(result))
+  }
 
-      return {
-        filename,
-        path: result.path,
-        authorLines: result.authorLines,
-        totalLines: result.totalLines || 0,
-        percentage:
-          (result.totalLines ?? 0) > 0
-            ? Math.round((result.authorLines / (result.totalLines ?? 0)) * 100)
-            : 0,
-      }
-    })
+  /**
+   * The files each canonical author holds the most lines in, for everyone at
+   * once.
+   *
+   * One query in place of one per author: a screen that lists every
+   * contributor's top files was asking the database once per person, which on
+   * a repository with a hundred of them is a hundred round trips for what a
+   * window function answers in one. Aliases are folded into their canonical
+   * author, the same as the one-author query does, and a tie in line count is
+   * broken by path so that the answer is the same on every run.
+   */
+  async getTopFilesForAuthors(
+    limit: number,
+  ): Promise<Map<number, FileContribution[]>> {
+    const rows = await this.db.all<{
+      canonicalId: number
+      path: string
+      totalLines: number | null
+      authorLines: number
+    }>(sql`
+      SELECT canonical_id AS canonicalId,
+             path,
+             total_lines AS totalLines,
+             author_lines AS authorLines
+      FROM (
+        SELECT a.canonical_id AS canonical_id,
+               f.path AS path,
+               f.total_lines AS total_lines,
+               count(b.id) AS author_lines,
+               row_number() OVER (
+                 PARTITION BY a.canonical_id
+                 ORDER BY count(b.id) DESC, f.path ASC
+               ) AS position
+        FROM blame_lines b
+        JOIN files f ON f.id = b.file_id
+        JOIN authors a ON a.id = b.author_id
+        GROUP BY a.canonical_id, f.id
+      )
+      WHERE position <= ${limit}
+      ORDER BY canonical_id, position
+    `)
+
+    const byAuthor = new Map<number, FileContribution[]>()
+    for (const row of rows) {
+      const list = byAuthor.get(row.canonicalId) ?? []
+      list.push(this.toFileContribution(row))
+      byAuthor.set(row.canonicalId, list)
+    }
+    return byAuthor
+  }
+
+  private toFileContribution(row: {
+    path: string
+    authorLines: number
+    totalLines: number | null
+  }): FileContribution {
+    const totalLines = row.totalLines ?? 0
+    return {
+      filename: row.path.split('/').pop() || row.path,
+      path: row.path,
+      authorLines: row.authorLines,
+      totalLines,
+      percentage:
+        totalLines > 0 ? Math.round((row.authorLines / totalLines) * 100) : 0,
+    }
   }
 
   async getAllAuthors(): Promise<

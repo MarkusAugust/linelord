@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessages'
 import type { AnalysisService } from '../services/AnalysisService'
 import type { AnalysisStep } from '../types/analysisTypes'
-import { renderSimplePercentageBar } from '../utility/simplePercentageBar'
 import { AuthorSelector } from './AuthorSelector'
+import { FileContributionRow } from './FileContributionRow'
 import { EnhancedProgressBar } from './ProgressBar'
 
 // Simple Author interface to match AuthorSelector
@@ -276,36 +276,6 @@ export default function SingleDevRepoStats({
     return pc.green('█'.repeat(filled)) + pc.gray('░'.repeat(empty))
   }
 
-  const parseFileName = (filename: string) => {
-    if (filename.startsWith('.')) {
-      const remainingName = filename.slice(1)
-      const dotIndex = remainingName.indexOf('.')
-
-      if (dotIndex === -1) {
-        return {
-          baseName: filename,
-          extension: '',
-        }
-      }
-      return {
-        baseName: filename.slice(0, dotIndex + 1),
-        extension: remainingName.slice(dotIndex + 1),
-      }
-    }
-
-    const lastDotIndex = filename.lastIndexOf('.')
-    if (lastDotIndex === -1 || lastDotIndex === 0) {
-      return {
-        baseName: filename,
-        extension: '',
-      }
-    }
-    return {
-      baseName: filename.slice(0, lastDotIndex),
-      extension: filename.slice(lastDotIndex + 1),
-    }
-  }
-
   return (
     <Box flexDirection="column">
       <Text>{pc.bold(pc.green('Single Developer Repository Statistics'))}</Text>
@@ -383,47 +353,13 @@ export default function SingleDevRepoStats({
 
                 {stats.authorStats.fileContributions
                   .slice(0, 15)
-                  .map((file, fileIndex) => {
-                    const { baseName, extension } = parseFileName(file.filename)
-
-                    const baseNameDisplay =
-                      baseName.length > 12
-                        ? `${baseName.substring(0, 12)}...`
-                        : baseName.padEnd(15, ' ')
-
-                    const extensionDisplay = extension
-                      ? pc.yellow(extension.padEnd(5, ' ').substring(0, 5))
-                      : ' '.repeat(5)
-
-                    const percentDisplay = `${file.percentage}%`.padStart(
-                      4,
-                      ' ',
-                    )
-                    const lineCountDisplay = `[${file.authorLines}/${file.totalLines}]`
-
-                    return (
-                      <Box
-                        key={`file-${fileIndex}-${file.path}-${file.authorLines}-${file.totalLines}`}
-                      >
-                        <Text>
-                          {pc.dim(
-                            `${(fileIndex + 1).toString().padStart(2, ' ')}. `,
-                          )}
-                          {baseNameDisplay}
-                          {extension ? ' .' : '  '}
-                          {extensionDisplay}
-                          {'  '}
-                          <Text dimColor>
-                            {renderSimplePercentageBar(file.percentage, 10)}
-                          </Text>
-                          {'  '}
-                          {pc.bold(percentDisplay)}
-                          {'    '}
-                          {pc.dim(lineCountDisplay)}
-                        </Text>
-                      </Box>
-                    )
-                  })}
+                  .map((file, fileIndex) => (
+                    <FileContributionRow
+                      key={`file-${fileIndex}-${file.path}`}
+                      position={fileIndex + 1}
+                      file={file}
+                    />
+                  ))}
               </Box>
             )}
           </Box>

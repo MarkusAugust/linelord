@@ -41,6 +41,7 @@
     "@types/ink-spinner": "^3.0.4",
     "@types/picomatch": "^4.0.3",
     "@types/react": "^18.2.0",
+    "ink-testing-library": "^4.0.0",
     "react-devtools-core": "^6.1.2",
     "typescript": "^5.8.3"
   },

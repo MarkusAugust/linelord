@@ -1,9 +1,7 @@
 import { Box, Text, useInput } from 'ink'
 import pc from 'picocolors'
-import { useEffect, useState } from 'react'
 import type { LineLordService } from '../services/LineLordService'
 import {
-  type AuthorFileLongevity,
   type AuthorLongevity,
   type AuthorSurvivalWithIdentity,
   LongevityService,
@@ -11,6 +9,7 @@ import {
 import { formatAge, HISTOGRAM_BUCKETS } from '../utility/ageFormatting'
 import { renderSimplePercentageBar } from '../utility/simplePercentageBar'
 import { curveSpanDays, renderSurvivalCurve } from '../utility/survivalCurve'
+import { useAsyncData } from '../utility/useAsyncData'
 
 type LongevityDetailProps = {
   lineLordService: LineLordService
@@ -54,31 +53,20 @@ export default function LongevityDetail({
   survival,
   onBack,
 }: LongevityDetailProps) {
-  const [files, setFiles] = useState<AuthorFileLongevity[]>([])
-
   useInput((input, key) => {
     if (key.escape || input === 'q') onBack()
   })
 
-  useEffect(() => {
-    let cancelled = false
-
-    const load = async () => {
-      try {
-        const service = new LongevityService(lineLordService.getDatabase())
-        const oldest = await service.filesForAuthor(warrior.authorId)
-        if (!cancelled) setFiles(oldest)
-      } catch {
-        // The histogram and the two ends are already on screen; a missing
-        // file list is a smaller screen, not an error worth taking it over.
-      }
-    }
-
-    void load()
-    return () => {
-      cancelled = true
-    }
-  }, [lineLordService, warrior.authorId])
+  // The histogram and the two ends are already on screen; a missing file
+  // list is a smaller screen, not an error worth taking it over.
+  const loaded = useAsyncData(
+    () =>
+      new LongevityService(lineLordService.getDatabase()).filesForAuthor(
+        warrior.authorId,
+      ),
+    [lineLordService, warrior.authorId],
+  )
+  const files = loaded.status === 'ready' ? loaded.data : []
 
   const tallest = Math.max(
     ...HISTOGRAM_BUCKETS.map(({ key }) => warrior.ageHistogram[key]),
