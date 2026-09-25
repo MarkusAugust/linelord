@@ -117,11 +117,17 @@ export const BarbarianRankings: React.FC<BarbarianRankingsProps> = ({
       {topWarrior && (
         <Box flexDirection="column" padding={1} borderStyle="single">
           <Text color="redBright" bold>
-            {topWarrior.barbarianTitle}
+            CHAMPION OF THE RANKINGS
           </Text>
           <Text color={selected === 0 ? 'green' : 'cyan'} bold>
             {selected === 0 ? '› ' : ''}
             {topWarrior.displayName}
+            {topWarrior.title && (
+              <Text color="yellow" bold={false}>
+                {'  '}
+                {topWarrior.title}
+              </Text>
+            )}
           </Text>
           <Text color="green">
             Gorvek Score: {topWarrior.gorvekScore.toLocaleString()}
@@ -166,13 +172,17 @@ export const BarbarianRankings: React.FC<BarbarianRankingsProps> = ({
                 <Text color={selected === index + 1 ? 'green' : 'white'} bold>
                   {selected === index + 1 ? '› ' : ''}#{warrior.rank + 1}{' '}
                 </Text>
-                <Text color="cyan">{warrior.barbarianTitle}</Text>
+                <Text color="cyan">{warrior.displayName}</Text>
+                {warrior.title && (
+                  <Text color="yellow">
+                    {'  '}
+                    {warrior.title}
+                  </Text>
+                )}
               </Box>
 
               <Box flexDirection="row">
-                <Text color="gray">{'  '}Warrior: </Text>
-                <Text color="white">{warrior.displayName}</Text>
-                <Text color="gray"> | Score: </Text>
+                <Text color="gray">{'  '}Score: </Text>
                 <Text color="green">
                   {warrior.gorvekScore.toLocaleString()}
                 </Text>

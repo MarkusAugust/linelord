@@ -1,7 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import type { LineLordDatabase } from '../db/database'
 import { authors } from '../db/schema'
-import { getDistributedTitles } from '../resources/rankedTitles'
 import type {
   BarbarianRanking,
   BarbarianWarriorMetrics,
@@ -100,6 +99,7 @@ export class BarbarianAnalysisService {
         name: authors.name,
         email: authors.email,
         displayName: authors.displayName,
+        title: authors.title,
       })
       .from(authors)
       .where(eq(authors.isCanonical, true))
@@ -116,7 +116,7 @@ export class BarbarianAnalysisService {
           displayName: author.displayName,
           metrics,
           gorvekScore: this.calculateGorvekScore(metrics),
-          barbarianTitle: '', // assigned once the order is known
+          title: author.title,
           specialAchievements: [], // assigned to category leaders below
           rank: 0,
         }
@@ -128,12 +128,8 @@ export class BarbarianAnalysisService {
 
     rankings.sort((a, b) => b.gorvekScore - a.gorvekScore)
 
-    const distributedTitles = this.getDistributedBarbarianTitles(
-      rankings.length,
-    )
     rankings.forEach((ranking, index) => {
       ranking.rank = index
-      ranking.barbarianTitle = distributedTitles[index] ?? 'UNKNOWN WANDERER'
     })
 
     this.assignTopPerformerAchievements(rankings)
@@ -276,20 +272,6 @@ export class BarbarianAnalysisService {
     const totalScore = conquest + endurance + intensity + synergyBonus
 
     return Math.round(totalScore * 100) / 100
-  }
-
-  /**
-   * Barbarian titles, distributed across the ranking by the shared title system
-   * so that the tiers match the rest of the tool.
-   */
-  private getDistributedBarbarianTitles(numWarriors: number): string[] {
-    if (numWarriors <= 0) return []
-
-    return getDistributedTitles(numWarriors).map((title, index) => {
-      if (index === 0 && numWarriors > 1) return 'WARLORD OF THE REPOSITORY'
-      if (index === 1 && numWarriors > 2) return "GORVEK'S CHOSEN CHAMPION"
-      return title.toUpperCase()
-    })
   }
 
   /**

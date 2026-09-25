@@ -12,6 +12,14 @@ because the earlier answer was wrong.
 
 ### Changed
 
+- **One title per warrior.** The overview handed out titles by share of the
+  surviving lines, and the barbarian rankings handed out a second set from
+  the same word list by Gorvek score — so the same person was *legend* on one
+  screen and *warrior* on the next, which looked like a bug and was one. The
+  rankings now show the same title as everywhere else, next to the name, and
+  what they add is the Gorvek score, the placing and the achievements. The
+  two epithets for first and second place by score are gone with it.
+
 - **One warrior screen where there were two.** *Single Developer Statistics*
   showed a person's lines, files, share and top files; Enter on the longevity
   table showed the same person's age histogram, oldest and newest line and
