@@ -3,7 +3,7 @@ import type React from 'react'
 import type {
   BarbarianRanking,
   BarbarianWarriorMetrics,
-} from '../types/analysisTypes'
+} from '../core/barbarian'
 import { HonestyNote } from './HonestyNote'
 
 interface BarbarianRankingsProps {

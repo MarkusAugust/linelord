@@ -32,6 +32,11 @@ because the earlier answer was wrong.
   screen draws from values and no longer waits on a query. Nearest-rank
   medians, bucket edges and tie-breaks are exactly as they were, and the
   tests say so on values rather than on a seeded database.
+- **The barbarian rankings, as plain functions.** Every metric, the Gorvek
+  score and the achievements are computed from the loaded analysis by
+  functions in the core, with `now` handed in. The rankings screen draws
+  from values. The legacy-file rule, the day boundaries and the tie-breaks
+  match what the SQL did, and the tests say so on values.
 
 ## [0.11.0] — 2026-09-25
 

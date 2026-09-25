@@ -423,10 +423,10 @@ export default function App({
 
       {state === 'about' && <About onBack={returnToMenu} />}
 
-      {state === 'barbarianrankings' && (
+      {state === 'barbarianrankings' && analysis && warriorSource && (
         <BarbarianRankingBox
           onBack={returnToMenu}
-          lineLordService={lineLordService}
+          analysis={analysis}
           warriorSource={warriorSource}
         />
       )}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { render } from 'ink-testing-library'
-import type { BarbarianRanking } from '../../types/analysisTypes'
+import type { BarbarianRanking } from '../../core/barbarian'
 import { BarbarianRankings, fit } from '../BarbarianRankings'
 import { stripAnsi } from './fakeAnalysisService'
 
