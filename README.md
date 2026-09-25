@@ -122,13 +122,12 @@ Once in LineLord's realm:
 
 ### Battle Reports Available
 
-1. **📊 Repository Statistics** - Quick overview of your digital domain
-2. **📈 Extended Repository Statistics** - Detailed battle reports with file breakdowns
-3. **👤 Single Developer Statistics** - Focus on one warrior's contributions
-4. **🪓 Brutal Barbarian Rankings** - Who holds ground: territory, sole conquests, code that outlived a year
-5. **⏳ Code Longevity** - How old the code each warrior still holds is
-6. **🧾 Draft a .mailmap** - Show which warriors may be one person, and write it down if they are
-7. **ℹ️ About** - Learn the ways of LineLord
+1. **📊 Repository Overview** - What was analysed, and every warrior ranked by the share they hold. Enter on a warrior opens their files
+2. **👤 Single Developer Statistics** - Focus on one warrior's contributions
+3. **🪓 Brutal Barbarian Rankings** - Who holds ground: territory, sole conquests, code that outlived a year
+4. **⏳ Code Longevity** - How old the code each warrior still holds is
+5. **🧾 Draft a .mailmap** - Show which warriors may be one person, and write it down if they are
+6. **ℹ️ About** - Learn the ways of LineLord
 
 ## 🔄 Updating Your Weapon - Stay Sharp for Battle
 
@@ -222,12 +221,14 @@ The theming is a joke about conquest. The numbers are not.
 
 ## 📊 Understanding the Battle Reports
 
-### Repository Statistics
+### Repository Overview
 
-- **Developer count** - How many warriors have touched your codebase
+- **Developer count** - How many warriors hold lines in your codebase
 - **File metrics** - Total files vs analyzed files vs large files cast aside
 - **Line counts** - The true measure of a codebase's might
-- **Contribution percentages** - Who rules which territories
+- **The ranking** - Every warrior by the share of surviving lines they hold,
+  with their title and address. Enter on a row shows the files they hold the
+  most of
 
 ### The Great Filtering
 
@@ -246,12 +247,7 @@ LineLord uses **current line ownership** (via `git blame`), not historical commi
 - 👑 **Crown** - The supreme ruler of your codebase
 - 🥈 **Silver Honor** - The second most dominating code warrior
 - 🥉 **Bronze Glory** - The third most dominating code warrior
-- **Glorious/Lowly** - The mightiest and humblest contributors
-
-### Pie Chart Visualization
-
-- 🔴 **Red** - For the mightiest contributor
-- **Top 10 limit** - Only the worthiest warriors are displayed
+- **Titles** - From legend down to peasant, handed out in rank order
 
 ### When a reformatting rewrote everything
 

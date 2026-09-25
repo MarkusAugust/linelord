@@ -12,15 +12,25 @@ because the earlier answer was wrong.
 
 ### Changed
 
+- **One overview where there were three screens.** The contributor list on
+  the menu, *Repository Statistics* and *Extended Repository Statistics* all
+  drew the same percentages — in a list, a bar chart, a horizontal "pie
+  chart", its legend and a top-and-bottom box — so the same number for the
+  same person appeared up to four times on one screen. *Repository Overview*
+  replaces them: the file summary, then one table of every warrior with rank,
+  share, lines, title and address. Enter on a row opens that warrior's files,
+  which is where the extended screen's breakdown went; the single-developer
+  screen shows the same detail. The menu screen now holds the repository, its
+  status lines and the menu, so the menu is in view on a repository with many
+  contributors rather than scrolled off under the list.
+
 - **The screens share their building blocks.** The note under the longevity
   screen, the rankings and the About page that says what the numbers are not
   is now one list, so a rewording reaches all three. A person's files are drawn
   by one row component wherever they are listed. Every screen that loads
   something does it through one hook, which forgets an answer that arrives
   after the screen has been left — the barbarian and longevity screens guarded
-  against that, and the others did not. The extended statistics ask the
-  database once for everyone's top files rather than once per contributor.
-  Nothing on screen changes except the wording of the notes, which now agree
+  against that, and the others did not. Nothing on screen changes except the wording of the notes, which now agree
   with each other. Component tests exist for the first time, through
   `ink-testing-library`.
 

@@ -1,6 +1,5 @@
 import { Box, Text } from 'ink'
 import About from './components/About'
-import { AuthorsList } from './components/AuthorList'
 import BarbarianRankingBox from './components/BarbarianRankingBox'
 import ErrorScreen from './components/ErrorScreen'
 import ExitScreen from './components/ExitScreen'
@@ -9,9 +8,8 @@ import LoadingScreen from './components/LoadingScreen'
 import LongevityDashboard from './components/LongevityDashboard'
 import MailmapDraft from './components/MailmapDraft'
 import Menu, { type MenuOption } from './components/Menu'
+import { Overview } from './components/Overview'
 import RepoPathInput from './components/RepoPathInput'
-import RepoStats from './components/RepoStats'
-import SimpleRepoStats from './components/SimpleRepoStats'
 import SingleDevRepoStats from './components/SingleDevRepoStats'
 
 import type { SnapshotInterval } from './services/snapshotSelection'
@@ -366,8 +364,6 @@ export default function App({
             )}
           </Box>
 
-          {analysisService && <AuthorsList analysisService={analysisService} />}
-
           <Menu
             title="Select a feature:"
             options={menuOptions}
@@ -391,18 +387,8 @@ export default function App({
         />
       )}
 
-      {state === 'repostats' && (
-        <SimpleRepoStats
-          repoPath={repoPath}
-          onBack={returnToMenu}
-          largeFileThresholdKB={largeFileThresholdKB}
-          analysisService={analysisService}
-        />
-      )}
-
-      {state === 'extendedrepostats' && (
-        <RepoStats
-          repoPath={repoPath}
+      {state === 'overview' && analysisService && (
+        <Overview
           onBack={returnToMenu}
           largeFileThresholdKB={largeFileThresholdKB}
           analysisService={analysisService}
@@ -411,7 +397,6 @@ export default function App({
 
       {state === 'singledevrepostats' && (
         <SingleDevRepoStats
-          repoPath={repoPath}
           onBack={returnToMenu}
           analysisService={analysisService}
         />
