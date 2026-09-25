@@ -36,6 +36,7 @@ async function seed(db: ReturnType<typeof createDatabase>) {
       email: 'gorvek@ashendale.realm',
       displayName: 'Gorvek the Ironbane',
       isCanonical: true,
+      title: 'legend',
     },
     {
       id: NIGHTSHROUD,
@@ -43,6 +44,7 @@ async function seed(db: ReturnType<typeof createDatabase>) {
       email: 'nightshroud@alderstone.realm',
       displayName: 'Sister Nightshroud',
       isCanonical: true,
+      title: 'peasant',
     },
     {
       id: GHOST,
@@ -165,14 +167,26 @@ describe('BarbarianAnalysisService', () => {
     expect(rankings[0]?.gorvekScore).toBeCloseTo(63.58, 2)
   })
 
-  it('crowns the leader and gives every other warrior a distributed title', async () => {
+  it('carries the title the line-share ranking gave, rather than handing out a second', async () => {
+    // Two title systems on the same word list meant the same person was
+    // "legend" on the overview and "warrior" here. There is one title now,
+    // and it is the one the authors table holds.
     const rankings = await service.getBarbarianRankings()
 
-    expect(rankings[0]?.barbarianTitle).toBe('WARLORD OF THE REPOSITORY')
-    expect(rankings[1]?.barbarianTitle).toBeTruthy()
-    expect(rankings[1]?.barbarianTitle).toBe(
-      rankings[1]?.barbarianTitle?.toUpperCase() ?? '',
-    )
+    expect(rankings[0]?.title).toBe('legend')
+    expect(rankings[1]?.title).toBe('peasant')
+  })
+
+  it('leaves the title empty for a warrior the ranking never titled', async () => {
+    const untitled = createDatabase()
+    await seed(untitled)
+    await untitled.update(authors).set({ title: null })
+    const rankings = await new BarbarianAnalysisService(
+      untitled,
+      NOW,
+    ).getBarbarianRankings()
+
+    expect(rankings.map((r) => r.title)).toEqual([null, null])
   })
 
   it('awards each achievement to a single category leader, and never for zero', async () => {

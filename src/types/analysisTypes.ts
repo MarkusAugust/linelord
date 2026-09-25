@@ -67,7 +67,12 @@ export interface BarbarianRanking {
   displayName: string
   metrics: BarbarianWarriorMetrics
   gorvekScore: number
-  barbarianTitle: string
+  /**
+   * The title the line-share ranking gave them, the same one every other
+   * screen shows. There used to be a second distribution here, by Gorvek
+   * score, so one person wore two titles depending on the screen.
+   */
+  title: string | null
   specialAchievements: string[]
   /** Zero-based position in the ranking. */
   rank: number

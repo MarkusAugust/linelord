@@ -210,6 +210,11 @@ lines that are **still alive in `HEAD`**:
 | Massive Battles | Days when over 100 of their surviving lines were last touched |
 | Campaigns | Distinct days their surviving lines were last touched |
 
+A warrior's title is the same here as on the overview: it comes from their
+share of the surviving lines, and the rankings do not hand out a second one.
+What this screen adds is the Gorvek score, the placing it gives, and the
+achievements for whoever leads each category.
+
 ### How to read the numbers
 
 The theming is a joke about conquest. The numbers are not.
