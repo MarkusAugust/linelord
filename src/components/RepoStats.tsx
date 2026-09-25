@@ -6,10 +6,12 @@ import { getRandomBarbarianMessage } from '../resources/barbarianAnalysisMessage
 import type {
   AnalysisService,
   AuthorContribution,
+  FileContribution,
 } from '../services/AnalysisService'
 import type { AnalysisStep } from '../types/analysisTypes'
 import { renderSimplePercentageBar } from '../utility/simplePercentageBar'
 import { ContributorRankingBox } from './ContributorRankingBox'
+import { FileContributionRow } from './FileContributionRow'
 import { PieChartSection } from './PieChartSection'
 import { EnhancedProgressBar } from './ProgressBar'
 import { RepositoryOverview } from './RepositoryOverview'
@@ -22,15 +24,7 @@ type RepoStatsProps = {
 }
 
 interface ExtendedAuthorContribution extends AuthorContribution {
-  topFiles?: Array<{
-    filename: string
-    path: string
-    authorLines: number
-    totalLines: number
-    percentage: number
-  }>
-
-  aliases?: Array<{ name: string; email: string }>
+  topFiles?: FileContribution[]
 }
 
 type AnalysisState = {
@@ -84,36 +78,6 @@ export default function RepoStats({
     }
   }, [state.step, state.isLoading])
 
-  const parseFileName = (filename: string) => {
-    if (filename.startsWith('.')) {
-      const remainingName = filename.slice(1)
-      const dotIndex = remainingName.indexOf('.')
-
-      if (dotIndex === -1) {
-        return {
-          baseName: filename,
-          extension: '',
-        }
-      }
-      return {
-        baseName: filename.slice(0, dotIndex + 1),
-        extension: remainingName.slice(dotIndex + 1),
-      }
-    }
-
-    const lastDotIndex = filename.lastIndexOf('.')
-    if (lastDotIndex === -1 || lastDotIndex === 0) {
-      return {
-        baseName: filename,
-        extension: '',
-      }
-    }
-    return {
-      baseName: filename.slice(0, lastDotIndex),
-      extension: filename.slice(lastDotIndex + 1),
-    }
-  }
-
   useEffect(() => {
     const analyzeRepository = async () => {
       if (!analysisService) {
@@ -159,40 +123,14 @@ export default function RepoStats({
           stepMessage: getRandomBarbarianMessage('scanning'),
         }))
 
-        // Get detailed file contributions for each author
-        const extendedContributions: ExtendedAuthorContribution[] = []
+        // Every author's top files in one query, rather than one per author.
+        const topFilesByAuthor = await analysisService.getTopFilesForAuthors(5)
 
-        for (const author of authorContributions) {
-          setState((prev) => ({
-            ...prev,
-            progress:
-              60 +
-              (extendedContributions.length / authorContributions.length) * 20,
+        const extendedContributions: ExtendedAuthorContribution[] =
+          authorContributions.map((author) => ({
+            ...author,
+            topFiles: topFilesByAuthor.get(author.id) ?? [],
           }))
-
-          const fileContributions =
-            await analysisService.getAuthorFileContributions(author.id)
-
-          extendedContributions.push({
-            id: author.id,
-            name: author.name,
-            email: author.email,
-            displayName: author.displayName,
-            totalLines: author.totalLines,
-            totalFiles: author.totalFiles,
-            percentage: author.percentage,
-            title: author.title,
-            rank: author.rank,
-            topFiles: fileContributions.slice(0, 5).map((file) => ({
-              filename: file.filename,
-              path: file.path,
-              authorLines: file.authorLines,
-              totalLines: file.totalLines,
-              percentage: file.percentage,
-            })),
-            aliases: author.aliases,
-          })
-        }
 
         setState({
           isLoading: false,
@@ -319,51 +257,13 @@ export default function RepoStats({
                 {dev.topFiles && dev.topFiles.length > 0 && (
                   <Box flexDirection="column" paddingLeft={3} marginTop={1}>
                     <Text>{pc.dim('Top files:')}</Text>
-                    {dev.topFiles.map((file, fileIndex) => {
-                      const { baseName, extension } = parseFileName(
-                        file.filename,
-                      )
-
-                      const baseNameDisplay =
-                        baseName.length > 12
-                          ? `${baseName.substring(0, 12)}...`
-                          : baseName.padEnd(15, ' ')
-
-                      const extensionDisplay = extension
-                        ? pc.yellow(extension.padEnd(5, ' ').substring(0, 5))
-                        : ' '.repeat(5)
-
-                      const percentDisplay = `${file.percentage}%`.padStart(
-                        4,
-                        ' ',
-                      )
-                      const lineCountDisplay = `[${file.authorLines}/${file.totalLines}]`
-
-                      return (
-                        <Box key={`${index}-${fileIndex}-${file.filename}`}>
-                          <Text>
-                            {pc.dim(
-                              `${(fileIndex + 1).toString().padStart(2, ' ')}. `,
-                            )}
-                            {baseNameDisplay}
-                            {extension ? ' .' : '  '}
-                            {extensionDisplay}
-                            {'  '}
-                            <Text dimColor>
-                              {renderSimplePercentageBar(
-                                file.percentage,
-                                10,
-                                'green',
-                              )}
-                            </Text>
-                            {'  '}
-                            {pc.bold(percentDisplay)}
-                            {'    '}
-                            {pc.dim(lineCountDisplay)}
-                          </Text>
-                        </Box>
-                      )
-                    })}
+                    {dev.topFiles.map((file, fileIndex) => (
+                      <FileContributionRow
+                        key={`${index}-${fileIndex}-${file.filename}`}
+                        position={fileIndex + 1}
+                        file={file}
+                      />
+                    ))}
                   </Box>
                 )}
               </Box>

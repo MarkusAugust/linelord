@@ -1,9 +1,8 @@
 import { Box, Text, useInput } from 'ink'
 import type React from 'react'
-import { useEffect, useState } from 'react'
 import { BarbarianAnalysisService } from '../services/BarbarianAnalysisService'
 import type { LineLordService } from '../services/LineLordService'
-import type { BarbarianRanking } from '../types/analysisTypes'
+import { useAsyncData } from '../utility/useAsyncData'
 import BarbarianRankings from './BarbarianRankings'
 
 interface BarbarianRankingBoxProps {
@@ -18,58 +17,25 @@ export const BarbarianRankingBox: React.FC<BarbarianRankingBoxProps> = ({
   onBack,
   lineLordService,
 }) => {
-  const [rankings, setRankings] = useState<BarbarianRanking[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
   useInput((input, key) => {
     if (key.escape || input === 'q' || input === 'Q') {
       onBack()
     }
   })
 
-  useEffect(() => {
-    // Ink owns the terminal, so a result arriving after the screen has been
-    // left must not be written into a dead component.
-    let cancelled = false
-
-    const loadBarbarianRankings = async () => {
-      if (!lineLordService?.isInitialized()) {
-        if (cancelled) return
-        setError('LineLord service is unavailable or not initialized')
-        setIsLoading(false)
-        return
-      }
-
-      try {
-        setIsLoading(true)
-        setError(null)
-
-        const barbarianService = new BarbarianAnalysisService(
-          lineLordService.getDatabase(),
-        )
-        const barbarianRankings = await barbarianService.getBarbarianRankings()
-
-        if (cancelled) return
-        setRankings(barbarianRankings)
-      } catch (err) {
-        if (cancelled) return
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Failed to load barbarian rankings',
-        )
-      } finally {
-        if (!cancelled) setIsLoading(false)
-      }
+  const loaded = useAsyncData(async () => {
+    if (!lineLordService?.isInitialized()) {
+      throw new Error('LineLord service is unavailable or not initialized')
     }
-
-    loadBarbarianRankings()
-
-    return () => {
-      cancelled = true
-    }
+    const barbarianService = new BarbarianAnalysisService(
+      lineLordService.getDatabase(),
+    )
+    return barbarianService.getBarbarianRankings()
   }, [lineLordService])
+
+  const error = loaded.status === 'failed' ? loaded.error : null
+  const isLoading = loaded.status === 'loading'
+  const rankings = loaded.status === 'ready' ? loaded.data : []
 
   if (error) {
     return (

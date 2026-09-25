@@ -4,6 +4,7 @@ import type {
   BarbarianRanking,
   BarbarianWarriorMetrics,
 } from '../types/analysisTypes'
+import { HonestyNote } from './HonestyNote'
 
 interface BarbarianRankingsProps {
   rankings: BarbarianRanking[]
@@ -225,26 +226,8 @@ export const BarbarianRankings: React.FC<BarbarianRankingsProps> = ({
           ))}
         </Box>
 
-        <Box marginTop={1} flexDirection="column">
-          <Text color="yellow" bold>
-            HOW TO READ THIS
-          </Text>
-          <Text color="gray">
-            Every number counts lines still alive in HEAD -- not commits, and
-            not hours worked.
-          </Text>
-          <Text color="gray">
-            Old code means stable code, not good code. Nobody dares touch the
-            worst of it.
-          </Text>
-          <Text color="gray">
-            Reformatting resets a line's age. Use .git-blame-ignore-revs to keep
-            it honest.
-          </Text>
-          <Text color="gray">
-            This is a joke about conquest. It does not measure anyone's
-            productivity.
-          </Text>
+        <Box marginTop={1}>
+          <HonestyNote topic="rankings" />
         </Box>
 
         <Box marginTop={1}>

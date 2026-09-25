@@ -10,7 +10,19 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **The screens share their building blocks.** The note under the longevity
+  screen, the rankings and the About page that says what the numbers are not
+  is now one list, so a rewording reaches all three. A person's files are drawn
+  by one row component wherever they are listed. Every screen that loads
+  something does it through one hook, which forgets an answer that arrives
+  after the screen has been left — the barbarian and longevity screens guarded
+  against that, and the others did not. The extended statistics ask the
+  database once for everyone's top files rather than once per contributor.
+  Nothing on screen changes except the wording of the notes, which now agree
+  with each other. Component tests exist for the first time, through
+  `ink-testing-library`.
 
 ## [0.10.0] — 2026-09-20
 

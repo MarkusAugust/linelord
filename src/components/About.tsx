@@ -1,5 +1,6 @@
 import { Box, Text, useInput } from 'ink'
 import pc from 'picocolors'
+import { HonestyNote } from './HonestyNote'
 
 type AboutProps = {
   onBack: () => void
@@ -87,30 +88,12 @@ export default function About({ onBack }: AboutProps) {
       {/*
         L6. The longevity screen is the easiest of these to misread as a
         judgement of people, and the barbarian tone must not be allowed to
-        hide that it is not one.
+        hide that it is not one. The same note the screen itself shows.
       */}
       <Box flexDirection="column" marginY={1}>
         <Text>{pc.bold('⏳ On the age of code:')}</Text>
-        <Box flexDirection="column" marginLeft={2}>
-          <Text>
-            • Age is when a line was {pc.yellow('last changed')}, not when it
-            was written
-          </Text>
-          <Text>
-            • A reformatting resets it — name those commits in
-            .git-blame-ignore-revs
-          </Text>
-          <Text>• Old code is stable code. Stable is not the same as good</Text>
-          <Text>
-            • New code usually means working where the work is, not working
-            badly
-          </Text>
-          <Text>
-            •{' '}
-            {pc.yellow(
-              'None of this measures a warrior. Do not use it that way.',
-            )}
-          </Text>
+        <Box marginLeft={2}>
+          <HonestyNote topic="age" showHeading={false} />
         </Box>
       </Box>
 
