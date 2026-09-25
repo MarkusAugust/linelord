@@ -1,4 +1,4 @@
-import type { LineLordDatabase } from '../db/database'
+import type { LineLordDatabase } from '../adapters/sqlite/database'
 import {
   AnalysisService,
   type AuthorContribution,

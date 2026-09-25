@@ -4,8 +4,8 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
-import { clearDatabase, createDatabase } from '../../db/database'
-import { authors, blameLines, files } from '../../db/schema'
+import { clearDatabase, createDatabase } from '../../adapters/sqlite/database'
+import { authors, blameLines, files } from '../../adapters/sqlite/schema'
 import { GitService } from '../GitService'
 
 const execAsync = promisify(exec)

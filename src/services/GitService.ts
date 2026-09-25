@@ -2,8 +2,8 @@ import { exec, spawn } from 'node:child_process'
 import path from 'node:path'
 import { promisify } from 'node:util'
 import { eq, sql } from 'drizzle-orm'
-import type { LineLordDatabase } from '../db/database'
-import { authors, blameLines, files } from '../db/schema'
+import type { LineLordDatabase } from '../adapters/sqlite/database'
+import { authors, blameLines, files } from '../adapters/sqlite/schema'
 import {
   ignoredFileExtensions,
   isIgnoredByPattern,

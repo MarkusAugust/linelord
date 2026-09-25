@@ -1,6 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
-import type { LineLordDatabase } from '../db/database'
-import { authors } from '../db/schema'
+import type { LineLordDatabase } from '../adapters/sqlite/database'
+import { authors } from '../adapters/sqlite/schema'
 import type {
   BarbarianRanking,
   BarbarianWarriorMetrics,

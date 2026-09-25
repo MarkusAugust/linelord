@@ -5,7 +5,7 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
-import { blameLines } from '../../db/schema'
+import { blameLines } from '../../adapters/sqlite/schema'
 import { IGNORE_REVS_FILENAME } from '../../utility/ignoreRevs'
 import { LineLordService } from '../LineLordService'
 

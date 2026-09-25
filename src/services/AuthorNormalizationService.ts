@@ -1,7 +1,12 @@
 import { eq } from 'drizzle-orm'
 import { distance } from 'fastest-levenshtein'
-import type { LineLordDatabase } from '../db/database'
-import { type Author, authorAliases, authors, blameLines } from '../db/schema'
+import type { LineLordDatabase } from '../adapters/sqlite/database'
+import {
+  type Author,
+  authorAliases,
+  authors,
+  blameLines,
+} from '../adapters/sqlite/schema'
 
 /** One person the guessing decided several identities add up to. */
 export interface IdentityMerge {

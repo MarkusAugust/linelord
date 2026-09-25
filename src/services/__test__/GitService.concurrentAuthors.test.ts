@@ -3,8 +3,8 @@ import {
   createTestRepo,
   type TestRepo,
 } from '../../__test__/helpers/createTestRepo'
-import { createDatabase } from '../../db/database'
-import { authors, blameLines } from '../../db/schema'
+import { createDatabase } from '../../adapters/sqlite/database'
+import { authors, blameLines } from '../../adapters/sqlite/schema'
 import { GitService } from '../GitService'
 
 /**

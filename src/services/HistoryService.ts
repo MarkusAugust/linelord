@@ -1,8 +1,17 @@
 import { spawn } from 'node:child_process'
 import { eq, sql } from 'drizzle-orm'
-import type { LineLordDatabase } from '../db/database'
-import { HISTORY_HEAD_KEY, HISTORY_SNAPSHOTS_KEY, writeMeta } from '../db/meta'
-import { authors, cohortLines, meta, snapshots } from '../db/schema'
+import type { LineLordDatabase } from '../adapters/sqlite/database'
+import {
+  HISTORY_HEAD_KEY,
+  HISTORY_SNAPSHOTS_KEY,
+  writeMeta,
+} from '../adapters/sqlite/meta'
+import {
+  authors,
+  cohortLines,
+  meta,
+  snapshots,
+} from '../adapters/sqlite/schema'
 import { isAncestor, pathsTouchedBetween } from '../utility/gitRepository'
 import { normaliseConcurrency } from './GitService'
 import {
