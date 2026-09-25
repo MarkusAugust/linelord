@@ -10,33 +10,14 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.11.0] — 2026-09-25
+
+Fewer screens, and each number said once. Nothing here changes what is
+counted or how; every figure is still there, reached with fewer steps.
+
 ### Changed
-
-- **The barbarian rankings are a table.** The champion sat in a box with
-  every metric spelled out, and everyone below got a line of seven emoji and
-  seven numbers with the key two screens further down — the same figures,
-  laid out so that only the first person's could be read. Every warrior is
-  now one row under named columns, the achievements are listed beneath, and
-  the legend turns each short column name into what it counts. ↑↓ and Enter
-  open a warrior, as on the other tables.
-
-- **One title per warrior.** The overview handed out titles by share of the
-  surviving lines, and the barbarian rankings handed out a second set from
-  the same word list by Gorvek score — so the same person was *legend* on one
-  screen and *warrior* on the next, which looked like a bug and was one. The
-  rankings now show the same title as everywhere else, next to the name, and
-  what they add is the Gorvek score, the placing and the achievements. The
-  two epithets for first and second place by score are gone with it.
-
-- **One warrior screen where there were two.** *Single Developer Statistics*
-  showed a person's lines, files, share and top files; Enter on the longevity
-  table showed the same person's age histogram, oldest and newest line and
-  survival curve. Neither knew about the other. They are now one screen,
-  reached with ↑↓ and Enter from the overview, from the longevity table and
-  from the barbarian rankings alike: share and top files first, then how old
-  it is and where the oldest of it sits, then — when `--history` has been run
-  — what became of everything they wrote. The separate menu entry and its
-  pick-a-name step are gone, because the tables are the pick-a-name step.
 
 - **One overview where there were three screens.** The contributor list on
   the menu, *Repository Statistics* and *Extended Repository Statistics* all
@@ -49,6 +30,36 @@ because the earlier answer was wrong.
   screen shows the same detail. The menu screen now holds the repository, its
   status lines and the menu, so the menu is in view on a repository with many
   contributors rather than scrolled off under the list.
+
+
+- **One warrior screen where there were two.** *Single Developer Statistics*
+  showed a person's lines, files, share and top files; Enter on the longevity
+  table showed the same person's age histogram, oldest and newest line and
+  survival curve. Neither knew about the other. They are now one screen,
+  reached with ↑↓ and Enter from the overview, from the longevity table and
+  from the barbarian rankings alike: share and top files first, then how old
+  it is and where the oldest of it sits, then — when `--history` has been run
+  — what became of everything they wrote. The separate menu entry and its
+  pick-a-name step are gone, because the tables are the pick-a-name step.
+
+
+- **One title per warrior.** The overview handed out titles by share of the
+  surviving lines, and the barbarian rankings handed out a second set from
+  the same word list by Gorvek score — so the same person was *legend* on one
+  screen and *warrior* on the next, which looked like a bug and was one. The
+  rankings now show the same title as everywhere else, next to the name, and
+  what they add is the Gorvek score, the placing and the achievements. The
+  two epithets for first and second place by score are gone with it.
+
+
+- **The barbarian rankings are a table.** The champion sat in a box with
+  every metric spelled out, and everyone below got a line of seven emoji and
+  seven numbers with the key two screens further down — the same figures,
+  laid out so that only the first person's could be read. Every warrior is
+  now one row under named columns, the achievements are listed beneath, and
+  the legend turns each short column name into what it counts. ↑↓ and Enter
+  open a warrior, as on the other tables.
+
 
 - **The screens share their building blocks.** The note under the longevity
   screen, the rankings and the About page that says what the numbers are not
@@ -413,7 +424,8 @@ stored analysis is rebuilt once, because the database layout changed.
 Earlier releases predate this changelog. See the
 [releases page](https://github.com/MarkusAugust/linelord/releases).
 
-[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/MarkusAugust/linelord/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/MarkusAugust/linelord/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/MarkusAugust/linelord/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/MarkusAugust/linelord/compare/v0.8.0...v0.8.1
