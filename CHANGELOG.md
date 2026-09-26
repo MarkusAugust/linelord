@@ -10,7 +10,16 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **Each platform builds its own binaries.** The Release workflow used to
+  cross-compile all four from one macOS runner, so the Linux binaries were
+  published without ever having been run on Linux. Now a macOS runner builds
+  and runs the macOS binaries and a Linux runner the Linux ones, each
+  checking the architecture of the other it cannot run; the release itself
+  is published by a job that checks out nothing, installs nothing and builds
+  nothing while it holds the token that can write. A manual `build_only` run
+  of the workflow proves a change to the build before the next tag.
 
 ## [0.12.1] — 2026-09-26
 

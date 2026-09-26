@@ -9,34 +9,49 @@ on:
   push:
     tags:
       - 'v*'
-  # Sync the tap to a release that already exists, without building or
-  # publishing anything. This is how you recover when the tap update fails on
-  # its own -- an expired token, most likely -- without re-tagging.
   workflow_dispatch:
     inputs:
+      # Sync the tap to a release that already exists, without building or
+      # publishing anything. This is how you recover when the tap update fails
+      # on its own -- an expired token, most likely -- without re-tagging.
       tag:
         description: Existing release tag to sync the Homebrew tap to
-        required: true
+        required: false
+      # Build and smoke-test the binaries on every runner without publishing
+      # anything: how a change to the build is proven before the next tag.
+      build_only:
+        description: Build the binaries on their own runners, publish nothing
+        type: boolean
+        default: false
 
 jobs:
-  build-and-release:
-    # Nothing to build when we are only re-syncing the tap.
-    if: github.event_name == 'push'
-    runs-on: macos-latest
-    # Creating the release is the only write this workflow makes with
-    # GITHUB_TOKEN. The tap is written with its own token, not this one.
+  # Each platform builds its own binaries. Cross-compiling everything from
+  # macOS worked, but a Linux binary that has never been run on Linux before
+  # it is published is a binary nobody has tested; here each runner executes
+  # the one it can and checks the architecture of the other.
+  build:
+    if: github.event_name == 'push' || inputs.build_only == true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos
+            runs-on: macos-latest
+            script: release:macos
+          - name: linux
+            runs-on: ubuntu-24.04
+            script: release:linux
+    name: build (${{ matrix.name }})
+    runs-on: ${{ matrix.runs-on }}
+    # Builds only. The release is written by a job that runs none of this.
     permissions:
-      contents: write
+      contents: read
     steps:
-      # persist-credentials is off because this job holds contents: write and
-      # then runs `bun install`, which executes dependency lifecycle scripts,
-      # followed by the build. Persisting would put a write-capable token in
-      # .git/config while all of that third-party code runs. The release step
-      # receives GITHUB_TOKEN explicitly, and nothing here pushes with git.
+      # persist-credentials is off because this job runs `bun install`, which
+      # executes dependency lifecycle scripts, followed by the build. Nothing
+      # here pushes with git, so nothing here needs credentials on disk.
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
-          fetch-tags: true
           persist-credentials: false
 
       - name: Setup Bun
@@ -49,19 +64,20 @@ jobs:
           bun-version: 1.3.14
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Run tests
         run: bun test
 
       - name: Build binaries
-        run: bun run release
+        run: bun run ${{ matrix.script }}
 
-      # The tarballs are what users get. Unpack the one this runner can
-      # execute and confirm it starts, and check the architecture of the rest
-      # so a cross-compile that silently produced the wrong target is caught
-      # before it is published rather than by whoever installs it.
-      - name: Smoke-test the built binaries
+      # The tarballs are what users get. Unpack them, run the one this runner
+      # can execute, and check the architecture of the other, so a build that
+      # silently produced the wrong target is caught here rather than by
+      # whoever installs it.
+      - name: Smoke-test the macOS binaries
+        if: matrix.name == 'macos'
         run: |
           set -euo pipefail
           cd release
@@ -71,15 +87,61 @@ jobs:
           ./linelord-macos-arm64 --version
           file linelord-macos-arm64 | grep -q 'arm64'
           file linelord-macos-intel | grep -q 'x86_64'
+          rm -f linelord-macos-arm64 linelord-macos-intel
+
+      - name: Smoke-test the Linux binaries
+        if: matrix.name == 'linux'
+        run: |
+          set -euo pipefail
+          cd release
+          for archive in linelord-*.tar.gz; do
+            tar -xzf "$archive"
+          done
+          ./linelord-linux-x64 --version
           file linelord-linux-x64   | grep -q 'x86-64'
           file linelord-linux-arm64 | grep -q 'ARM aarch64'
-          rm -f linelord-macos-arm64 linelord-macos-intel \
-                linelord-linux-x64 linelord-linux-arm64
+          rm -f linelord-linux-x64 linelord-linux-arm64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.name }}
+          path: release/linelord-*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  # Publishing is the only write this workflow makes with GITHUB_TOKEN, and
+  # this job does nothing else: no checkout, no dependencies, no build, so no
+  # third-party code runs while the token is in hand.
+  release:
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: binaries-*
+          merge-multiple: true
+          path: release
+
+      # Four tarballs, or the release is not whole. A build job that uploaded
+      # nothing has already failed on if-no-files-found, but say so here too.
+      - name: Check every platform arrived
+        run: |
+          set -euo pipefail
+          cd release
+          ls -l
+          for expected in linelord-macos-arm64 linelord-macos-intel \
+                          linelord-linux-x64 linelord-linux-arm64; do
+            test -f "$expected.tar.gz" || { echo "::error::$expected.tar.gz is missing"; exit 1; }
+          done
 
       - name: Create checksums
         run: |
           cd release
-          shasum -a 256 *.tar.gz > checksums.txt
+          sha256sum *.tar.gz > checksums.txt
+          cat checksums.txt
 
       - name: Create GitHub Release in Public Repo
         uses: softprops/action-gh-release@v3
@@ -98,14 +160,15 @@ jobs:
   # is how v0.7.2 came to ship a formula nobody could install for months.
   update-homebrew-tap:
     name: Update the Homebrew tap
-    needs: build-and-release
-    # On a manual run the build is skipped, so `always()` is needed to reach
-    # this job at all -- but a failed build must still stop the tap from being
-    # pointed at a release that was never published.
+    needs: release
+    # On a tap-sync run the release is skipped, so `always()` is needed to
+    # reach this job at all -- but a failed release must still stop the tap
+    # from being pointed at a release that was never published, and a
+    # build-only run publishes nothing to sync to.
     if: >-
       always()
-      && (github.event_name == 'workflow_dispatch'
-          || needs.build-and-release.result == 'success')
+      && ((github.event_name == 'workflow_dispatch' && inputs.build_only != true)
+          || needs.release.result == 'success')
     runs-on: ubuntu-24.04
     # Only reads this repository's release metadata. The write it performs is
     # to the tap, authorised by HOMEBREW_TAP_TOKEN rather than by this token.
@@ -114,10 +177,14 @@ jobs:
     env:
       TAG: ${{ inputs.tag || github.ref_name }}
     steps:
-      - name: Check the tap token is configured
+      - name: Check the tap token is configured, and the tag named
         env:
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
+          if [ -z "$TAG" ]; then
+            echo "::error::No tag to sync to. A manual run needs the tag input unless build_only is set."
+            exit 1
+          fi
           if [ -z "$TAP_TOKEN" ]; then
             echo "::error::HOMEBREW_TAP_TOKEN is not set. The release is published, but the Homebrew tap still points at the previous version. Add a fine-grained token with Contents: write on MarkusAugust/homebrew-linelord, then re-run this job."
             exit 1
