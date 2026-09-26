@@ -19,7 +19,7 @@ import { acquireCacheLock } from '../../adapters/sqlite/cacheMaintenance'
  * same settings the present was read with.
  */
 
-const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
+const GORVEK = { name: 'Gorvek of Bonereach', email: 'gorvek@bonereach.realm' }
 const MONTHLY = { interval: 'month' as const, maxSnapshots: 60 }
 
 describe('gatherHistory', () => {

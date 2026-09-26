@@ -24,21 +24,21 @@ const nowSeconds = Math.floor(NOW.getTime() / 1000)
 const daysAgo = (days: number) => Math.round(nowSeconds - days * DAY)
 
 const GORVEK = 1
-const NIGHTSHROUD = 2
+const SARN = 2
 const GHOST = 3
 
 const AUTHORS = [
   author(GORVEK, {
-    name: 'Gorvek the Ironbane',
-    email: 'gorvek@ashendale.realm',
+    name: 'Gorvek of Bonereach',
+    email: 'gorvek@bonereach.realm',
   }),
-  author(NIGHTSHROUD, {
-    name: 'Sister Nightshroud',
-    email: 'nightshroud@alderstone.realm',
+  author(SARN, {
+    name: 'Sarn the Faceless',
+    email: 'sarn@kell.realm',
   }),
   author(GHOST, {
     name: 'Ghost of Commits Past',
-    email: 'ghost@ashendale.realm',
+    email: 'ghost@bonereach.realm',
   }),
 ]
 const FILES = [file(1, 'src/old.ts'), file(2, 'src/new.ts')]
@@ -89,10 +89,7 @@ describe('ageOfAuthors', () => {
 
   it('counts only the lines that are still there', () => {
     const result = ageOfAuthors(
-      repo(
-        { authorId: GORVEK, ages: [5, 10] },
-        { authorId: NIGHTSHROUD, ages: [5] },
-      ),
+      repo({ authorId: GORVEK, ages: [5, 10] }, { authorId: SARN, ages: [5] }),
       NOW,
     )
 
@@ -204,20 +201,20 @@ describe('ageOfAuthors', () => {
   it('sorts the oldest code first, which is the question being asked', () => {
     const result = ageOfAuthors(
       repo(
-        { authorId: NIGHTSHROUD, ages: [1, 1, 1] },
+        { authorId: SARN, ages: [1, 1, 1] },
         { authorId: GORVEK, ages: [1000, 1000, 1000] },
       ),
       NOW,
     )
 
-    expect(result.map((one) => one.authorId)).toEqual([GORVEK, NIGHTSHROUD])
+    expect(result.map((one) => one.authorId)).toEqual([GORVEK, SARN])
   })
 
   it('carries the name and address, so the interface need not ask again', () => {
     const [gorvek] = ageOfAuthors(repo({ authorId: GORVEK, ages: [5] }), NOW)
 
-    expect(gorvek?.name).toBe('Gorvek the Ironbane')
-    expect(gorvek?.email).toBe('gorvek@ashendale.realm')
+    expect(gorvek?.name).toBe('Gorvek of Bonereach')
+    expect(gorvek?.email).toBe('gorvek@bonereach.realm')
   })
 
   it('leaves out a line whose commit time was never recorded', () => {
@@ -263,7 +260,7 @@ describe('filesByAge', () => {
     const files = filesByAge(
       repo(
         { authorId: GORVEK, ages: [500], fileId: 1 },
-        { authorId: NIGHTSHROUD, ages: [500, 500, 500], fileId: 1 },
+        { authorId: SARN, ages: [500, 500, 500], fileId: 1 },
       ),
       GORVEK,
       NOW,
@@ -296,7 +293,7 @@ describe('ageOfRepository', () => {
     const repository = ageOfRepository(
       repo(
         { authorId: GORVEK, ages: [1, 2, 3] },
-        { authorId: NIGHTSHROUD, ages: [100, 200] },
+        { authorId: SARN, ages: [100, 200] },
       ),
       NOW,
     )
@@ -309,7 +306,7 @@ describe('ageOfRepository', () => {
     const repository = ageOfRepository(
       repo(
         { authorId: GORVEK, ages: [10, 20, 30] },
-        { authorId: NIGHTSHROUD, ages: [100] },
+        { authorId: SARN, ages: [100] },
       ),
       NOW,
     )
@@ -321,7 +318,7 @@ describe('ageOfRepository', () => {
     const repository = ageOfRepository(
       repo(
         { authorId: GORVEK, ages: [400], fileId: 1 },
-        { authorId: NIGHTSHROUD, ages: [2], fileId: 2 },
+        { authorId: SARN, ages: [2], fileId: 2 },
       ),
       NOW,
     )
@@ -394,8 +391,8 @@ describe('survivalByAuthor', () => {
     const [gorvek] = survivalByAuthor(history, AUTHORS)
 
     expect(gorvek?.authorId).toBe(GORVEK)
-    expect(gorvek?.name).toBe('Gorvek the Ironbane')
-    expect(gorvek?.email).toBe('gorvek@ashendale.realm')
+    expect(gorvek?.name).toBe('Gorvek of Bonereach')
+    expect(gorvek?.email).toBe('gorvek@bonereach.realm')
     expect(gorvek?.linesEverWritten).toBe(10)
     expect(gorvek?.survivingLines).toBe(4)
     expect(gorvek?.survivalRate).toBeCloseTo(0.4, 5)

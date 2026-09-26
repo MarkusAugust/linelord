@@ -93,8 +93,8 @@ describe('counting blame into cohorts', () => {
   it('reads a key back into what it was made from', () => {
     const month = cohortMonth(1_700_000_000)
 
-    expect(readCountKey(countKey('gorvek@ashendale.realm', month))).toEqual({
-      email: 'gorvek@ashendale.realm',
+    expect(readCountKey(countKey('gorvek@bonereach.realm', month))).toEqual({
+      email: 'gorvek@bonereach.realm',
       month,
     })
   })

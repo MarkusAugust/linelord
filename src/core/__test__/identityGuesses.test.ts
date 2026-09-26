@@ -19,8 +19,8 @@ import { canonicalAuthors } from '../ownership'
  */
 
 const SHORT = { name: 'Gorvek', email: 'gorvek@privat.no' }
-const LONG = { name: 'Gorvek the Ironbane', email: 'gorvek@firma.no' }
-const OTHER = { name: 'Sister Nightshroud', email: 'night@alderstone.realm' }
+const LONG = { name: 'Gorvek of Bonereach', email: 'gorvek@firma.no' }
+const OTHER = { name: 'Sarn the Faceless', email: 'sarn@kell.realm' }
 
 async function repoWithOnePersonTwice(): Promise<TestRepo> {
   const repo = await createTestRepo()

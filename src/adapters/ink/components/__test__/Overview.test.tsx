@@ -6,7 +6,7 @@ import {
   fakeWarriorSource,
   GORVEK,
   KEY,
-  NIGHTSHROUD,
+  SARN,
   STABLE_BOY,
   settle,
   stripAnsi,
@@ -32,7 +32,7 @@ describe('Overview', () => {
     expect(frame).toContain('1,000')
     expect(frame).toContain('Files analyzed')
 
-    for (const one of [GORVEK, NIGHTSHROUD, STABLE_BOY]) {
+    for (const one of [GORVEK, SARN, STABLE_BOY]) {
       expect(frame).toContain(one.displayName)
       expect(frame).toContain(one.email)
       expect(frame).toContain(one.title ?? '')
@@ -73,7 +73,7 @@ describe('Overview', () => {
     await settle()
     const frame = stripAnsi(lastFrame() ?? '')
 
-    expect(frame).toContain(NIGHTSHROUD.displayName)
+    expect(frame).toContain(SARN.displayName)
     expect(frame).toContain('Holds 250 lines in 5 files')
     // The repository box is gone: the detail has the screen to itself.
     expect(frame).not.toContain('Files analyzed')

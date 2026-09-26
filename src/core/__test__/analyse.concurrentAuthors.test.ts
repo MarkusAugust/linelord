@@ -18,11 +18,11 @@ import { authors, blameLines } from '../../adapters/sqlite/schema'
  */
 
 const WARRIORS = [
-  { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' },
-  { name: 'Sister Nightshroud', email: 'night@alderstone.realm' },
-  { name: 'Zygofer the Defiler', email: 'zygofer@vale.realm' },
-  { name: 'Merigall the Trickster', email: 'merigall@bitterreach.realm' },
-  { name: 'Rust the Ravenlander', email: 'rust@ravenland.realm' },
+  { name: 'Gorvek of Bonereach', email: 'gorvek@bonereach.realm' },
+  { name: 'Sarn the Faceless', email: 'sarn@kell.realm' },
+  { name: 'Captain Drusk', email: 'drusk@greycloaks.realm' },
+  { name: 'Brother Nask', email: 'nask@kell.realm' },
+  { name: 'Vurn the Ashborn', email: 'vurn@bonereach.realm' },
 ]
 
 describe('blaming many files at once', () => {

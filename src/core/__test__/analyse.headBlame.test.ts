@@ -11,10 +11,10 @@ import { createDatabase } from '../../adapters/sqlite/database'
 import { authors, blameLines, files } from '../../adapters/sqlite/schema'
 import type { GitPort } from '../../ports/git'
 
-const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
-const NIGHTSHROUD = {
-  name: 'Sister Nightshroud',
-  email: 'nightshroud@alderstone.realm',
+const GORVEK = { name: 'Gorvek of Bonereach', email: 'gorvek@bonereach.realm' }
+const SARN = {
+  name: 'Sarn the Faceless',
+  email: 'sarn@kell.realm',
 }
 
 async function analyse(repoPath: string) {
@@ -66,7 +66,7 @@ describe('GitService - blames HEAD rather than the working copy', () => {
     })
     await repo.commit({
       message: 'second file',
-      author: NIGHTSHROUD,
+      author: SARN,
       date: new Date('2023-06-10T09:00:00Z'),
       write: { 'b.ts': 'const four = 4\n' },
     })
@@ -83,14 +83,14 @@ describe('GitService - blames HEAD rather than the working copy', () => {
 
     const authorNames = dirty.authors.map((a) => a.name)
     expect(authorNames).not.toContain('Not Committed Yet')
-    expect(authorNames.sort()).toEqual([GORVEK.name, NIGHTSHROUD.name].sort())
+    expect(authorNames.sort()).toEqual([GORVEK.name, SARN.name].sort())
 
     // The numbers must be identical with and without the unsaved edit.
     expect(Object.fromEntries(dirty.linesByEmail)).toEqual(
       Object.fromEntries(clean.linesByEmail),
     )
     expect(dirty.linesByEmail.get(GORVEK.email)).toBe(3)
-    expect(dirty.linesByEmail.get(NIGHTSHROUD.email)).toBe(1)
+    expect(dirty.linesByEmail.get(SARN.email)).toBe(1)
   })
 
   it('reports the revision analysed and how many files were left out', async () => {

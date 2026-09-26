@@ -18,7 +18,7 @@ import { authorContributions } from '../ownership'
  * ran it.
  */
 
-const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
+const GORVEK = { name: 'Gorvek of Bonereach', email: 'gorvek@bonereach.realm' }
 const BOT = { name: 'Prettier Bot', email: 'bot@example.com' }
 
 const WRITTEN = new Date('2020-01-01T10:00:00Z')

@@ -110,11 +110,11 @@ export function describeAnalysisStore(
       const ids = await store.ensureAuthors([
         {
           name: 'Gorvek',
-          email: 'gorvek@ashendale.realm',
+          email: 'gorvek@bonereach.realm',
           displayName: 'Gorvek',
         },
       ])
-      const gorvek = ids.get('gorvek@ashendale.realm') ?? -1
+      const gorvek = ids.get('gorvek@bonereach.realm') ?? -1
       await store.storeBlame(a.id, [
         {
           authorId: gorvek,
@@ -136,11 +136,11 @@ export function describeAnalysisStore(
       const ids = await store.ensureAuthors([
         {
           name: 'Gorvek',
-          email: 'gorvek@ashendale.realm',
+          email: 'gorvek@bonereach.realm',
           displayName: 'Gorvek',
         },
       ])
-      const gorvek = ids.get('gorvek@ashendale.realm') ?? -1
+      const gorvek = ids.get('gorvek@bonereach.realm') ?? -1
 
       await store.storeBlame(a.id, [
         {
@@ -175,11 +175,11 @@ export function describeAnalysisStore(
       const ids = await store.ensureAuthors([
         {
           name: 'Gorvek',
-          email: 'gorvek@ashendale.realm',
+          email: 'gorvek@bonereach.realm',
           displayName: 'Gorvek',
         },
       ])
-      const gorvek = ids.get('gorvek@ashendale.realm') ?? -1
+      const gorvek = ids.get('gorvek@bonereach.realm') ?? -1
       await store.storeBlame(a.id, [
         {
           authorId: gorvek,
@@ -209,11 +209,11 @@ export function describeAnalysisStore(
       const ids = await store.ensureAuthors([
         {
           name: 'Gorvek',
-          email: 'gorvek@ashendale.realm',
+          email: 'gorvek@bonereach.realm',
           displayName: 'Gorvek',
         },
       ])
-      const gorvek = ids.get('gorvek@ashendale.realm') ?? -1
+      const gorvek = ids.get('gorvek@bonereach.realm') ?? -1
       await store.storeBlame(a.id, [
         {
           authorId: gorvek,
@@ -241,29 +241,29 @@ export function describeAnalysisStore(
       const first = await store.ensureAuthors([
         {
           name: 'Gorvek',
-          email: 'gorvek@ashendale.realm',
+          email: 'gorvek@bonereach.realm',
           displayName: 'Gorvek',
         },
         {
           name: 'Sister',
-          email: 'nightshroud@alderstone.realm',
+          email: 'sarn@kell.realm',
           displayName: 'Sister',
         },
       ])
       const again = await store.ensureAuthors([
         {
           name: 'Gorvek again',
-          email: 'gorvek@ashendale.realm',
+          email: 'gorvek@bonereach.realm',
           displayName: 'G',
         },
       ])
 
-      expect(again.get('gorvek@ashendale.realm')).toBe(
-        first.get('gorvek@ashendale.realm') ?? -1,
+      expect(again.get('gorvek@bonereach.realm')).toBe(
+        first.get('gorvek@bonereach.realm') ?? -1,
       )
       const authors = await store.listAuthors()
       expect(authors).toHaveLength(2)
-      const gorvek = authors.find((a) => a.email === 'gorvek@ashendale.realm')
+      const gorvek = authors.find((a) => a.email === 'gorvek@bonereach.realm')
       expect(gorvek).toMatchObject({
         name: 'Gorvek',
         displayName: 'Gorvek',
@@ -279,12 +279,12 @@ export function describeAnalysisStore(
       const ids = await store.ensureAuthors([
         {
           name: 'Gorvek',
-          email: 'gorvek@ashendale.realm',
+          email: 'gorvek@bonereach.realm',
           displayName: 'Gorvek',
         },
         { name: 'gorvek', email: 'gorvek@old.realm', displayName: 'gorvek' },
       ])
-      const keep = ids.get('gorvek@ashendale.realm') ?? -1
+      const keep = ids.get('gorvek@bonereach.realm') ?? -1
       const old = ids.get('gorvek@old.realm') ?? -1
       await store.updateAuthors([
         { id: old, changes: { isCanonical: false, canonicalId: keep } },
@@ -302,11 +302,11 @@ export function describeAnalysisStore(
       const ids = await store.ensureAuthors([
         {
           name: 'Gorvek',
-          email: 'gorvek@ashendale.realm',
+          email: 'gorvek@bonereach.realm',
           displayName: 'Gorvek',
         },
       ])
-      const gorvek = ids.get('gorvek@ashendale.realm') ?? -1
+      const gorvek = ids.get('gorvek@bonereach.realm') ?? -1
 
       await store.updateAuthors([
         {
@@ -315,7 +315,7 @@ export function describeAnalysisStore(
             rank: 1,
             percentage: 72.5,
             title: 'legend',
-            displayName: 'Gorvek the Ironbane',
+            displayName: 'Gorvek of Bonereach',
           },
         },
       ])
@@ -324,7 +324,7 @@ export function describeAnalysisStore(
         rank: 1,
         percentage: 72.5,
         title: 'legend',
-        displayName: 'Gorvek the Ironbane',
+        displayName: 'Gorvek of Bonereach',
       })
     })
 
@@ -332,11 +332,11 @@ export function describeAnalysisStore(
       const ids = await store.ensureAuthors([
         {
           name: 'Gorvek',
-          email: 'gorvek@ashendale.realm',
+          email: 'gorvek@bonereach.realm',
           displayName: 'Gorvek',
         },
       ])
-      const gorvek = ids.get('gorvek@ashendale.realm') ?? -1
+      const gorvek = ids.get('gorvek@bonereach.realm') ?? -1
 
       await store.replaceAliases([
         {
@@ -367,12 +367,12 @@ export function describeAnalysisStore(
       const ids = await store.ensureAuthors([
         {
           name: 'Gorvek',
-          email: 'gorvek@ashendale.realm',
+          email: 'gorvek@bonereach.realm',
           displayName: 'Gorvek',
         },
         { name: 'gorvek', email: 'gorvek@old.realm', displayName: 'gorvek' },
       ])
-      const keep = ids.get('gorvek@ashendale.realm') ?? -1
+      const keep = ids.get('gorvek@bonereach.realm') ?? -1
       const old = ids.get('gorvek@old.realm') ?? -1
       await store.storeBlame(a.id, [
         { authorId: old, lineNumber: 1, commitHash: null, commitTimestamp: 1 },
@@ -402,11 +402,11 @@ export function describeAnalysisStore(
       const ids = await store.ensureAuthors([
         {
           name: 'Gorvek',
-          email: 'gorvek@ashendale.realm',
+          email: 'gorvek@bonereach.realm',
           displayName: 'Gorvek',
         },
       ])
-      const gorvek = ids.get('gorvek@ashendale.realm') ?? -1
+      const gorvek = ids.get('gorvek@bonereach.realm') ?? -1
 
       await store.storeSnapshot(
         { commitSha: 'a'.repeat(40), snapshotTimestamp: 1000, totalLines: 5 },
@@ -451,11 +451,11 @@ export function describeAnalysisStore(
       const ids = await store.ensureAuthors([
         {
           name: 'Gorvek',
-          email: 'gorvek@ashendale.realm',
+          email: 'gorvek@bonereach.realm',
           displayName: 'Gorvek',
         },
       ])
-      const gorvek = ids.get('gorvek@ashendale.realm') ?? -1
+      const gorvek = ids.get('gorvek@bonereach.realm') ?? -1
       await store.storeBlame(a.id, [
         {
           authorId: gorvek,

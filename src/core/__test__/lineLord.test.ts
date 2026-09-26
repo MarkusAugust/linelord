@@ -13,17 +13,17 @@ import {
 } from '../ownership'
 
 const GORVEK = {
-  name: 'Gorvek the Ironbane',
-  email: 'gorvek@ashendale.realm',
+  name: 'Gorvek of Bonereach',
+  email: 'gorvek@bonereach.realm',
 }
 /** The same person, committing from a second address. */
 const GORVEK_AT_HOME = {
-  name: 'Gorvek the Ironbane',
-  email: 'g.ironbane@ashendale.realm',
+  name: 'Gorvek of Bonereach',
+  email: 'g.bonereach@bonereach.realm',
 }
-const NIGHTSHROUD = {
-  name: 'Sister Nightshroud',
-  email: 'nightshroud@alderstone.realm',
+const SARN = {
+  name: 'Sarn the Faceless',
+  email: 'sarn@kell.realm',
 }
 
 async function buildRepo(): Promise<TestRepo> {
@@ -41,8 +41,8 @@ async function buildRepo(): Promise<TestRepo> {
     write: { 'src/b.ts': 'const four = 4\n' },
   })
   await repo.commit({
-    message: 'nightshroud',
-    author: NIGHTSHROUD,
+    message: 'sarn',
+    author: SARN,
     date: new Date('2023-03-10T09:00:00Z'),
     write: { 'src/c.ts': 'const five = 5\nconst six = 6\n' },
   })
@@ -78,14 +78,14 @@ describe('LineLord - end to end over a real repository', () => {
 
     // Gorvek's two addresses are one contributor holding 4 lines, because the
     // .mailmap says so. Were ranking to run before normalisation, he would
-    // appear twice, with 3 and 1 line, and Nightshroud's 2 lines would rank
+    // appear twice, with 3 and 1 line, and Sarn's 2 lines would rank
     // second rather than last.
     expect(contributions).toHaveLength(2)
     const [first, second] = contributions
     expect(first?.displayName).toBe(GORVEK.name)
     expect(first?.totalLines).toBe(4)
     expect(first?.rank).toBe(1)
-    expect(second?.displayName).toBe(NIGHTSHROUD.name)
+    expect(second?.displayName).toBe(SARN.name)
     expect(second?.totalLines).toBe(2)
     expect(second?.rank).toBe(2)
   })
@@ -191,8 +191,8 @@ describe('LineLord - end to end over a real repository', () => {
     const other = await createTestRepo()
     try {
       await other.commit({
-        message: 'only nightshroud here',
-        author: NIGHTSHROUD,
+        message: 'only sarn here',
+        author: SARN,
         write: { 'src/only.ts': 'const only = 1\n' },
       })
 
@@ -209,7 +209,7 @@ describe('LineLord - end to end over a real repository', () => {
 
       // Nothing from the first repository may appear in the second.
       expect(contributions).toHaveLength(1)
-      expect(contributions[0]?.displayName).toBe(NIGHTSHROUD.name)
+      expect(contributions[0]?.displayName).toBe(SARN.name)
       expect(contributions[0]?.totalLines).toBe(1)
       expect(second.getCurrentRepoPath()).toBe(other.path)
     } finally {

@@ -32,12 +32,12 @@ const portsFor = (repoPath: string, db: ReturnType<typeof createDatabase>) => ({
 
 const THRESHOLD = 50 * 1024
 
-const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
-const NIGHTSHROUD = {
-  name: 'Sister Nightshroud',
-  email: 'night@alderstone.realm',
+const GORVEK = { name: 'Gorvek of Bonereach', email: 'gorvek@bonereach.realm' }
+const SARN = {
+  name: 'Sarn the Faceless',
+  email: 'sarn@kell.realm',
 }
-const ZYGOFER = { name: 'Zygofer the Defiler', email: 'zygofer@vale.realm' }
+const DRUSK = { name: 'Captain Drusk', email: 'drusk@greycloaks.realm' }
 
 type Db = ReturnType<typeof createDatabase>
 
@@ -59,7 +59,7 @@ async function repoWithAYear(): Promise<TestRepo> {
   })
   await repo.commit({
     message: 'a second hand',
-    author: NIGHTSHROUD,
+    author: SARN,
     date: new Date('2025-03-12T10:00:00Z'),
     write: { 'a.ts': `${lines(5, 'a')}${lines(5, 'rewritten')}` },
   })
@@ -67,19 +67,19 @@ async function repoWithAYear(): Promise<TestRepo> {
   // ends, and it moves every line of the file to a different author.
   await repo.commit({
     message: 'a change',
-    author: ZYGOFER,
+    author: DRUSK,
     date: new Date('2025-05-02T10:00:00Z'),
-    write: { 'b.ts': lines(6, 'zygofer') },
+    write: { 'b.ts': lines(6, 'drusk') },
   })
   await repo.commit({
     message: 'and back again',
-    author: ZYGOFER,
+    author: DRUSK,
     date: new Date('2025-05-20T10:00:00Z'),
     write: { 'b.ts': lines(6, 'b') },
   })
   await repo.commit({
     message: 'something new',
-    author: NIGHTSHROUD,
+    author: SARN,
     date: new Date('2025-08-01T10:00:00Z'),
     write: { 'c.ts': lines(4, 'c') },
   })
@@ -203,7 +203,7 @@ describe('HistoryService', () => {
     })
 
     const stored = await db.select({ email: authors.email }).from(authors)
-    expect(stored.map((one) => one.email)).toContain(ZYGOFER.email)
+    expect(stored.map((one) => one.email)).toContain(DRUSK.email)
   }, 120000)
 
   it('honours the ceiling on how many revisions it will read', async () => {
@@ -247,7 +247,7 @@ describe('HistoryService', () => {
     })
     await repo.commit({
       message: 'the child, dated May',
-      author: NIGHTSHROUD,
+      author: SARN,
       date: new Date('2025-05-01T10:00:00Z'),
       write: { 'f.ts': 'one\ntwo\nfour\nfive\n' },
     })
@@ -302,12 +302,12 @@ describe('HistoryService', () => {
       thresholdBytes: THRESHOLD,
     })
 
-    const [zygofer] = await db
+    const [drusk] = await db
       .select({ name: authors.displayName })
       .from(authors)
-      .where(eq(authors.email, ZYGOFER.email))
+      .where(eq(authors.email, DRUSK.email))
 
-    expect(zygofer?.name).toBe(ZYGOFER.name)
+    expect(drusk?.name).toBe(DRUSK.name)
   }, 120000)
 
   it('records which revision the history describes', async () => {
@@ -333,13 +333,13 @@ describe('HistoryService', () => {
     repo = await createTestRepo()
     await repo.commit({
       message: 'from the office',
-      author: { name: 'Gorvek the Ironbane', email: 'gorvek@firma.no' },
+      author: { name: 'Gorvek of Bonereach', email: 'gorvek@firma.no' },
       date: new Date('2025-01-10T10:00:00Z'),
       write: { 'a.ts': 'one\ntwo\n' },
     })
     await repo.commit({
       message: 'from the laptop',
-      author: { name: 'Gorvek Ironbane', email: 'gorvek@privat.no' },
+      author: { name: 'Gorvek Bonereach', email: 'gorvek@privat.no' },
       date: new Date('2025-02-10T10:00:00Z'),
       write: { 'b.ts': 'three\n' },
     })
@@ -379,13 +379,13 @@ describe('HistoryService', () => {
     })
     await repo.commit({
       message: 'five of them rewritten in March',
-      author: NIGHTSHROUD,
+      author: SARN,
       date: new Date('2025-03-12T10:00:00Z'),
       write: { 'a.ts': 'g0\ng1\ng2\ng3\ng4\nn0\nn1\nn2\nn3\nn4\n' },
     })
     await repo.commit({
       message: 'three more of them rewritten in June',
-      author: ZYGOFER,
+      author: DRUSK,
       date: new Date('2025-06-14T10:00:00Z'),
       write: { 'a.ts': 'g0\ng1\nn0\nn1\nn2\nn3\nn4\nz0\nz1\nz2\n' },
     })
@@ -473,13 +473,13 @@ describe('HistoryService', () => {
     repo = await createTestRepo()
     await repo.commit({
       message: 'from the office',
-      author: { name: 'Gorvek the Ironbane', email: 'gorvek@firma.no' },
+      author: { name: 'Gorvek of Bonereach', email: 'gorvek@firma.no' },
       date: new Date('2025-04-10T10:00:00Z'),
       write: { 'a.ts': 'one\ntwo\n' },
     })
     await repo.commit({
       message: 'from the laptop, the same month',
-      author: { name: 'Gorvek Ironbane', email: 'gorvek@privat.no' },
+      author: { name: 'Gorvek Bonereach', email: 'gorvek@privat.no' },
       date: new Date('2025-04-20T10:00:00Z'),
       write: { 'b.ts': 'three\n' },
     })
@@ -516,13 +516,13 @@ describe('HistoryService', () => {
     })
     await repo.commit({
       message: 'every one of them replaced in April',
-      author: NIGHTSHROUD,
+      author: SARN,
       date: new Date('2025-04-10T10:00:00Z'),
       write: { 'a.ts': 'n0\nn1\nn2\nn3\nn4\nn5\nn6\nn7\nn8\nn9\n' },
     })
     await repo.commit({
       message: 'and one more in July',
-      author: NIGHTSHROUD,
+      author: SARN,
       date: new Date('2025-07-10T10:00:00Z'),
       write: {
         'a.ts': 'n0\nn1\nn2\nn3\nn4\nn5\nn6\nn7\nn8\nn9\nn10\n',
@@ -545,7 +545,7 @@ describe('HistoryService', () => {
       (await store.loadAnalysis()).authors,
     )
     const gorvek = survival.find((one) => one.email === GORVEK.email)
-    const nightshroud = survival.find((one) => one.email === NIGHTSHROUD.email)
+    const sarn = survival.find((one) => one.email === SARN.email)
 
     // Gorvek wrote ten and has none left. Nothing in the database says zero
     // -- the row simply stops -- so a half-life at all is the thing being
@@ -555,10 +555,10 @@ describe('HistoryService', () => {
     expect(gorvek?.survivalRate).toBe(0)
     expect(gorvek?.halfLifeDays).not.toBe(null)
 
-    // Nightshroud's work is all still standing.
-    expect(nightshroud?.survivalRate).toBe(1)
-    expect(nightshroud?.halfLifeDays).toBe(null)
-    expect(nightshroud?.name).toBe(NIGHTSHROUD.name)
+    // Sarn's work is all still standing.
+    expect(sarn?.survivalRate).toBe(1)
+    expect(sarn?.halfLifeDays).toBe(null)
+    expect(sarn?.name).toBe(SARN.name)
   }, 120000)
 
   it('reports no survival figures when no history was gathered', async () => {

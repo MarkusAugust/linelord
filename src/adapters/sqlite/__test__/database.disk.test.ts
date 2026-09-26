@@ -51,9 +51,9 @@ describe('createDatabase on disk', () => {
     const first = createDatabase({ path })
     await first.insert(authors).values({
       id: 1,
-      name: 'Gorvek the Ironbane',
-      email: 'gorvek@ashendale.realm',
-      displayName: 'Gorvek the Ironbane',
+      name: 'Gorvek of Bonereach',
+      email: 'gorvek@bonereach.realm',
+      displayName: 'Gorvek of Bonereach',
       isCanonical: true,
     })
 
@@ -61,7 +61,7 @@ describe('createDatabase on disk', () => {
     const rows = await second.select().from(authors)
 
     expect(rows).toHaveLength(1)
-    expect(rows[0]?.email).toBe('gorvek@ashendale.realm')
+    expect(rows[0]?.email).toBe('gorvek@bonereach.realm')
   })
 
   it('uses write-ahead logging, so a reader is not blocked by the writer', async () => {
@@ -93,9 +93,9 @@ describe('clearDatabase', () => {
     const db = createDatabase()
     await db.insert(authors).values({
       id: 1,
-      name: 'Gorvek the Ironbane',
-      email: 'gorvek@ashendale.realm',
-      displayName: 'Gorvek the Ironbane',
+      name: 'Gorvek of Bonereach',
+      email: 'gorvek@bonereach.realm',
+      displayName: 'Gorvek of Bonereach',
       isCanonical: true,
     })
     writeMeta(db, { head_sha: 'abc123', threshold_bytes: '51200' })

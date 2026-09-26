@@ -16,20 +16,20 @@ const GHOST = 4
 const seeded = analysis({
   authors: [
     author(WARLORD, {
-      name: 'Gorvek the Ironbane',
-      email: 'gorvek@ashendale.realm',
+      name: 'Gorvek of Bonereach',
+      email: 'gorvek@bonereach.realm',
     }),
     author(CHAMPION, {
-      name: 'Sister Nightshroud',
-      email: 'nightshroud@alderstone.realm',
+      name: 'Sarn the Faceless',
+      email: 'sarn@kell.realm',
     }),
     author(SQUIRE, {
-      name: 'Zygofer the Defiler',
-      email: 'zygofer@ashendale.realm',
+      name: 'Captain Drusk',
+      email: 'drusk@bonereach.realm',
     }),
     author(GHOST, {
       name: 'Ghost of Commits Past',
-      email: 'ghost@ashendale.realm',
+      email: 'ghost@bonereach.realm',
     }),
   ],
   files: [file(1, 'a.ts')],
@@ -126,7 +126,7 @@ describe('rankAuthors', () => {
         ...seeded.authors,
         author(99, {
           name: 'gorvek',
-          email: 'gorvek.alias@ashendale.realm',
+          email: 'gorvek.alias@bonereach.realm',
           isCanonical: false,
           canonicalId: WARLORD,
         }),
@@ -188,9 +188,9 @@ describe('rankAuthors', () => {
     const [stored] = await store.listFiles()
     const fileId = stored?.id ?? -1
     const held = [
-      ['gorvek@ashendale.realm', 60],
-      ['nightshroud@alderstone.realm', 30],
-      ['zygofer@ashendale.realm', 10],
+      ['gorvek@bonereach.realm', 60],
+      ['sarn@kell.realm', 30],
+      ['drusk@bonereach.realm', 10],
     ] as const
     await store.storeBlame(
       fileId,
@@ -210,7 +210,7 @@ describe('rankAuthors', () => {
     const second = await store.listAuthors()
 
     expect(second).toEqual(first)
-    expect(first.find((a) => a.email === 'gorvek@ashendale.realm')?.rank).toBe(
+    expect(first.find((a) => a.email === 'gorvek@bonereach.realm')?.rank).toBe(
       1,
     )
   })

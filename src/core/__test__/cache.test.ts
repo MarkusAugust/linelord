@@ -82,14 +82,14 @@ describe('computeFingerprint', () => {
 
     await writeFile(
       mailmap,
-      'Gorvek <gorvek@ashendale.realm> <old@example.com>\n',
+      'Gorvek <gorvek@bonereach.realm> <old@example.com>\n',
     )
     const present = await computeFingerprint(inputs)
     expect(present.mailmap).not.toBe('')
 
     await writeFile(
       mailmap,
-      'Gorvek <gorvek@ashendale.realm> <other@example.com>\n',
+      'Gorvek <gorvek@bonereach.realm> <other@example.com>\n',
     )
     const edited = await computeFingerprint(inputs)
     expect(edited.mailmap).not.toBe(present.mailmap)
