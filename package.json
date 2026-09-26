@@ -1,6 +1,6 @@
 {
   "name": "linelord",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "private": true,
   "module": "src/app/cli.ts",
   "type": "module",
