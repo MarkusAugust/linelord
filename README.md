@@ -460,16 +460,10 @@ never needs a database.
 
 ## 🗡️ Contributing to the Saga
 
-Bug reports, feature requests, and pull requests are welcome at the
-[repository](https://github.com/MarkusAugust/linelord). Bring steel, bring
-tests, and bring the README along with any change that moves what a screen
-says.
-
-## 📜 Gorvek's Wisdom
-
-> _"Let Rust Brothers and demon-worshippers brood over questions of reality and illusion. The developer knows that code either works or it does not!"_
-
-> _"Horn cares little for your frameworks. He cares if the work is done."_
+Bug reports, feature requests and pull requests are welcome at the
+[repository](https://github.com/MarkusAugust/linelord). Before you draw
+steel, read [CONTRIBUTING.md](CONTRIBUTING.md): the gate every change passes
+through, the shape of the code, the theme, and how a release is cut.
 
 ## 📄 License
 

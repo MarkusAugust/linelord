@@ -19,6 +19,13 @@ because the earlier answer was wrong.
   along with the Homebrew housekeeping and the performance jokes, and
   Gorvek's voice is laid on thicker everywhere else. Nothing about the
   program changes.
+- **`CONTRIBUTING.md`.** What a contributor needs to know, committed rather
+  than kept on the maintainer's machine: the gate and why all three of its
+  outputs are read, one task per branch, test first, the shape of the code
+  and its rules, the theme and the names it may not use, the self-review
+  list, and how a release is cut. The README's own contributing section now
+  points there, and Gorvek's collected wisdom, which the program already
+  quotes on its way out, leaves the README.
 
 ## [0.12.0] — 2026-09-26
 
