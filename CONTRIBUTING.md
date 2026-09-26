@@ -117,9 +117,12 @@ no 1.0.0. Releases are cut by the maintainer:
    `CHANGELOG.md`, add the compare links, leave `Unreleased` empty, and merge
    it through a pull request with CI green.
 2. On `master`, `bun run publish:minor` or `bun run publish:patch` bumps the
-   version, tags it and pushes both. The Release workflow builds the four
-   binaries, smoke-tests them, publishes the GitHub release and updates the
-   Homebrew tap.
+   version, tags it and pushes both. The Release workflow builds the macOS
+   binaries on a macOS runner and the Linux ones on a Linux runner, runs the
+   one each can and checks the other's architecture, publishes the GitHub
+   release from a job that runs no other code, and updates the Homebrew tap.
+   A change to the build is proven first by running the workflow by hand
+   with `build_only`, which builds and smoke-tests without publishing.
 
 Homebrew and the binaries on each release are the whole distribution story.
 There is no npm package, no `--json` output, no web interface and no Windows

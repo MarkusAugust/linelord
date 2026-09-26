@@ -24,9 +24,15 @@ const WORKFLOW = join(
 
 const workflow = readFileSync(WORKFLOW, 'utf8')
 
-/** The build-and-release job, up to where the next job starts. */
+/** The build jobs, up to where the release job starts. */
 const buildJob = workflow.slice(
-  workflow.indexOf('  build-and-release:'),
+  workflow.indexOf('  build:'),
+  workflow.indexOf('  release:'),
+)
+
+/** The release job, up to where the tap job starts. */
+const releaseJob = workflow.slice(
+  workflow.indexOf('  release:'),
   workflow.indexOf('  update-homebrew-tap:'),
 )
 
@@ -67,20 +73,26 @@ describe('release workflow', () => {
     // own it is satisfied by removing the permission altogether, which would
     // leave action-gh-release unable to publish -- a failure that only shows
     // up when a tag is pushed. Pin the job that legitimately needs it.
-    expect(buildJob).toContain('permissions:\n      contents: write')
+    expect(releaseJob).toContain('permissions:\n      contents: write')
   })
 
-  it('does not hold a write token while dependency and build code runs', () => {
-    // This job installs dependencies, which executes lifecycle scripts from
-    // the dependency tree, and then builds. A persisted token would sit in
-    // .git/config throughout. The release step is handed GITHUB_TOKEN
-    // explicitly, so nothing here needs credentials on disk.
-    // Found by the step rather than by how the action is referenced. Naming
-    // the version made this fail the day the action was updated, which says
-    // nothing about whether credentials are persisted -- and matching only
-    // `@v<major>` would fail again the day these are pinned to a commit,
-    // which is a change that makes the workflow safer, not less so. Anchored
-    // on `uses:` so a mention in a comment is not mistaken for the step.
+  it('runs no dependency or build code in the job that holds the write token', () => {
+    // The release job downloads what the build jobs made and publishes it.
+    // Installing dependencies executes lifecycle scripts from the dependency
+    // tree, and a checkout is a repository that code could write into; the
+    // job that can create a release does neither.
+    expect(releaseJob).not.toContain('bun install')
+    expect(releaseJob).not.toContain('actions/checkout')
+    expect(releaseJob).toContain('actions/download-artifact')
+    expect(buildJob).toContain('permissions:\n      contents: read')
+    expect(buildJob).not.toContain('contents: write')
+  })
+
+  it('does not persist credentials where dependency and build code runs', () => {
+    // The build jobs install dependencies and build. A persisted token would
+    // sit in .git/config throughout, and nothing there pushes with git.
+    // Found by the step rather than by how the action is referenced, and
+    // anchored on `uses:` so a mention in a comment is not mistaken for it.
     const at = buildJob.search(/uses:\s*actions\/checkout@\S+/)
     expect(at).toBeGreaterThan(-1)
     const checkout = buildJob.slice(at)
@@ -88,6 +100,26 @@ describe('release workflow', () => {
     const block = nextStep === -1 ? checkout : checkout.slice(0, nextStep)
 
     expect(block).toContain('persist-credentials: false')
+  })
+
+  it('builds each platform on a runner of that platform', () => {
+    // A Linux binary that has never been run on Linux before it is published
+    // is a binary nobody has tested. Each runner builds its own and executes
+    // the one it can; the release job checks that all four arrived.
+    expect(buildJob).toContain('runs-on: macos-latest')
+    expect(buildJob).toContain('runs-on: ubuntu-24.04')
+    expect(buildJob).toContain('release:macos')
+    expect(buildJob).toContain('release:linux')
+    expect(buildJob).toContain('./linelord-macos-arm64 --version')
+    expect(buildJob).toContain('./linelord-linux-x64 --version')
+    for (const target of [
+      'linelord-macos-arm64',
+      'linelord-macos-intel',
+      'linelord-linux-x64',
+      'linelord-linux-arm64',
+    ]) {
+      expect(releaseJob).toContain(target)
+    }
   })
 
   it('still refuses to run when the tap token is missing', () => {
