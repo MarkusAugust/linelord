@@ -2,7 +2,7 @@
 
 <h1>👑 ⚔️ LineLord ⚔️ 👑</h1>
 
-## The Barbarians Guide to Git Repository Conquest
+## The Barbarian's Guide to Git Repository Conquest
 
 </div>
 
@@ -12,179 +12,119 @@
 
 ## ⚔️ What is LineLord?
 
-Know, O Prince, that between the years when repositories were young and the rise of the great codebases, there was an age undreamed of. And unto this, **LineLord**, destined to track every line of code and every developer who dared shape the digital realm!
+Know, O Prince, that between the years when repositories were young and the rise of the great codebases, there was an age undreamed of. And unto this came **LineLord**, forged in the fires of the Ashen Vale and destined to track every line of code and every warrior who dared shape the digital realm.
 
-LineLord is a mighty CLI tool forged in the fires of the Ashen Vale, wielding the ancient powers of `git blame` to reveal the true warriors who have conquered your codebase. No sorcery, no external APIs, no mystical dependencies — only the raw strength of native git commands, blessed by the flame-maned steeds of Horn!
+LineLord is a CLI tool that wields the ancient power of `git blame` to reveal who truly holds your codebase. No sorcery, no far-off oracles, no mystical dependencies — only the raw strength of native git commands, an SQLite scroll to remember what it read, and the honest arithmetic of lines that still stand.
 
-### 🏰 Features Fit for a Galdane Warrior
+### 🏰 What Gorvek Brings to the Battlefield
 
-- **🗡️ Native Git Power**: Uses git commands and an in-memory SQLite index — works anywhere git draws breath
-- **🧠 Honest Author Identity**: One person is one email address, and `.mailmap` is how you say otherwise — no guessing who is who, and `--write-mailmap` to draft the file for you
-- **📊 Comprehensive Battle Reports**: File-level ownership, project statistics, and developer rankings
-- **⚡ Lightning-Fast Analysis**: Parallel processing that would make Horn's volcanic forge proud
-- **🎯 Smart Filtering**: Analyses tracked files only, and sets aside binaries, generated files and anything over the size threshold
-- **⚔️ Brutal Barbarian Rankings**: Ranks warriors by the ground they still hold — territory owned, solo-conquered files, and code that has outlived a year
-- **⚙️ Configurable Thresholds**: Control large file limits to suit your conquest needs
-- **🎨 Epic Forbidden Lands Theme**: Because code analysis should feel like surviving the Blood Mist!
+- **🗡️ Native Git Power** — every number comes from git itself, and works wherever git draws breath
+- **🧠 Honest Identity** — one warrior is one email address; `.mailmap` is how you say otherwise, and LineLord will draft it for you
+- **📊 Battle Reports** — who holds what, how old it is, and who conquered which ground
+- **⏳ Code Longevity** — how long the code still standing has stood, and with `--history`, how long code actually lasts before it falls
+- **🪓 Brutal Barbarian Rankings** — territory owned, files held alone, code that outlived a year
+- **🎨 The Forbidden Lands** — because surveying a codebase should feel like surviving the Blood Mist
 
-## 🏹 Installation - Claim Your Weapon
+## 🏹 Claim Your Weapon
 
-### The Swift Path via Homebrew
-
-The easiest way to arm yourself with LineLord is through Homebrew, as trusted as a Galdane battle-axe:
+Homebrew forges it, as trusted as a Galdane battle-axe:
 
 ```bash
-# Add the LineLord tap (repository of formulas)
 brew tap markusaugust/linelord
-
-# Install LineLord
 brew install linelord
 ```
 
-If LineLord responds with Gorvek's wisdom, your installation is complete!
-
-## ⚔️ Usage - Enter the Digital Battlefield
-
-### Quick Conquest
+When Horn's smiths temper a new blade, sharpen yours:
 
 ```bash
-# Analyze current directory
-linelord
+brew update && brew upgrade linelord
+```
 
-# Analyze specific repository
-linelord ~/projects/my-epic-codebase
+If LineLord answers with Gorvek's wisdom, your weapon is ready. Linux and macOS
+are the realms it walks; each release carries a binary for every one of them.
 
-# Use path flag (supports ~ expansion)
-linelord --path ~/code/forbidden-toolkit
+## ⚔️ Enter the Battlefield
 
-# Show version information
+```bash
+linelord                                # survey the repository you stand in
+linelord ~/code/forbidden-toolkit       # or the one you point at
+linelord -p ~/code/saga -t 75           # the same, with files over 75 KB set aside
+
+linelord --threshold 100                # files larger than this are left unread (default: 50 KB)
+linelord --concurrency 4                # blame four files at a time (default: 12, at most 64)
+
+linelord --no-cache                     # neither read nor write the stored analysis
+linelord --refresh                      # ignore what is stored and read everything again
+linelord --clear-cache                  # forget this repository's stored analysis
+linelord --clear-all-caches             # forget every repository's
+
+linelord --ignore-rev 1a2b3c4           # look past a reformatting commit, for this run
+linelord --fuzzy-authors                # guess who is who from names (see below — it lies)
+linelord --write-mailmap                # draft a .mailmap from those guesses, and stop
+
+linelord --history                      # also read the past, and how long code lasted
+linelord --history --snapshot-interval=quarter --max-snapshots=24
+
 linelord --version
-
-# Display help and available options
 linelord --help
 ```
 
-### Advanced Usage - Master the Battlefield
+Stand anywhere inside a repository and LineLord surveys the whole of it, never
+merely the corner you happen to be standing in. Point it at ground that is no
+repository, or hand it a threshold that is zero, negative or no number at all,
+and it says so and stops — Gorvek does not hand you an empty map and call it a
+conquest.
 
-```bash
-# Custom file size threshold (default: 50KB)
-linelord --threshold=100 ~/large-repo    # Skip files >100KB
-linelord -t 25 .                         # More aggressive filtering
+LineLord runs one `git blame` per file, twelve at a time. Lower it on a machine
+already at war with something else, raise it on one that idles — though past a
+point the time goes into raising and reaping git processes rather than reading
+blame, so it is capped at 64.
 
-# Combine path and threshold for total conquest
-linelord --path=~/enterprise-codebase --threshold=200
+### The Scroll of Memory
 
-# Short flags for swift warriors
-linelord -p ~/code/project -t 75
-```
+What LineLord reads, it remembers, in `$XDG_CACHE_HOME/linelord` or
+`~/.cache/linelord` — one scroll per repository. A repository that has not
+moved opens at once; one that has moved forward has only its changed files read
+again. The scroll holds file paths, commit hashes and dates, and contributor
+names and addresses. Never file contents.
 
-```bash
-# Cache control
-linelord --no-cache          # do not read or write the stored analysis
-linelord --refresh           # ignore what is stored and read everything again
-linelord --clear-cache       # forget this repository's stored analysis
-linelord --clear-all-caches  # forget every repository's
-```
+Scrolls nobody has opened for fifteen days are burned, and once the shelf
+passes 500 MB the least recently used go first. If the shelf cannot be written
+to, the analysis runs anyway and simply remembers nothing.
 
-```bash
-# Reformatting commits
-linelord --ignore-rev 1a2b3c4   # look past this commit as well
+### Commanding the Realm
 
-# How hard to work the machine
-linelord --concurrency 4        # blame four files at a time (default: 12)
-```
+- **↑↓** and **Enter** — choose, and open
+- **1–9** — leap straight to a menu entry
+- **ESC** or **q** — retreat one screen, or leave the realm
+- **:q** or **:x** — leave as a vim warrior would, from the main menu
+- On Code Longevity: **m**, **a**, **l** re-sort by median, mean and lines; **h** and **s** by half-life and survival once the history is walked
+- On the `.mailmap` draft: **w** writes what it proposes
 
-LineLord runs one `git blame` per file, twelve at a time. Lower it on a
-machine that is busy with something else, raise it on one that is not — though
-past a point the time goes into spawning processes rather than reading blame,
-so it is capped at 64.
+## 🛡️ What Gets Analysed
 
-The analysis is kept in `$XDG_CACHE_HOME/linelord` (or `~/.cache/linelord`),
-one file per repository. It holds file paths, commit hashes and dates, and
-contributor names and email addresses — not file contents. Caches nobody has
-opened for fifteen days are removed, and once the directory passes 500 MB the
-least recently used caches are deleted until it is back under. If it cannot be written, the analysis runs anyway.
+_"These are the true scrolls of power, written by mortal hands with sweat and blood. LineLord honours them, for they bear the mark of genuine battle against the demonic corruption of bugs."_
 
-Run it anywhere inside a repository and it analyses the whole repository, not
-just the directory you happen to be standing in. Point it somewhere that is not
-a repository, or give a threshold that is zero, negative or not a number, and it
-says so and stops — rather than handing you an empty or unfiltered analysis with
-no explanation.
+Every file git tracks in `HEAD` that is text, is not generated, and is under
+the size threshold: source in any tongue, configuration, documentation, scripts
+and makefiles, and tests — for a test is code somebody wrote and holds, and it
+counts.
 
-### Navigation Commands
+_"What Galdane warrior has time for scrolls that weigh more than a war hammer? LineLord casts these aside, for they are the spawn of Zytera's corruption and code generation, not true craftsmanship."_
 
-Once in LineLord's realm:
-
-- **ESC or 'q'** - Return to previous screen or exit
-- **Arrow keys** - Navigate menus like a seasoned Galdane rider
-- **Enter** - Select your conquest
-- **:q** or **:x** - Exit like a vim warrior (from main menu)
-
-### Battle Reports Available
-
-1. **📊 Repository Overview** - What was analysed, and every warrior ranked by the share they hold
-2. **🪓 Brutal Barbarian Rankings** - Who holds ground: territory, sole conquests, code that outlived a year
-3. **⏳ Code Longevity** - How old the code each warrior still holds is
-4. **🧾 Draft a .mailmap** - Show which warriors may be one person, and write it down if they are
-5. **ℹ️ About** - Learn the ways of LineLord
-
-On any of the first three, **↑↓ and Enter** open one warrior: their share of
-the codebase and the files they hold the most of, how old that code is and
-where the oldest of it sits, and — when the history has been walked with
-`--history` — what became of everything they ever wrote.
-
-## 🔄 Updating Your Weapon - Stay Sharp for Battle
-
-### The Honorable Upgrade Path
-
-When a new version is forged in Horn's volcanic fires, Homebrew makes updating as simple as drawing your blade:
-
-```bash
-# Update Homebrew's knowledge of available formulas
-brew update
-
-# Upgrade LineLord to the latest version
-brew upgrade linelord
-```
-
-### Stay Informed of New Releases
-
-```bash
-# Check what version is available
-brew info linelord
-
-# See all outdated formulas (including LineLord if applicable)
-brew outdated
-```
-
-## 🛡️ What Gets Analyzed?
-
-### The Worthy (Included)
-
-_"These are the true scrolls of power! Written by mortal hands with sweat and blood, each line a testament to the warrior's craft. LineLord honors these works, for they bear the mark of genuine battle against the demonic corruption of bugs!"_
-
-- ✅ All git-tracked text files under size threshold
-- ✅ Source code in any language
-- ✅ Configuration files
-- ✅ Documentation
-- ✅ Scripts and makefiles
-- ✅ Tests — they are code somebody wrote and owns, and they count
-
-### The Unworthy (Excluded)
-
-_"What Galdane warrior has time for scrolls that weigh more than a war hammer? LineLord casts aside these digital beasts, for they are likely the work of Zytera's corruption and code generation, not true craftsmanship!"_
-
-- ❌ Binary files — git decides, by the same rule it uses when choosing whether
-  to show you a diff. If `git diff` prints the contents, LineLord counts them;
-  if it says `Binary files differ`, it does not. That means SVG counts, being
-  markup somebody wrote, and a blob with an unfamiliar extension does not
-- ❌ Generated files (package-lock.json, yarn.lock, etc.) — matched as proper
-  globs, so a directory is excluded only when a whole path segment matches;
-  `checkout/` is not `out/`
-- ❌ Build artifacts (dist/, build/, node_modules/)
-- ❌ Untracked files — only what git tracks is analysed, so whatever `.gitignore` keeps out of the repository is already out of scope
-- ❌ **Bloated files (configurable threshold, default: 50KB)**
-- ❌ **Blank lines (banished from the realm)**
+- ❌ **Binary files** — git decides, by the same rule it uses when choosing
+  whether to show you a diff. If `git diff` prints the contents, LineLord
+  counts them; if it says `Binary files differ`, it does not. So an SVG
+  counts, being markup somebody wrote, and a blob with an unfamiliar
+  extension does not
+- ❌ **Generated files** — `package-lock.json`, `yarn.lock` and their kin,
+  matched as proper globs, so a directory is excluded only when a whole path
+  segment matches: `checkout/` is not `out/`
+- ❌ **Build artifacts** — `dist/`, `build/`, `node_modules/`
+- ❌ **Bloated files** — anything over the threshold, 50 KB unless you say otherwise
+- ❌ **Untracked files** — whatever `.gitignore` keeps out of the repository was never in the realm
+- ❌ **Uncommitted changes** — the analysis runs against `HEAD`, so unsaved edits are neither counted nor credited to anyone
+- ❌ **Blank lines** — banished from the realm, though they keep their line numbers
 
 Disagree with a verdict? `.gitattributes` settles it, for git and LineLord
 alike:
@@ -193,12 +133,29 @@ alike:
 generated.sql binary     # count it as a blob, though it is text
 weird.dat     diff       # count it as text, though git would guess otherwise
 ```
-- ❌ **Uncommitted changes** — analysis runs against `HEAD`, so unsaved edits in your working copy are never counted and never attributed to anyone
 
-## ⚔️ Brutal Barbarian Rankings
+## 📊 The Battle Reports
 
-A ranking of warriors by conquest rather than by volume. Every metric counts
-lines that are **still alive in `HEAD`**:
+Five scrolls await on the menu. On the first three, **↑↓ and Enter** open one
+warrior in full: their share of the codebase and the files they hold the most
+of, how old that code is and where the oldest of it sits, and — once the
+history has been walked — what became of everything they ever wrote.
+
+### 📊 Repository Overview
+
+The realm at a glance: how many files were surveyed and how many set aside as
+binary, generated or bloated; how many lines still stand; and every warrior
+ranked by the share of those lines they hold, with their title and address
+beneath the name. The address is what tells two warriors of one name apart.
+
+Titles run from **legend** down to **peasant** and are handed out in rank
+order, the crown, the silver and the bronze marking the three who hold the
+most. A warrior wears one title, the same on every screen.
+
+### 🪓 Brutal Barbarian Rankings
+
+A ranking by conquest rather than by volume. Every metric counts lines that
+are **still alive in `HEAD`**:
 
 | Metric | What it counts |
 | --- | --- |
@@ -210,59 +167,106 @@ lines that are **still alive in `HEAD`**:
 | Massive Battles | Days when over 100 of their surviving lines were last touched |
 | Campaigns | Distinct days their surviving lines were last touched |
 
-A warrior's title is the same here as on the overview: it comes from their
-share of the surviving lines, and the rankings do not hand out a second one.
-What this screen adds is the Gorvek score, the placing it gives, and the
-achievements for whoever leads each category.
+Weighed together they make the **Gorvek score**, which decides the placing;
+whoever leads a category is decorated for it. Every warrior is one row under
+named columns, and the legend beneath the table says what each column counts.
 
-### How to read the numbers
+### ⏳ Code Longevity
 
-The theming is a joke about conquest. The numbers are not.
+How old is the code still standing, and whose? For every surviving line, how
+long ago was the commit that last touched it — per warrior, and for the
+codebase as a whole:
 
-- Nothing here counts commits, and nothing here looks at **when** anyone worked.
-  A late night costs you nothing and earns you nothing.
-- **Old code means stable code, not good code.** The code nobody dares touch
-  scores exactly as well as the code that earned its place.
-- Reformatting resets a line's age. A single `prettier` commit can hand one
-  warrior the whole codebase — use `.git-blame-ignore-revs` to keep it honest.
-- **These numbers are not a measure of anyone's productivity**, and LineLord
-  should not be used as one.
+```
+The codebase is 3y 8m old at the middle, 21% of it last touched within ninety days.
+Oldest line still standing: old.ts:1 — 3y 8m old
 
-## 📊 Understanding the Battle Reports
+  # Warrior                   Lines   Median    Spread (p10–p90)  Half-life  New → old
+›  1 Gorvek the Ironbane          10    3y 8m          6m – 3y 8m          —     ▂ █
+   2 Zygofer the Defiler           1    1y 4m       1y 4m – 1y 4m          —      █
+   3 Sister Nightshroud            3       2d             2d – 2d          —  █
+```
 
-### Repository Overview
+Sorted by the **median**, not the mean: one ancient file somebody still holds
+drags a mean across years and the median not at all. The last column is the
+age histogram, newest code on the left and oldest on the right, so the shape
+of what remains of someone's work is readable at a glance.
 
-- **Developer count** - How many warriors hold lines in your codebase
-- **File metrics** - Total files vs analyzed files vs large files cast aside
-- **Line counts** - The true measure of a codebase's might
-- **The ranking** - Every warrior by the share of surviving lines they hold,
-  with their title and address. Enter on a row opens the warrior
+#### How long code actually lasts
 
-### The Great Filtering
+The figures above measure the age of what survives. They say nothing of the
+code that is *gone* — and a warrior whose every line has since been rewritten
+looks, to them, like one who never wrote any.
 
-LineLord's wisdom recognizes that not all files deserve the honor of analysis:
+`--history` reads the repository as it stood at points in the past, the last
+commit of each month unless `--snapshot-interval` says week or quarter, and
+follows each month's work forward — at most `--max-snapshots` of them, sixty
+by default. That gives three things the present cannot: how many lines a
+warrior ever had standing, how much of it is left, and how long half of a
+month's work lasts before it falls.
 
-- **Binary files** are banished like demons from the Forbidden Lands
-- **Generated files** are dismissed as the work of corrupted Rust Brothers
-- **Oversized scrolls** are deemed unworthy of a warrior's attention - _"By Gorvek's flame-scarred hands, what mortal could craft such bloated code? These are the spawn of demonic tools and Zytera's dark magic!"_
+It is opt-in because it costs. Every sampled revision is a pass over the
+repository, so sixty of them on a large codebase is minutes rather than
+seconds. LineLord re-reads only the files some commit touched since the
+previous sample and carries the rest across, which is the difference between
+minutes and an afternoon, but it is still the slow road.
 
-**Configure your threshold:** Use `--threshold=X` where X is your desired KB limit. Smaller values = more aggressive filtering.
+With the history walked, the **Half-life** column fills, and the warrior's
+scroll draws the curve:
 
-### The Ranking System
+```
+What became of it
+  10 lines written in all, 2 still standing — 20%
+  Half of a month's work is gone after 2m
+  ██▄▄▄▂
+  new                older → 5m
+```
 
-LineLord uses **current line ownership** (via `git blame`), not historical commits:
+The column can say three things. A number is a measured half-life. `> 3m`
+means the work outlasted everything the history watched. A dash means the
+history saw that code only once and knows nothing either way — which is not
+the same as short-lived, and is why it is not a number. Somebody the present
+has forgotten, with nothing left standing, is given a row all the same, for
+they are precisely who the history exists to show.
 
-- 👑 **Crown** - The supreme ruler of your codebase
-- 🥈 **Silver Honor** - The second most dominating code warrior
-- 🥉 **Bronze Glory** - The third most dominating code warrior
-- **Titles** - From legend down to peasant, handed out in rank order
+A stored history outlives the analysis that made it. If the repository has
+moved on since, the screen says which revision the history describes and
+leaves the columns empty rather than draw a curve about a realm that no
+longer exists.
 
-### When a reformatting rewrote everything
+### 🧾 Draft a .mailmap, and ℹ️ About
+
+The fourth scroll is told of under [Who is one warrior](#-who-is-one-warrior).
+The fifth is Gorvek explaining himself.
+
+## ⚖️ What the Numbers Are, and Are Not
+
+_"The theming is a joke about conquest. The numbers are not."_ — This matters
+more than any figure above it, and so it stands on the screens as well as
+here.
+
+- **Nothing counts commits, and nothing looks at when anyone worked.** A late
+  night costs you nothing and earns you nothing. Only lines still alive in
+  `HEAD` are counted.
+- **Age is when a line was last changed, not when it was written.** A
+  reformatting, a linter sweep or a mass rename resets it for everything it
+  touches; without [`.git-blame-ignore-revs`](#-when-a-reformatting-rewrote-everything)
+  the figures measure the formatter's calendar.
+- **Old code is stable code, which is not the same as good code.** The code
+  nobody dares touch scores exactly as well as the code that earned its place.
+- **New code usually means working where the work is.** A low median says a
+  warrior has been where the fighting is, not that they fight badly.
+- **None of it measures a person's worth or productivity, and it must not be
+  used that way.** LineLord counts lines and dates. It knows nothing of what
+  the lines do, how hard they were to write, or what else the warrior did
+  that week.
+
+## 🔥 When a Reformatting Rewrote Everything
 
 One commit that runs a formatter over the whole repository changes every line
 without changing what any of them mean. Left alone, `git blame` credits the
 entire codebase to whoever ran it, dated to the afternoon they ran it — so the
-formatter tops the ranking, everyone else vanishes, and the code all looks a
+formatter tops every ranking, everyone else vanishes, and the code all looks a
 week old.
 
 Write those commits down in `.git-blame-ignore-revs`, one hash per line:
@@ -273,12 +277,10 @@ b7d3f1a9c2e45608d1f37b2a9c4e6d80f5a1b3c7
 ```
 
 LineLord reads it and tells blame to look past them, so the lines go back to
-whoever wrote them, with the date they were written. The same file works with
+whoever wrote them, with the date they were written. The same file serves
 `git blame --ignore-revs-file` and is what GitHub reads, so it is worth having
-regardless.
-
-For a commit not written down yet, `--ignore-rev <sha>` does the same for one
-run, and can be given more than once.
+regardless. For a commit not yet written down, `--ignore-rev <sha>` does the
+same for one run, and may be given more than once.
 
 When either is in use the menu screen says so, because the ownership shown is
 deliberately not what plain `git blame` would report:
@@ -288,45 +290,23 @@ Looking past 1 commit named in .git-blame-ignore-revs, so their lines are
 credited to whoever wrote them
 ```
 
-An entry that names no commit in this repository is left out and reported
-rather than passed on, saying which source named it. Handed to git, a single
-bad line makes it refuse the blame — for every file — and the repository comes
-back unreadable over a typo.
-
-A `.git-blame-ignore-revs` that exists but cannot be read stops the analysis
-with an explanation, rather than quietly analysing without it. Carrying on
+An entry that names no commit here is left out and reported, saying which
+source named it. Handed to git, a single bad line makes it refuse the blame —
+for every file — and the whole realm comes back unreadable over a typo. A
+`.git-blame-ignore-revs` that exists but cannot be read stops the analysis
+with an explanation rather than quietly analysing without it: carrying on
 would hand the reformatting back to whoever ran it, on every screen, and store
-that in the cache as though it were right.
+that in the scroll of memory as though it were right.
 
-### Who counts as one person
+## 🧠 Who Is One Warrior
 
 An email address is an identity. Two commits belong to the same warrior when
-git says they do, and nothing is inferred from names.
+git says they do, and nothing is inferred from names. That makes the merging
+explicit, reviewable, and the same identity git uses everywhere else.
 
-If one person has committed under several addresses, say so in `.mailmap` — the
-file git itself reads, and which `git blame` applies before LineLord sees a
-single line:
-
-```
-Gorvek the Ironbane <gorvek@ashendale.realm> <old-laptop@example.com>
-```
-
-That makes the merging explicit, reviewable, and the same identity git uses
-everywhere else.
-
-`--fuzzy-authors` brings back the old behaviour, which guessed from names and
-from addresses that resembled each other. It is not the default because it is
-wrong often enough to matter: it merged `mk@firma.no` with `ml@firma.no`,
-`john@corp.com` with `joan@corp.com`, and `erik.hansen@` with `erika.hansen@`.
-Different people, and one of each pair then vanished from the ranking while the
-other was credited with their work. Use it to find candidates for a `.mailmap`,
-not to trust the output.
-
-### When one warrior appears twice
-
-Someone who has committed from a work machine and a personal one, or before and
-after changing employer, has two addresses and so counts as two warriors. The
-contributor list shows the address under each name, which is what tells them
+So a warrior who has committed from the war camp and from home, or before and
+after swearing to a new lord, has two addresses and counts as two warriors.
+The overview shows the address under each name, which is what tells them
 apart:
 
 ```
@@ -335,18 +315,19 @@ Gorvek the Ironbane  <gorvek@privat.no>                       2 lines
 Gorvek the Ironbane  <4711+gorvek@users.noreply.github.com>   1 line
 ```
 
-Two lines in `.mailmap` settle it, for LineLord and for `git shortlog` alike:
+Two lines in `.mailmap` — the file git itself reads, and which `git blame`
+applies before LineLord sees a single line — settle it, for LineLord and for
+`git shortlog` alike:
 
 ```
 Gorvek the Ironbane <gorvek@firma.no> <gorvek@privat.no>
 Gorvek the Ironbane <gorvek@firma.no> <4711+gorvek@users.noreply.github.com>
 ```
 
-### When LineLord thinks two warriors are one
+### Gorvek Notices, but Does Not Presume
 
-The default merges nothing, but it does not keep quiet about what it noticed.
-When two contributors look like one person, the menu screen says so, with the
-reason for each guess:
+The default merges nobody, yet it does not keep quiet about what it saw. When
+two contributors look like one person, the menu screen says so, and says why:
 
 ```
 ⚠ 1 contributor may have committed under more than one address:
@@ -355,22 +336,22 @@ reason for each guess:
   Nothing was merged. Pick "Draft a .mailmap" below to record the ones that are right.
 ```
 
-Both addresses still count separately, and both keep their own place in the
-ranking. The warning is there so that two entries for one person are a thing
-you can decide about rather than a thing you have to notice.
+Both addresses still count apart and keep their own places in the ranking. The
+warning is there so that two entries for one warrior are a thing you can
+decide about, not a thing you have to notice.
 
-### Writing the `.mailmap` for you
+### Drafting the .mailmap
 
-Finding the candidates by hand is tedious, so LineLord will do the tedious part.
-Pick **Draft a .mailmap from identity guesses** on the menu, or do it without
-opening the interface:
+Finding the candidates by hand is drudgery fit for a stable boy, so LineLord
+does the drudgery. Pick **Draft a .mailmap from identity guesses** on the
+menu, or skip the interface:
 
 ```bash
 linelord --write-mailmap
 ```
 
-Either way the analysis itself stays strict and merges nobody. The guessing is
-run as a question — *who would a loose run take to be one person?* — and the
+Either way the analysis stays strict and merges nobody. The guessing is run
+as a question — *whom would a loose run take to be one person?* — and the
 answer is shown before anything is written:
 
 ```
@@ -385,124 +366,21 @@ answer is shown before anything is written:
 Press 'w' to write these to .mailmap · 'q' or Esc to go back
 ```
 
-On the menu screen it is `w` that writes; from the command line the lines are
-appended and each one reported, `+` for added and `=` for already there:
-
-```
-  + Gorvek the Ironbane <gorvek@firma.no> <gorvek@privat.no>
-⚔️  Wrote 1 line to /home/gorvek/code/saga/.mailmap.
-💡 These are guesses. Read them, delete the wrong ones, and they will
-   never have to be guessed again.
-```
-
+On the menu it is `w` that writes; from the command line the lines are
+appended and each one reported, `+` for added and `=` for already there.
 Nothing is ever overwritten or removed: entries you wrote by hand stay exactly
 as they are, and a wrong guess is a line to delete, not a decision to undo.
+Once a line is in `.mailmap`, git applies it and the guess is never made
+again.
 
-Read what it wrote before committing it. The guessing that produced these lines
-is the same guessing that merges `erik.hansen@` with `erika.hansen@`, and the
-point of the file is that a person, not a heuristic, decided.
-
-Once a line is in `.mailmap`, `git blame` applies it and the guess is never
-made again — asking a second time says there is nothing left to write, because
-there genuinely is not.
-
-### How old is the code, and whose
-
-**⏳ Code Longevity** on the menu measures the age of the code that is still
-standing. For every surviving line, how long ago was the commit that last
-touched it — aggregated per warrior, and for the codebase as a whole.
-
-```
-The codebase is 3y 8m old at the middle, 21% of it last touched within ninety days.
-Oldest line still standing: old.ts:1 — 3y 8m old
-
-  # Warrior                   Lines   Median    Spread (p10–p90)  New → old
-›  1 Gorvek the Ironbane          10    3y 8m          6m – 3y 8m     ▂ █
-   2 Zygofer the Defiler           1    1y 4m       1y 4m – 1y 4m      █
-   3 Sister Nightshroud            3       2d             2d – 2d  █
-```
-
-Sorted by the **median**, not the mean: one ancient file somebody still owns
-drags a mean across years and the median not at all. The last column is the
-age histogram — newest code on the left, oldest on the right — so the shape of
-someone's remaining code is readable at a glance. `m`, `a` and `l` re-sort by
-median, mean and line count. Enter opens one warrior: their share of the
-codebase, the full histogram with numbers, the oldest and newest line they
-still hold with file and line number, and the files where their oldest code
-sits.
-
-#### How long code actually lasts
-
-The figures above measure the age of what survives. They say nothing about the
-code that is *gone* — and a person whose every line has been rewritten looks,
-to them, like a person who never wrote any.
-
-```bash
-linelord --history                      # also read the past
-linelord --history --snapshot-interval=quarter
-linelord --history --max-snapshots=24
-```
-
-`--history` reads the repository as it stood at points in the past — the last
-commit of each month by default — and follows each month's work forward. That
-gives three things the present cannot: how many lines somebody ever had
-standing, how much of it is left, and how long half of a month's work lasts
-before it is rewritten.
-
-It is opt-in because it costs. Every sampled revision is a pass over the
-repository, so sixty of them on a large codebase is minutes rather than
-seconds. LineLord re-reads only the files some commit touched since the
-previous sample and carries the rest across, which is the difference between
-minutes and an afternoon, but it is still the slow path.
-
-The dashboard then fills in a **Half-life** column, `h` and `s` sort by it and
-by survival rate, and the detail view draws the curve:
-
-```
-What became of it
-  10 lines written in all, 2 still standing — 20%
-  Half of a month's work is gone after 2m
-  ██▄▄▄▂
-  new                older → 5m
-```
-
-Three things the column can say. A number is a measured half-life. `> 3m` means
-the work outlasted everything the history watched. A dash means the history saw
-that code only once and so knows nothing either way — which is not the same as
-saying it is short-lived, and is why it is not a number.
-
-A stored history outlives the analysis that made it. If the repository has
-moved on since, the screen says which revision the history describes and leaves
-the columns out rather than drawing a curve about a repository that has changed.
-
-#### What these numbers mean, and what they do not
-
-This matters more than the numbers themselves, so it is on the screen as well
-as here.
-
-- **Age is when a line was last changed, not when it was written.** A
-  reformatting, a linter sweep or a mass rename resets it for everything it
-  touches. That is what [`.git-blame-ignore-revs`](#when-a-reformatting-rewrote-everything)
-  is for, and without it these figures measure the formatter's calendar.
-- **Old code is stable code, which is not the same as good code.** Untouched
-  code may simply be code nobody dares to move.
-- **New code usually means working where the work is.** A low median says
-  somebody has been in an area under active development, not that they write
-  badly.
-- **None of it measures a person's worth or productivity, and it must not be
-  used that way.** LineLord counts lines and dates. It knows nothing about what
-  the lines do, how hard they were to write, or what else the person did that
-  week.
-
-### Performance Notes
-
-- **Small repos (< 100 files)**: Lightning fast as Ashwind's charge ⚡
-- **Medium repos (100-1000 files)**: Swift as Gorvek's blade 🗡️
-- **Large repos (1000+ files)**: Worthy of a Galdane warrior's patience 🏰
-- **Within one run**: The blame data is held in memory, so moving between screens is instant
-- **Between runs**: The analysis is cached on disk, so a repository that has not
-  moved opens at once, and one that has moved re-reads only the files that
-  changed. `--no-cache` and `--refresh` turn that off; see [Cache control](#advanced-usage---master-the-battlefield)
+**Read what it wrote before committing it.** The guessing is
+`--fuzzy-authors` — the old behaviour, which matched names and addresses that
+merely resembled each other. It is no longer the default because it is wrong
+often enough to matter: it took `mk@firma.no` for `ml@firma.no`, `john@` for
+`joan@`, and `erik.hansen@` for `erika.hansen@`. Different warriors, and one
+of each pair then vanished from the ranking while the other was credited with
+their deeds. Use it to find candidates for a `.mailmap`, never to trust the
+output; the point of the file is that a person, not a heuristic, decided.
 
 ## 🏗️ Architecture — Ports and Adapters
 
@@ -579,21 +457,19 @@ The rule that follows from the shape: the numbers are computed once, in the
 core, from values. A screen never runs a query, and a test of a calculation
 never needs a database.
 
+
 ## 🗡️ Contributing to the Saga
 
-Want to forge improvements to LineLord? Contact the maintainer!
+Bug reports, feature requests, and pull requests are welcome at the
+[repository](https://github.com/MarkusAugust/linelord). Bring steel, bring
+tests, and bring the README along with any change that moves what a screen
+says.
 
 ## 📜 Gorvek's Wisdom
-
-> _"Contemplate this upon the ruins of Falender: merge conflicts are temporary, but git history is forever."_
-
-> _"What is steel compared to the code that wields it? What is the compiler compared to the mind that guides it?"_
 
 > _"Let Rust Brothers and demon-worshippers brood over questions of reality and illusion. The developer knows that code either works or it does not!"_
 
 > _"Horn cares little for your frameworks. He cares if the work is done."_
-
-> _"Between the time when the Blood Mist shrouded the land, and the rise of the new age of exploration, there was an age undreamed of. And onto this, LineLord, destined to track all code in your repository!"_
 
 ## 📄 License
 
@@ -607,17 +483,11 @@ LineLord is open source software released under the **GNU General Public License
 
 LineLord stands on the shoulders of these mighty open source warriors:
 
-### Core Dependencies
-
-- **[ink](https://github.com/vadimdemedes/ink)** - React for CLI interfaces
-- **[meow](https://github.com/sindresorhus/meow)** - CLI argument parsing
-- **[fastest-levenshtein](https://github.com/ka-weihe/fastest-levenshtein)** - Author name matching
-- **[picocolors](https://github.com/alexeyraspopov/picocolors)** - Terminal colors
-- **[react](https://reactjs.org/)** - UI framework
-
-### Development Tools
-
-- **[Biome](https://biomejs.dev/)** - Code formatting and linting
-- **[TypeScript](https://www.typescriptlang.org/)** - Type safety
+- **[ink](https://github.com/vadimdemedes/ink)** and **[react](https://reactjs.org/)** — the terminal interface
+- **[meow](https://github.com/sindresorhus/meow)** — CLI argument parsing
+- **[drizzle-orm](https://orm.drizzle.team/)** — the SQLite scroll of memory
+- **[fastest-levenshtein](https://github.com/ka-weihe/fastest-levenshtein)** — the identity guessing
+- **[picocolors](https://github.com/alexeyraspopov/picocolors)** — terminal colours
+- **[Biome](https://biomejs.dev/)** and **[TypeScript](https://www.typescriptlang.org/)** — the forge
 
 _All dependencies use permissive licenses and remain under their original terms._

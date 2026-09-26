@@ -10,7 +10,15 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **The README, forged anew.** Every subject stands in one place: what is
+  analysed, the screens in menu order, what the numbers are not, the
+  reformatting commits, and who is one warrior. The three retellings of the
+  filtering, the two of the disclaimer and the four of identity are gone,
+  along with the Homebrew housekeeping and the performance jokes, and
+  Gorvek's voice is laid on thicker everywhere else. Nothing about the
+  program changes.
 
 ## [0.12.0] — 2026-09-26
 
