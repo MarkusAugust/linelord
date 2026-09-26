@@ -18,10 +18,10 @@ import { authorContributions } from '../ownership'
  * and comparing, because a cache that is merely quick is worse than none.
  */
 
-const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
-const NIGHTSHROUD = {
-  name: 'Sister Nightshroud',
-  email: 'nightshroud@alderstone.realm',
+const GORVEK = { name: 'Gorvek of Bonereach', email: 'gorvek@bonereach.realm' }
+const SARN = {
+  name: 'Sarn the Faceless',
+  email: 'sarn@kell.realm',
 }
 
 /** Ownership per contributor, which is what every comparison here is about. */
@@ -98,7 +98,7 @@ describe('LineLord - the cache', () => {
 
     await repo.commit({
       message: 'one file',
-      author: NIGHTSHROUD,
+      author: SARN,
       write: { 'f.txt': 'one\nCHANGED\nthree\n' },
     })
 
@@ -123,12 +123,12 @@ describe('LineLord - the cache', () => {
 
     await repo.commit({
       message: 'change it',
-      author: NIGHTSHROUD,
+      author: SARN,
       write: { 'f.txt': 'one\nCHANGED\nthree\n' },
     })
     await repo.commit({
       message: 'put it back',
-      author: NIGHTSHROUD,
+      author: SARN,
       write: { 'f.txt': 'one\ntwo\nthree\n' },
     })
 
@@ -139,7 +139,7 @@ describe('LineLord - the cache', () => {
     expect(await ownership(service)).toBe(await ownership(scratch))
     // And the answer is not the one the file contents suggest: the line reads
     // exactly as Gorvek wrote it, but it belongs to whoever touched it last.
-    expect(await ownership(scratch)).toContain(`${NIGHTSHROUD.email}:1`)
+    expect(await ownership(scratch)).toContain(`${SARN.email}:1`)
   })
 
   it('re-reads a file changed only while resolving a merge', async () => {
@@ -147,7 +147,7 @@ describe('LineLord - the cache', () => {
     await repo.git(['checkout', '-q', '-b', 'side'])
     await repo.commit({
       message: 'side edit',
-      author: NIGHTSHROUD,
+      author: SARN,
       write: { 'f.txt': 'one\nside\nthree\n' },
     })
     await repo.git(['checkout', '-q', 'main'])
@@ -178,7 +178,7 @@ describe('LineLord - the cache', () => {
     repo = await baseRepo()
     await repo.commit({
       message: 'second',
-      author: NIGHTSHROUD,
+      author: SARN,
       write: { 'f.txt': 'one\nchanged\nthree\n' },
     })
     await cached(repo.path)
@@ -232,7 +232,7 @@ describe('LineLord - the cache', () => {
     try {
       await other.commit({
         message: 'elsewhere',
-        author: NIGHTSHROUD,
+        author: SARN,
         write: { 'only-here.txt': 'a\nb\nc\nd\ne\n' },
       })
 
@@ -258,7 +258,7 @@ describe('LineLord - the cache', () => {
     try {
       await other.commit({
         message: 'elsewhere',
-        author: NIGHTSHROUD,
+        author: SARN,
         write: { 'only-here.txt': 'a\nb\n' },
       })
 
@@ -390,7 +390,7 @@ describe('LineLord - incremental and full agree, whatever the history', () => {
     // deliberately awkward -- edits, reverts, additions, deletions and a file
     // that comes back after being removed.
     repo = await createTestRepo()
-    const people = [GORVEK, NIGHTSHROUD]
+    const people = [GORVEK, SARN]
     await repo.commit({
       message: 'start',
       author: GORVEK,

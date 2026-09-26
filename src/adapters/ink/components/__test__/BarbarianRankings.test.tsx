@@ -6,9 +6,9 @@ import { stripAnsi } from './fakeAnalysisService'
 
 const gorvek: BarbarianRanking = {
   authorId: 1,
-  name: 'Gorvek the Ironbane',
-  email: 'gorvek@ashendale.realm',
-  displayName: 'Gorvek the Ironbane',
+  name: 'Gorvek of Bonereach',
+  email: 'gorvek@bonereach.realm',
+  displayName: 'Gorvek of Bonereach',
   metrics: {
     survivingLines: 19120,
     battleScars: 14525,
@@ -25,11 +25,11 @@ const gorvek: BarbarianRanking = {
   rank: 0,
 }
 
-const nightshroud: BarbarianRanking = {
+const sarn: BarbarianRanking = {
   authorId: 2,
-  name: 'Sister Nightshroud',
-  email: 'nightshroud@alderstone.realm',
-  displayName: 'Sister Nightshroud',
+  name: 'Sarn the Faceless',
+  email: 'sarn@kell.realm',
+  displayName: 'Sarn the Faceless',
   metrics: {
     survivingLines: 300,
     battleScars: 10,
@@ -49,7 +49,7 @@ const nightshroud: BarbarianRanking = {
 describe('BarbarianRankings', () => {
   it('lays every warrior out as one row under named columns', () => {
     const { lastFrame } = render(
-      <BarbarianRankings rankings={[gorvek, nightshroud]} />,
+      <BarbarianRankings rankings={[gorvek, sarn]} />,
     )
     const frame = stripAnsi(lastFrame() ?? '')
 
@@ -65,16 +65,14 @@ describe('BarbarianRankings', () => {
     expect(gorvekRow).toContain('128')
     expect(gorvekRow).toContain('4,752')
 
-    const nightshroudRow = frame
-      .split('\n')
-      .find((line) => line.includes('Sister'))
-    expect(nightshroudRow).toContain('300')
-    expect(nightshroudRow).toContain('41')
+    const sarnRow = frame.split('\n').find((line) => line.includes('Sarn'))
+    expect(sarnRow).toContain('300')
+    expect(sarnRow).toContain('41')
   })
 
   it('shows the title the rest of the app gave, once, beside the name', () => {
     const { lastFrame } = render(
-      <BarbarianRankings rankings={[gorvek, nightshroud]} />,
+      <BarbarianRankings rankings={[gorvek, sarn]} />,
     )
     const frame = stripAnsi(lastFrame() ?? '')
 
@@ -86,21 +84,19 @@ describe('BarbarianRankings', () => {
 
   it('marks the selected row', () => {
     const { lastFrame } = render(
-      <BarbarianRankings rankings={[gorvek, nightshroud]} selected={1} />,
+      <BarbarianRankings rankings={[gorvek, sarn]} selected={1} />,
     )
     const frame = stripAnsi(lastFrame() ?? '')
 
-    const nightshroudRow = frame
-      .split('\n')
-      .find((line) => line.includes('Sister'))
-    expect(nightshroudRow?.trimStart().startsWith('›')).toBe(true)
+    const sarnRow = frame.split('\n').find((line) => line.includes('Sarn'))
+    expect(sarnRow?.trimStart().startsWith('›')).toBe(true)
     const gorvekRow = frame.split('\n').find((line) => line.includes('Gorvek'))
     expect(gorvekRow?.trimStart().startsWith('›')).toBe(false)
   })
 
   it('lists the achievements under the table, and only for those who have any', () => {
     const { lastFrame } = render(
-      <BarbarianRankings rankings={[gorvek, nightshroud]} />,
+      <BarbarianRankings rankings={[gorvek, sarn]} />,
     )
     const frame = stripAnsi(lastFrame() ?? '')
 

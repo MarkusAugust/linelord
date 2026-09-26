@@ -15,9 +15,9 @@ describe('ensureAuthors, called twice at once for one address', () => {
   it('returns the one row rather than failing the second caller', async () => {
     const store = createSqliteStore(createDatabase())
     const gorvek = {
-      name: 'Gorvek the Ironbane',
-      email: 'gorvek@ashendale.realm',
-      displayName: 'Gorvek the Ironbane',
+      name: 'Gorvek of Bonereach',
+      email: 'gorvek@bonereach.realm',
+      displayName: 'Gorvek of Bonereach',
     }
 
     const [first, second] = await Promise.all([

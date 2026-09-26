@@ -60,8 +60,8 @@ export interface CreateTestRepoOptions {
 }
 
 const DEFAULT_AUTHOR: TestAuthor = {
-  name: 'Gorvek the Ironbane',
-  email: 'gorvek@ashendale.realm',
+  name: 'Gorvek of Bonereach',
+  email: 'gorvek@bonereach.realm',
 }
 
 /**

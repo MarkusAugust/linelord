@@ -13,10 +13,10 @@ import { parseBlamePorcelain } from '../blamePorcelain'
  * to catch a fixture that describes the format wrongly.
  */
 
-const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
-const NIGHTSHROUD = {
-  name: 'Sister Nightshroud',
-  email: 'night@alderstone.realm',
+const GORVEK = { name: 'Gorvek of Bonereach', email: 'gorvek@bonereach.realm' }
+const SARN = {
+  name: 'Sarn the Faceless',
+  email: 'sarn@kell.realm',
 }
 
 describe('parseBlamePorcelain against git itself', () => {
@@ -80,7 +80,7 @@ describe('parseBlamePorcelain against git itself', () => {
     })
     await repo.commit({
       message: 'a second hand',
-      author: NIGHTSHROUD,
+      author: SARN,
       date: new Date('2022-02-03T04:05:06Z'),
       write: { 'f.txt': 'one\nCHANGED\n\nfour\nfive\nsix\n' },
     })
@@ -120,7 +120,7 @@ describe('parseBlamePorcelain against git itself', () => {
     })
     await repo.commit({
       message: 'a later hand',
-      author: NIGHTSHROUD,
+      author: SARN,
       date: new Date('2022-02-03T04:05:06Z'),
       write: { 'f.txt': 'first\n\nthird\nfourth\n' },
     })
@@ -139,7 +139,7 @@ describe('parseBlamePorcelain against git itself', () => {
     // The blank line is line 2 and belongs to whoever wrote it, which is the
     // point: it is skipped when storing, not when numbering.
     expect(entries[1]?.content).toBe('')
-    expect(entries[3]?.author).toBe(NIGHTSHROUD.name)
+    expect(entries[3]?.author).toBe(SARN.name)
     expect(entries[3]?.authorTime).toBe(
       Math.floor(new Date('2022-02-03T04:05:06Z').getTime() / 1000),
     )

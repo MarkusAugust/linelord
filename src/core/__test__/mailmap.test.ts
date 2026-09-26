@@ -13,11 +13,11 @@ import { canonicalAuthors } from '../ownership'
 
 const files = createNodeFiles()
 
-const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@firma.no' }
-const GORVEK_AT_HOME = { name: 'Gorvek Ironbane', email: 'gorvek@privat.no' }
-const NIGHTSHROUD = {
-  name: 'Sister Nightshroud',
-  email: 'night@alderstone.realm',
+const GORVEK = { name: 'Gorvek of Bonereach', email: 'gorvek@firma.no' }
+const GORVEK_AT_HOME = { name: 'Gorvek Bonereach', email: 'gorvek@privat.no' }
+const SARN = {
+  name: 'Sarn the Faceless',
+  email: 'sarn@kell.realm',
 }
 
 describe('mailmapLines', () => {
@@ -28,7 +28,7 @@ describe('mailmapLines', () => {
     }
 
     expect(mailmapLines([merge])).toEqual([
-      'Gorvek the Ironbane <gorvek@firma.no> <gorvek@privat.no>',
+      'Gorvek of Bonereach <gorvek@firma.no> <gorvek@privat.no>',
     ])
   })
 
@@ -77,7 +77,7 @@ describe('writeMailmap', () => {
     })
     await created.commit({
       message: 'somebody else',
-      author: NIGHTSHROUD,
+      author: SARN,
       write: { 'c.ts': 'f\n' },
     })
     return created
@@ -101,11 +101,11 @@ describe('writeMailmap', () => {
     )
 
     expect(result.added).toEqual([
-      'Gorvek the Ironbane <gorvek@firma.no> <gorvek@privat.no>',
+      'Gorvek of Bonereach <gorvek@firma.no> <gorvek@privat.no>',
     ])
     expect(await readFile(result.path, 'utf8')).toContain('gorvek@privat.no')
-    // Nightshroud shares nothing with anyone and gets no entry.
-    expect(await readFile(result.path, 'utf8')).not.toContain('alderstone')
+    // Sarn shares nothing with anyone and gets no entry.
+    expect(await readFile(result.path, 'utf8')).not.toContain('kell')
   })
 
   it('adds nothing the second time', async () => {

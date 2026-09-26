@@ -24,12 +24,12 @@ describe('createTestRepo', () => {
   it('attributes each commit to the author it was given', async () => {
     repo = await createTestRepo()
     const gorvek = {
-      name: 'Gorvek the Ironbane',
-      email: 'gorvek@ashendale.realm',
+      name: 'Gorvek of Bonereach',
+      email: 'gorvek@bonereach.realm',
     }
-    const nightshroud = {
-      name: 'Sister Nightshroud',
-      email: 'nightshroud@alderstone.realm',
+    const sarn = {
+      name: 'Sarn the Faceless',
+      email: 'sarn@kell.realm',
     }
 
     await repo.commit({
@@ -38,15 +38,15 @@ describe('createTestRepo', () => {
       write: { 'a.ts': 'const a = 1\n' },
     })
     await repo.commit({
-      message: 'nightshroud writes',
-      author: nightshroud,
+      message: 'sarn writes',
+      author: sarn,
       write: { 'b.ts': 'const b = 2\n' },
     })
 
     const log = await repo.git(['log', '--format=%aN <%aE>', '--reverse'])
     expect(log.trim().split('\n')).toEqual([
       `${gorvek.name} <${gorvek.email}>`,
-      `${nightshroud.name} <${nightshroud.email}>`,
+      `${sarn.name} <${sarn.email}>`,
     ])
   })
 
@@ -122,8 +122,8 @@ describe('createTestRepo', () => {
   it('records rewrites and deletions as blame-visible changes', async () => {
     repo = await createTestRepo()
     const author = {
-      name: 'Zygofer the Defiler',
-      email: 'zygofer@ashendale.realm',
+      name: 'Captain Drusk',
+      email: 'drusk@bonereach.realm',
     }
 
     await repo.commit({

@@ -51,14 +51,14 @@ async function mergeGroups(
   }
 }
 
-const GORVEK = 'Gorvek the Ironbane'
-const NIGHTSHROUD = 'Sister Nightshroud'
+const GORVEK = 'Gorvek of Bonereach'
+const SARN = 'Sarn the Faceless'
 
 describe('who gets merged', () => {
   it('merges identities that differ only in the case of the email', async () => {
     const { groups } = await mergeGroups([
-      { name: 'Gorvek', email: 'Gorvek@Ashendale.Realm' },
-      { name: GORVEK, email: 'gorvek@ashendale.realm' },
+      { name: 'Gorvek', email: 'Gorvek@Bonereach.Realm' },
+      { name: GORVEK, email: 'gorvek@bonereach.realm' },
     ])
 
     expect(groups).toHaveLength(1)
@@ -68,8 +68,8 @@ describe('who gets merged', () => {
   it('merges one person who commits under two spellings of the same address', async () => {
     const { groups } = await mergeGroups(
       [
-        { name: 'Alpha', email: 'g.ironbane@corp.com' },
-        { name: 'Beta', email: 'gironbane@corp.com' },
+        { name: 'Alpha', email: 'g.bonereach@corp.com' },
+        { name: 'Beta', email: 'gbonereach@corp.com' },
       ],
       'loose',
     )
@@ -80,7 +80,7 @@ describe('who gets merged', () => {
   it('keeps clearly different people apart, even on a shared domain', async () => {
     const { groups } = await mergeGroups([
       { name: GORVEK, email: 'gorvek@corp.com' },
-      { name: NIGHTSHROUD, email: 'nightshroud@corp.com' },
+      { name: SARN, email: 'sarn@corp.com' },
     ])
 
     expect(groups).toHaveLength(2)
@@ -100,8 +100,8 @@ describe('who gets merged', () => {
 
   it('does not merge "Surname, Forename" with "Forename Surname"', async () => {
     const { groups } = await mergeGroups([
-      { name: 'Ironbane, Gorvek', email: 'a@x.com' },
-      { name: 'Gorvek Ironbane', email: 'b@y.com' },
+      { name: 'Bonereach, Gorvek', email: 'a@x.com' },
+      { name: 'Gorvek Bonereach', email: 'b@y.com' },
     ])
 
     // Recorded as current behaviour rather than endorsed.
@@ -146,8 +146,8 @@ describe('who gets merged', () => {
   it('still merges one person under two spellings when asked to guess', async () => {
     const { groups } = await mergeGroups(
       [
-        { name: 'Alpha', email: 'g.ironbane@corp.com' },
-        { name: 'Beta', email: 'gironbane@corp.com' },
+        { name: 'Alpha', email: 'g.bonereach@corp.com' },
+        { name: 'Beta', email: 'gbonereach@corp.com' },
       ],
       'loose',
     )
@@ -159,8 +159,8 @@ describe('who gets merged', () => {
 describe('choosing the canonical identity', () => {
   it('prefers a readable name over encoded gibberish', async () => {
     const { canonicalDisplayNames } = await mergeGroups([
-      { name: 'R29ydmVrIFRoZUlyb25iYW5l', email: 'Gorvek@Ashendale.Realm' },
-      { name: GORVEK, email: 'gorvek@ashendale.realm' },
+      { name: 'R29ydmVrIE9mQm9uZXJlYWNo', email: 'Gorvek@Bonereach.Realm' },
+      { name: GORVEK, email: 'gorvek@bonereach.realm' },
     ])
 
     expect(canonicalDisplayNames).toEqual([GORVEK])
@@ -168,8 +168,8 @@ describe('choosing the canonical identity', () => {
 
   it('prefers the longest display name among readable candidates', async () => {
     const { canonicalDisplayNames } = await mergeGroups([
-      { name: 'G', email: 'GORVEK@ashendale.realm' },
-      { name: GORVEK, email: 'gorvek@ashendale.realm' },
+      { name: 'G', email: 'GORVEK@bonereach.realm' },
+      { name: GORVEK, email: 'gorvek@bonereach.realm' },
     ])
 
     expect(canonicalDisplayNames).toEqual([GORVEK])
@@ -177,27 +177,27 @@ describe('choosing the canonical identity', () => {
 
   it('does not mistake an ordinary single-word name for encoded data', async () => {
     const { canonicalDisplayNames } = await mergeGroups([
-      { name: 'GorvekTheIronbane', email: 'Gorvek@Ashendale.Realm' },
-      { name: 'Gorvek', email: 'gorvek@ashendale.realm' },
+      { name: 'GorvekOfBonereach', email: 'Gorvek@Bonereach.Realm' },
+      { name: 'Gorvek', email: 'gorvek@bonereach.realm' },
     ])
 
-    expect(canonicalDisplayNames).toEqual(['GorvekTheIronbane'])
+    expect(canonicalDisplayNames).toEqual(['GorvekOfBonereach'])
   })
 
   it('keeps a name with an apostrophe readable', async () => {
     const { canonicalDisplayNames } = await mergeGroups([
-      { name: "Gorvek O'Ironbane", email: 'Gorvek@Ashendale.Realm' },
-      { name: 'Gorvek', email: 'gorvek@ashendale.realm' },
+      { name: "Gorvek O'Bonereach", email: 'Gorvek@Bonereach.Realm' },
+      { name: 'Gorvek', email: 'gorvek@bonereach.realm' },
     ])
 
-    expect(canonicalDisplayNames).toEqual(["Gorvek O'Ironbane"])
+    expect(canonicalDisplayNames).toEqual(["Gorvek O'Bonereach"])
   })
 
   it('leaves exactly one canonical author per merged group', async () => {
     const store = await storeWith([
-      { name: 'Gorvek', email: 'Gorvek@Ashendale.Realm' },
-      { name: GORVEK, email: 'gorvek@ashendale.realm' },
-      { name: NIGHTSHROUD, email: 'nightshroud@alderstone.realm' },
+      { name: 'Gorvek', email: 'Gorvek@Bonereach.Realm' },
+      { name: GORVEK, email: 'gorvek@bonereach.realm' },
+      { name: SARN, email: 'sarn@kell.realm' },
     ])
     await normalizeAuthors(store, 'strict')
 
@@ -211,8 +211,8 @@ describe('choosing the canonical identity', () => {
 describe('what a merge moves', () => {
   it('reattributes blame lines to the canonical author and records the alias', async () => {
     const store = await storeWith([
-      { name: 'Gorvek', email: 'Gorvek@Ashendale.Realm' },
-      { name: GORVEK, email: 'gorvek@ashendale.realm' },
+      { name: 'Gorvek', email: 'Gorvek@Bonereach.Realm' },
+      { name: GORVEK, email: 'gorvek@bonereach.realm' },
     ])
     await store.reconcileFiles({
       insert: [
@@ -254,8 +254,8 @@ describe('what a merge moves', () => {
 
   it('records no aliases when nobody is merged', async () => {
     const store = await storeWith([
-      { name: GORVEK, email: 'gorvek@ashendale.realm' },
-      { name: NIGHTSHROUD, email: 'nightshroud@alderstone.realm' },
+      { name: GORVEK, email: 'gorvek@bonereach.realm' },
+      { name: SARN, email: 'sarn@kell.realm' },
     ])
     await normalizeAuthors(store, 'strict')
 
@@ -265,8 +265,8 @@ describe('what a merge moves', () => {
   it('is a plan before it is a write', () => {
     const plan = planNormalization(
       [
-        author(1, { name: 'Gorvek', email: 'Gorvek@Ashendale.Realm' }),
-        author(2, { name: GORVEK, email: 'gorvek@ashendale.realm' }),
+        author(1, { name: 'Gorvek', email: 'Gorvek@Bonereach.Realm' }),
+        author(2, { name: GORVEK, email: 'gorvek@bonereach.realm' }),
       ],
       'strict',
     )
@@ -276,7 +276,7 @@ describe('what a merge moves', () => {
       {
         canonicalAuthorId: 2,
         aliasName: 'Gorvek',
-        aliasEmail: 'Gorvek@Ashendale.Realm',
+        aliasEmail: 'Gorvek@Bonereach.Realm',
       },
     ])
     expect(plan.authors.find((one) => one.id === 1)?.changes).toEqual({
@@ -292,8 +292,8 @@ describe('strict policy', () => {
       [
         { name: 'Ann', email: 'ann@example.com' },
         { name: 'Annabelle', email: 'annabelle@other.com' },
-        { name: 'Gorvek', email: 'gorvek@ashendale.realm' },
-        { name: 'Gorvek Ironbane', email: 'GORVEK@ashendale.realm' },
+        { name: 'Gorvek', email: 'gorvek@bonereach.realm' },
+        { name: 'Gorvek Bonereach', email: 'GORVEK@bonereach.realm' },
       ],
       'strict',
     )
@@ -301,14 +301,14 @@ describe('strict policy', () => {
     expect(groups).toHaveLength(3)
     expect(groups.find((group) => group.length === 2)).toEqual([
       'Gorvek',
-      'Gorvek Ironbane',
+      'Gorvek Bonereach',
     ])
   })
 
   it('makes a lone author canonical under either policy', async () => {
     for (const policy of ['strict', 'loose'] as const) {
       const { groups, canonicalDisplayNames } = await mergeGroups(
-        [{ name: GORVEK, email: 'gorvek@ashendale.realm' }],
+        [{ name: GORVEK, email: 'gorvek@bonereach.realm' }],
         policy,
       )
       expect(groups).toEqual([[GORVEK]])
@@ -326,12 +326,12 @@ describe('strict policy', () => {
 describe('the guesses, and their reasons', () => {
   const short = author(1, { name: 'Gorvek', email: 'gorvek@privat.no' })
   const long = author(2, {
-    name: 'Gorvek the Ironbane',
+    name: 'Gorvek of Bonereach',
     email: 'gorvek@firma.no',
   })
   const other = author(3, {
-    name: 'Sister Nightshroud',
-    email: 'night@alderstone.realm',
+    name: 'Sarn the Faceless',
+    email: 'sarn@kell.realm',
   })
 
   it('reports what a loose run would merge, having merged nothing', () => {
@@ -386,9 +386,9 @@ describe('the guesses, and their reasons', () => {
   it('says why two addresses at one domain are alike', () => {
     expect(
       whyAuthorsMatch(
-        { name: 'Alpha', displayName: 'Alpha', email: 'g.ironbane@corp.com' },
-        { name: 'Beta', displayName: 'Beta', email: 'gironbane@corp.com' },
+        { name: 'Alpha', displayName: 'Alpha', email: 'g.bonereach@corp.com' },
+        { name: 'Beta', displayName: 'Beta', email: 'gbonereach@corp.com' },
       ),
-    ).toBe('the addresses "g.ironbane" and "gironbane" are alike at corp.com')
+    ).toBe('the addresses "g.bonereach" and "gbonereach" are alike at corp.com')
   })
 })

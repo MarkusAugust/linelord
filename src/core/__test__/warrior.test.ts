@@ -35,9 +35,9 @@ async function seed(db: Db) {
   await db.insert(authors).values([
     {
       id: GORVEK,
-      name: 'Gorvek the Ironbane',
-      email: 'gorvek@ashendale.realm',
-      displayName: 'Gorvek the Ironbane',
+      name: 'Gorvek of Bonereach',
+      email: 'gorvek@bonereach.realm',
+      displayName: 'Gorvek of Bonereach',
       isCanonical: true,
       canonicalId: GORVEK,
       rank: 1,
@@ -47,7 +47,7 @@ async function seed(db: Db) {
     {
       id: GHOST,
       name: 'Ghost of Commits Past',
-      email: 'ghost@ashendale.realm',
+      email: 'ghost@bonereach.realm',
       displayName: 'Ghost of Commits Past',
       isCanonical: true,
       canonicalId: GHOST,

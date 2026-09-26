@@ -16,7 +16,7 @@ import {
 
 const files = createNodeFiles()
 
-const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
+const GORVEK = { name: 'Gorvek of Bonereach', email: 'gorvek@bonereach.realm' }
 
 describe('parseIgnoreRevsFile', () => {
   it('reads the commits and leaves the prose alone', () => {

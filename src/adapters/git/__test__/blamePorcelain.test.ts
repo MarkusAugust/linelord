@@ -72,11 +72,11 @@ describe('parseBlamePorcelain', () => {
   })
 
   it('reads the author, the address and the time', () => {
-    const output = `${header(SHA_A, 1, 1, 'Gorvek the Ironbane', 'gorvek@firma.no', 1789852140)}\n\tcode`
+    const output = `${header(SHA_A, 1, 1, 'Gorvek of Bonereach', 'gorvek@firma.no', 1789852140)}\n\tcode`
 
     const [entry] = parseBlamePorcelain(output)
 
-    expect(entry?.author).toBe('Gorvek the Ironbane')
+    expect(entry?.author).toBe('Gorvek of Bonereach')
     expect(entry?.authorEmail).toBe('gorvek@firma.no')
     // Whole seconds, as git writes them: a number to compare, not a string.
     expect(entry?.authorTime).toBe(1789852140)

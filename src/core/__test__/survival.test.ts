@@ -14,7 +14,7 @@ const at = (iso: string) => Math.floor(new Date(iso).getTime() / 1000)
 /** Every sampled revision, which the reading needs and the rows do not carry. */
 const sampled = (...dates: string[]) => dates.map(at)
 const GORVEK = 1
-const NIGHTSHROUD = 2
+const SARN = 2
 
 /** Shorthand for one cell of the matrix. */
 const cell = (
@@ -215,18 +215,18 @@ describe('computeSurvival', () => {
     const rows = [
       cell(GORVEK, '2025-01-01', '2025-01-15', 100),
       cell(GORVEK, '2025-01-01', '2025-02-15', 0),
-      cell(NIGHTSHROUD, '2025-01-01', '2025-01-15', 2),
-      cell(NIGHTSHROUD, '2025-01-01', '2025-02-15', 2),
+      cell(SARN, '2025-01-01', '2025-01-15', 2),
+      cell(SARN, '2025-01-01', '2025-02-15', 2),
     ]
 
-    const [gorvek, nightshroud] = computeSurvival(
+    const [gorvek, sarn] = computeSurvival(
       rows,
       sampled('2025-01-15', '2025-02-15'),
     )
 
     // Each is read on their own, so neither is diluted by the other.
     expect(gorvek?.survivalCurve.at(-1)?.fractionAlive).toBe(0)
-    expect(nightshroud?.survivalCurve.at(-1)?.fractionAlive).toBe(1)
+    expect(sarn?.survivalCurve.at(-1)?.fractionAlive).toBe(1)
   })
 
   it('never lets the curve rise', () => {
@@ -261,7 +261,7 @@ describe('computeSurvival', () => {
   it('keeps people apart', () => {
     const rows = [
       cell(GORVEK, '2025-01-01', '2025-02-28', 10),
-      cell(NIGHTSHROUD, '2025-01-01', '2025-02-28', 4),
+      cell(SARN, '2025-01-01', '2025-02-28', 4),
     ]
 
     const result = computeSurvival(rows, sampled('2025-02-28'))

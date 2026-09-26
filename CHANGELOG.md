@@ -19,7 +19,7 @@ because the earlier answer was wrong.
   the river-god Thurn, the drowned city of Kell, the Ashfall. LineLord itself
   has an entry there, with the rule its screens have always carried: it
   counts lines and dates and nothing else. Nothing else about any screen
-  changed, and no number moved.
+  changed, and no number moved. The test fixtures use the same cast.
 
 ## [0.12.2] — 2026-09-26
 

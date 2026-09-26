@@ -19,9 +19,9 @@ import type { WarriorSource } from '../../../../core/warrior'
  */
 export const GORVEK: AuthorContribution = {
   id: 1,
-  name: 'Gorvek the Ironbane',
-  email: 'gorvek@ashendale.realm',
-  displayName: 'Gorvek the Ironbane',
+  name: 'Gorvek of Bonereach',
+  email: 'gorvek@bonereach.realm',
+  displayName: 'Gorvek of Bonereach',
   totalLines: 700,
   totalFiles: 12,
   percentage: 70,
@@ -29,11 +29,11 @@ export const GORVEK: AuthorContribution = {
   rank: 1,
 }
 
-export const NIGHTSHROUD: AuthorContribution = {
+export const SARN: AuthorContribution = {
   id: 2,
-  name: 'Sister Nightshroud',
-  email: 'nightshroud@alderstone.realm',
-  displayName: 'Sister Nightshroud',
+  name: 'Sarn the Faceless',
+  email: 'sarn@kell.realm',
+  displayName: 'Sarn the Faceless',
   totalLines: 250,
   totalFiles: 5,
   percentage: 25,
@@ -44,7 +44,7 @@ export const NIGHTSHROUD: AuthorContribution = {
 export const STABLE_BOY: AuthorContribution = {
   id: 3,
   name: 'Ulfric of the Stables',
-  email: 'ulfric@alderstone.realm',
+  email: 'ulfric@kell.realm',
   displayName: 'Ulfric of the Stables',
   totalLines: 50,
   totalFiles: 1,
@@ -76,7 +76,7 @@ export const GORVEK_FILES: FileContribution[] = [
  * the detail says.
  */
 export function fakeAnalysis(
-  contributions: AuthorContribution[] = [GORVEK, NIGHTSHROUD, STABLE_BOY],
+  contributions: AuthorContribution[] = [GORVEK, SARN, STABLE_BOY],
 ): AnalysisData {
   const files: AnalysisData['files'] = []
   const lines: AnalysisData['lines'] = []
@@ -204,7 +204,7 @@ export function fakeWarriorSource(
 ): WarriorSource {
   return {
     share: async (id) =>
-      [GORVEK, NIGHTSHROUD, STABLE_BOY].find((one) => one.id === id) ?? null,
+      [GORVEK, SARN, STABLE_BOY].find((one) => one.id === id) ?? null,
     files: async (id) => (id === GORVEK.id ? GORVEK_FILES : []),
     age: async (id) => (id === GORVEK.id ? GORVEK_AGE : null),
     oldestFiles: async (id) => (id === GORVEK.id ? GORVEK_OLDEST : []),

@@ -10,7 +10,7 @@ import {
 import { analysis, author, file, lines } from './fixtures'
 
 const GORVEK = 1
-const NIGHTSHROUD = 2
+const SARN = 2
 const GORVEK_ALIAS = 3
 const GHOST = 4
 
@@ -27,15 +27,15 @@ const GHOST = 4
 const seeded = analysis({
   authors: [
     author(GORVEK, {
-      name: 'Gorvek the Ironbane',
-      email: 'gorvek@ashendale.realm',
+      name: 'Gorvek of Bonereach',
+      email: 'gorvek@bonereach.realm',
       rank: 1,
       percentage: 70,
       title: 'legend',
     }),
-    author(NIGHTSHROUD, {
-      name: 'Sister Nightshroud',
-      email: 'nightshroud@alderstone.realm',
+    author(SARN, {
+      name: 'Sarn the Faceless',
+      email: 'sarn@kell.realm',
       rank: 2,
       percentage: 30,
       title: 'squire',
@@ -48,7 +48,7 @@ const seeded = analysis({
     }),
     author(GHOST, {
       name: 'Ghost of Commits Past',
-      email: 'ghost@ashendale.realm',
+      email: 'ghost@bonereach.realm',
     }),
   ],
   aliases: [
@@ -71,7 +71,7 @@ const seeded = analysis({
   ],
   lines: lines(
     { fileId: 1, authorId: GORVEK, count: 4 },
-    { fileId: 1, authorId: NIGHTSHROUD, count: 2 },
+    { fileId: 1, authorId: SARN, count: 2 },
     { fileId: 2, authorId: GORVEK, count: 3 },
     { fileId: 2, authorId: GORVEK_ALIAS, count: 1 },
   ),
@@ -155,7 +155,7 @@ describe('authorContributions', () => {
   it('lists canonical contributors in rank order and leaves out the idle', () => {
     const contributions = authorContributions(seeded)
 
-    expect(contributions.map((c) => c.id)).toEqual([GORVEK, NIGHTSHROUD])
+    expect(contributions.map((c) => c.id)).toEqual([GORVEK, SARN])
     expect(contributions.map((c) => c.rank)).toEqual([1, 2])
   })
 
@@ -235,15 +235,15 @@ describe('author lookup', () => {
 
     expect(all.map((a) => a.displayName)).toEqual([
       'Ghost of Commits Past',
-      'Gorvek the Ironbane',
-      'Sister Nightshroud',
+      'Gorvek of Bonereach',
+      'Sarn the Faceless',
     ])
     expect(all.find((a) => a.id === GORVEK)?.aliases).toEqual(['gorvek'])
-    expect(all.find((a) => a.id === NIGHTSHROUD)?.aliases).toEqual([])
+    expect(all.find((a) => a.id === SARN)?.aliases).toEqual([])
   })
 
   it('resolves a canonical address to its author', () => {
-    expect(findCanonicalAuthorByEmail(seeded, 'gorvek@ashendale.realm')).toBe(
+    expect(findCanonicalAuthorByEmail(seeded, 'gorvek@bonereach.realm')).toBe(
       GORVEK,
     )
   })

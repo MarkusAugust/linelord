@@ -30,8 +30,8 @@ describe('WarriorDetail', () => {
     await settle()
     const frame = stripAnsi(lastFrame() ?? '')
 
-    expect(frame).toContain('Gorvek the Ironbane')
-    expect(frame).toContain('gorvek@ashendale.realm')
+    expect(frame).toContain('Gorvek of Bonereach')
+    expect(frame).toContain('gorvek@bonereach.realm')
     expect(frame).toContain('legend')
     expect(frame).toContain('700 lines in 12 files')
     expect(frame).toContain('70.0%')

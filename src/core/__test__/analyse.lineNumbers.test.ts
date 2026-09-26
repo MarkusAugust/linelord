@@ -16,7 +16,7 @@ import { blameLines, files } from '../../adapters/sqlite/schema'
  * seconds git had already given.
  */
 
-const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
+const GORVEK = { name: 'Gorvek of Bonereach', email: 'gorvek@bonereach.realm' }
 
 describe('what a blamed line is stored as', () => {
   let repo: TestRepo | undefined

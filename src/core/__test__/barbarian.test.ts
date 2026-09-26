@@ -10,34 +10,34 @@ const ANCIENT = seconds('2020-01-15T10:00:00.000Z')
 const RECENT = seconds('2025-06-01T10:00:00.000Z')
 
 const GORVEK = 1
-const NIGHTSHROUD = 2
+const SARN = 2
 const GHOST = 3
 
 /**
  * A small repository with known ownership:
  *
  *   src/a.ts         3 lines, all Gorvek's, all ancient
- *   src/legacy/b.ts  2 ancient Gorvek lines + 1 recent Nightshroud line
+ *   src/legacy/b.ts  2 ancient Gorvek lines + 1 recent Sarn line
  *   src/big.ts       1 recent Gorvek line, file over the 5000-byte mark
- *   src/c.js         2 recent Nightshroud lines
+ *   src/c.js         2 recent Sarn lines
  *
  * Ghost is a canonical author with no surviving lines at all.
  */
 const seeded = analysis({
   authors: [
     author(GORVEK, {
-      name: 'Gorvek the Ironbane',
-      email: 'gorvek@ashendale.realm',
+      name: 'Gorvek of Bonereach',
+      email: 'gorvek@bonereach.realm',
       title: 'legend',
     }),
-    author(NIGHTSHROUD, {
-      name: 'Sister Nightshroud',
-      email: 'nightshroud@alderstone.realm',
+    author(SARN, {
+      name: 'Sarn the Faceless',
+      email: 'sarn@kell.realm',
       title: 'peasant',
     }),
     author(GHOST, {
       name: 'Ghost of Commits Past',
-      email: 'ghost@ashendale.realm',
+      email: 'ghost@bonereach.realm',
     }),
   ],
   files: [
@@ -50,8 +50,8 @@ const seeded = analysis({
     { fileId: 1, authorId: GORVEK, timestamps: [ANCIENT, ANCIENT, ANCIENT] },
     { fileId: 2, authorId: GORVEK, timestamps: [ANCIENT, ANCIENT] },
     { fileId: 3, authorId: GORVEK, timestamps: [RECENT] },
-    { fileId: 2, authorId: NIGHTSHROUD, timestamps: [RECENT] },
-    { fileId: 4, authorId: NIGHTSHROUD, timestamps: [RECENT, RECENT] },
+    { fileId: 2, authorId: SARN, timestamps: [RECENT] },
+    { fileId: 4, authorId: SARN, timestamps: [RECENT, RECENT] },
   ),
 })
 
@@ -66,7 +66,7 @@ describe('barbarianRankings', () => {
   it('counts ownership from surviving lines rather than from commits', () => {
     const rankings = barbarianRankings(seeded, NOW)
     const gorvek = rankings.find((r) => r.authorId === GORVEK)
-    const nightshroud = rankings.find((r) => r.authorId === NIGHTSHROUD)
+    const sarn = rankings.find((r) => r.authorId === SARN)
 
     expect(gorvek?.metrics).toEqual({
       survivingLines: 6,
@@ -83,7 +83,7 @@ describe('barbarianRankings', () => {
       totalCampaigns: 2,
     })
 
-    expect(nightshroud?.metrics).toEqual({
+    expect(sarn?.metrics).toEqual({
       survivingLines: 3,
       // 1 line in the legacy path plus 2 in a .js file
       battleScars: 3,
@@ -107,7 +107,7 @@ describe('barbarianRankings', () => {
   it('ranks by Gorvek score, highest first, with zero-based ranks', () => {
     const rankings = barbarianRankings(seeded, NOW)
 
-    expect(rankings.map((r) => r.authorId)).toEqual([GORVEK, NIGHTSHROUD])
+    expect(rankings.map((r) => r.authorId)).toEqual([GORVEK, SARN])
     expect(rankings.map((r) => r.rank)).toEqual([0, 1])
     expect(rankings[0]?.gorvekScore).toBeGreaterThan(
       rankings[1]?.gorvekScore ?? 0,
@@ -138,12 +138,10 @@ describe('barbarianRankings', () => {
   it('awards each achievement to a single category leader, and never for zero', () => {
     const rankings = barbarianRankings(seeded, NOW)
     const gorvek = rankings.find((r) => r.authorId === GORVEK)
-    const nightshroud = rankings.find((r) => r.authorId === NIGHTSHROUD)
+    const sarn = rankings.find((r) => r.authorId === SARN)
 
-    // Nightshroud leads only on weapon mastery (2 extensions against 1).
-    expect(nightshroud?.specialAchievements).toEqual([
-      '⚡ Master of Many Weapons',
-    ])
+    // Sarn leads only on weapon mastery (2 extensions against 1).
+    expect(sarn?.specialAchievements).toEqual(['⚡ Master of Many Weapons'])
 
     expect(gorvek?.specialAchievements).toContain('🏰 Conqueror of Domains')
     expect(gorvek?.specialAchievements).toContain('🏺 Guardian of Ancient Code')

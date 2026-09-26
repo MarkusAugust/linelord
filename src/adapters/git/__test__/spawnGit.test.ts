@@ -18,7 +18,7 @@ import {
  * fixture that describes git's output wrongly.
  */
 
-const GORVEK = { name: 'Gorvek the Ironbane', email: 'gorvek@ashendale.realm' }
+const GORVEK = { name: 'Gorvek of Bonereach', email: 'gorvek@bonereach.realm' }
 
 describe('createGit, reading a tree at a revision', () => {
   let repo: TestRepo | undefined
