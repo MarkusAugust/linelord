@@ -8,11 +8,11 @@
 
 > _"What is best in code? To crush the bugs, see them driven from your repository, and to hear the lamentations of their stack traces!"_
 >
-> — Gorvek the Ironbane
+> — Gorvek of Bonereach
 
 ## What is LineLord?
 
-Know, O Prince, that between the years when repositories were young and the rise of the great codebases, there was an age undreamed of. And unto this came **LineLord**, forged in the fires of the Ashen Vale and destined to track every line of code and every warrior who dared shape the digital realm.
+Know, O Prince, that between the years when repositories were young and the rise of the great codebases, there was an age undreamed of. And unto this came **LineLord**, forged in the grey of the Ashfall and destined to track every line of code and every warrior who dared shape the digital realm.
 
 LineLord is a CLI tool that wields the ancient power of `git blame` to reveal who truly holds your codebase. No sorcery, no far-off oracles, no mystical dependencies — only the raw strength of native git commands, an SQLite scroll to remember what it read, and the honest arithmetic of lines that still stand.
 
@@ -23,18 +23,18 @@ LineLord is a CLI tool that wields the ancient power of `git blame` to reveal wh
 - **Battle Reports** — who holds what, how old it is, and who conquered which ground
 - **Code Longevity** — how long the code still standing has stood, and with `--history`, how long code actually lasts before it falls
 - **Brutal Barbarian Rankings** — territory owned, files held alone, code that outlived a year
-- **The Forbidden Lands** — because surveying a codebase should feel like surviving the Blood Mist
+- **Gallowmark** — because surveying a codebase should feel like walking out of the Ashfall
 
 ## Claim Your Weapon
 
-Homebrew forges it, as trusted as a Galdane battle-axe:
+Homebrew forges it, as trusted as a Bonereach axe:
 
 ```bash
 brew tap markusaugust/linelord
 brew install linelord
 ```
 
-When Horn's smiths temper a new blade, sharpen yours:
+When the smiths of Bonereach temper a new blade, sharpen yours:
 
 ```bash
 brew update && brew upgrade linelord
@@ -110,7 +110,7 @@ the size threshold: source in any tongue, configuration, documentation, scripts
 and makefiles, and tests — for a test is code somebody wrote and holds, and it
 counts.
 
-_"What Galdane warrior has time for scrolls that weigh more than a war hammer? LineLord casts these aside, for they are the spawn of Zytera's corruption and code generation, not true craftsmanship."_
+_"What warrior of the Reach has time for scrolls that weigh more than a war hammer? LineLord casts these aside, for they are the spawn of the Greycloaks' tithe-rolls and code generation, not true craftsmanship."_
 
 - **Binary files** — git decides, by the same rule it uses when choosing
   whether to show you a diff. If `git diff` prints the contents, LineLord
@@ -182,9 +182,9 @@ The codebase is 3y 8m old at the middle, 21% of it last touched within ninety da
 Oldest line still standing: old.ts:1 — 3y 8m old
 
   # Warrior                   Lines   Median    Spread (p10–p90)  Half-life  New → old
-›  1 Gorvek the Ironbane          10    3y 8m          6m – 3y 8m          —     ▂ █
-   2 Zygofer the Defiler           1    1y 4m       1y 4m – 1y 4m          —      █
-   3 Sister Nightshroud            3       2d             2d – 2d          —  █
+›  1 Gorvek of Bonereach          10    3y 8m          6m – 3y 8m          —     ▂ █
+   2 Captain Drusk                 1    1y 4m       1y 4m – 1y 4m          —      █
+   3 Sarn the Faceless             3       2d             2d – 2d          —  █
 ```
 
 Sorted by the **median**, not the mean: one ancient file somebody still holds
@@ -310,9 +310,9 @@ The overview shows the address under each name, which is what tells them
 apart:
 
 ```
-Gorvek the Ironbane  <gorvek@firma.no>                        3 lines
-Gorvek the Ironbane  <gorvek@privat.no>                       2 lines
-Gorvek the Ironbane  <4711+gorvek@users.noreply.github.com>   1 line
+Gorvek of Bonereach  <gorvek@firma.no>                        3 lines
+Gorvek of Bonereach  <gorvek@privat.no>                       2 lines
+Gorvek of Bonereach  <4711+gorvek@users.noreply.github.com>   1 line
 ```
 
 Two lines in `.mailmap` — the file git itself reads, and which `git blame`
@@ -320,8 +320,8 @@ applies before LineLord sees a single line — settle it, for LineLord and for
 `git shortlog` alike:
 
 ```
-Gorvek the Ironbane <gorvek@firma.no> <gorvek@privat.no>
-Gorvek the Ironbane <gorvek@firma.no> <4711+gorvek@users.noreply.github.com>
+Gorvek of Bonereach <gorvek@firma.no> <gorvek@privat.no>
+Gorvek of Bonereach <gorvek@firma.no> <4711+gorvek@users.noreply.github.com>
 ```
 
 ### Gorvek Notices, but Does Not Presume
@@ -331,8 +331,8 @@ two contributors look like one person, the menu screen says so, and says why:
 
 ```
 ⚠ 1 contributor may have committed under more than one address:
-  Gorvek the Ironbane <gorvek@firma.no>
-    ← gorvek@privat.no — the names "gorvek the ironbane" and "gorvek" are alike
+  Gorvek of Bonereach <gorvek@firma.no>
+    ← gorvek@privat.no — the names "gorvek of bonereach" and "gorvek" are alike
   Nothing was merged. Pick "Draft a .mailmap" below to record the ones that are right.
 ```
 
@@ -356,12 +356,12 @@ answer is shown before anything is written:
 
 ```
 1 contributor may have committed under more than one address:
-  Gorvek the Ironbane <gorvek@firma.no>
-    ← gorvek@privat.no — the names "gorvek the ironbane" and "gorvek" are alike
+  Gorvek of Bonereach <gorvek@firma.no>
+    ← gorvek@privat.no — the names "gorvek of bonereach" and "gorvek" are alike
 
 ⚠ These are guesses, and this guessing is wrong often enough to matter.
 
-  Gorvek the Ironbane <gorvek@firma.no> <gorvek@privat.no>
+  Gorvek of Bonereach <gorvek@firma.no> <gorvek@privat.no>
 
 Press 'w' to write these to .mailmap · 'q' or Esc to go back
 ```

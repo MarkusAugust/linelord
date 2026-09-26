@@ -15,7 +15,7 @@ import type { AnalysisData, FileRecord } from './model'
  * about conquest, not a measure of anyone's productivity, and it should
  * never be used as one.
  *
- * - Gorvek the Ironbane
+ * - Gorvek of Bonereach
  */
 
 export interface BarbarianWarriorMetrics {
