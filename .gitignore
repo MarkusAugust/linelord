@@ -40,7 +40,5 @@ release
 # AI tooling
 copilot-instructions.md
 claude.local.settings
-# Agent instructions stay on the machine they are written on, like the
-# copilot instructions above. Loading is by path, not by git status, so
-# Claude Code still reads .claude/CLAUDE.md with this in place.
 .claude/CLAUDE.md
+.claude/settings.local.json
