@@ -24,7 +24,7 @@ export default function About({ onBack }: AboutProps) {
           using
         </Text>
         <Text>
-          native git blame. By Huge's hammer, discover who truly rules your
+          native git blame. By the Ashfall, discover who truly rules your
           codebase!
         </Text>
       </Box>

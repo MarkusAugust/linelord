@@ -2,7 +2,7 @@
 
 > _"Bring steel, bring tests, and bring the README along with any change that moves what a screen says."_
 >
-> — Gorvek the Ironbane
+> — Gorvek of Bonereach
 
 LineLord is a Bun + TypeScript + Ink + Drizzle/SQLite CLI that reads
 `git blame` and reports who holds which line. **The numbers it prints are the
@@ -78,11 +78,12 @@ the numbers are not survives every rewording of every screen.
 ## The theme
 
 LineLord wears a barbarian theme, and lays it on thick. Its names come from
-Free League Publishing's *Forbidden Lands*: Gorvek the Ironbane, Sister
-Nightshroud, Zygofer the Defiler, Ashendale, Alderstone, the Galdane, Huge's
-hammer, the ruins of Falender, Zytera, the Blood Mist. Use that vocabulary in
-screens, help text, tests and prose, and do not invent a third register.
-**No names from Conan's world may be used**; they are under copyright.
+the [Gallowmark canon](https://github.com/MarkusAugust/gallowmark): Gorvek of
+Bonereach, Sarn the Faceless, Captain Drusk of the Greycloaks, Brother Nask
+the river-priest, Vurn the Ashborn, the river-god Thurn, the drowned city of
+Kell, the Ashfall. Use that vocabulary in screens, help text, tests and prose,
+and do not invent a third register. **A name that is not in the canon is not
+used here**: add it to Gallowmark first, then to LineLord.
 
 ## Before you push: the self-review
 

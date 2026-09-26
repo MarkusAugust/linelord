@@ -10,7 +10,16 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **The names are Gallowmark's.** Every warrior, place, god and order on the
+  screens, in the help, in the farewell quotes and in the README now comes
+  from the [Gallowmark canon](https://github.com/MarkusAugust/gallowmark):
+  Gorvek of Bonereach, Sarn the Faceless, Captain Drusk of the Greycloaks,
+  the river-god Thurn, the drowned city of Kell, the Ashfall. LineLord itself
+  has an entry there, with the rule its screens have always carried: it
+  counts lines and dates and nothing else. Nothing else about any screen
+  changed, and no number moved.
 
 ## [0.12.2] — 2026-09-26
 

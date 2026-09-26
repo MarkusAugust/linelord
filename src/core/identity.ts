@@ -145,8 +145,8 @@ export function whyAuthorsMatch(
  * Whether a name looks like something other than a name a person wrote.
  *
  * An earlier check stripped whitespace before testing the result against
- * the base64 alphabet, so "Gorvek the Ironbane" collapsed to
- * "GorvektheIronbane" and matched exactly as an encoded blob would. Every
+ * the base64 alphabet, so "Gorvek of Bonereach" collapsed to
+ * "GorvekofBonereach" and matched exactly as an encoded blob would. Every
  * plain ASCII name was therefore classed as an artifact, and the choice fell
  * back to insertion order -- crowning the gibberish it was written to avoid.
  */
@@ -178,7 +178,7 @@ function looksBase64Encoded(name: string): boolean {
   }
 
   // Otherwise demand both digits and an interior capital. A long single-word
-  // name such as "GorvekTheIronbane" has the capitals but not the digits.
+  // name such as "GorvekOfBonereach" has the capitals but not the digits.
   return /\d/.test(name) && /[a-z][A-Z]/.test(name)
 }
 
