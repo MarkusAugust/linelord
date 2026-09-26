@@ -10,7 +10,15 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **The quotes are Gallowmark's too.** The farewell quotes and the four pools
+  of analysis messages are generated from the `quotes/` of the
+  [Gallowmark canon](https://github.com/MarkusAugust/gallowmark) by
+  `bun run sync-lore`, into `gallowmarkQuotes.ts`, and are no longer kept
+  here by hand. Every line on the screens is the same line as before; no
+  number moved. To add or change a quote, change it in Gallowmark and run the
+  sync.
 
 ## [0.12.3] — 2026-09-26
 

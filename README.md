@@ -23,7 +23,7 @@ LineLord is a CLI tool that wields the ancient power of `git blame` to reveal wh
 - **Battle Reports** — who holds what, how old it is, and who conquered which ground
 - **Code Longevity** — how long the code still standing has stood, and with `--history`, how long code actually lasts before it falls
 - **Brutal Barbarian Rankings** — territory owned, files held alone, code that outlived a year
-- **Gallowmark** — because surveying a codebase should feel like walking out of the Ashfall
+- **Gallowmark** — because surveying a codebase should feel like walking out of the Ashfall; every name, farewell and analysis message comes from the canon
 
 ## Claim Your Weapon
 

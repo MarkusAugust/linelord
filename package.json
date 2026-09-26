@@ -47,6 +47,7 @@
   },
   "scripts": {
     "dev": "bun run --hot src/app/cli.ts",
+    "sync-lore": "bun run scripts/sync-lore.ts",
     "typecheck": "tsc --noEmit",
     "lint": "biome check --write",
     "test": "bun test",
