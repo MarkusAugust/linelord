@@ -10,6 +10,12 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.12.4] — 2026-09-26
+
+The release where the quotes became Gallowmark's too.
+
 ### Changed
 
 - **The quotes are Gallowmark's too.** The farewell quotes and the four pools
@@ -559,7 +565,8 @@ stored analysis is rebuilt once, because the database layout changed.
 Earlier releases predate this changelog. See the
 [releases page](https://github.com/MarkusAugust/linelord/releases).
 
-[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.12.3...HEAD
+[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.12.4...HEAD
+[0.12.4]: https://github.com/MarkusAugust/linelord/compare/v0.12.3...v0.12.4
 [0.12.3]: https://github.com/MarkusAugust/linelord/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/MarkusAugust/linelord/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/MarkusAugust/linelord/compare/v0.12.0...v0.12.1
