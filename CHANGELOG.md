@@ -10,6 +10,12 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.12.3] — 2026-09-26
+
+The release where LineLord's names became Gallowmark's.
+
 ### Changed
 
 - **The names are Gallowmark's.** Every warrior, place, god and order on the
@@ -545,7 +551,8 @@ stored analysis is rebuilt once, because the database layout changed.
 Earlier releases predate this changelog. See the
 [releases page](https://github.com/MarkusAugust/linelord/releases).
 
-[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.12.2...HEAD
+[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.12.3...HEAD
+[0.12.3]: https://github.com/MarkusAugust/linelord/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/MarkusAugust/linelord/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/MarkusAugust/linelord/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/MarkusAugust/linelord/compare/v0.11.0...v0.12.0
