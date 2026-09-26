@@ -85,6 +85,12 @@ Kell, the Ashfall. Use that vocabulary in screens, help text, tests and prose,
 and do not invent a third register. **A name that is not in the canon is not
 used here**: add it to Gallowmark first, then to LineLord.
 
+The farewell quotes and the analysis messages are the canon's as well: they
+are generated into `src/adapters/ink/resources/gallowmarkQuotes.ts` by
+`bun run sync-lore` (from a sibling checkout of Gallowmark, or fetched with
+the GitHub CLI). Add or change a quote in Gallowmark's `quotes/`, rebuild its
+export, run the sync here, and commit the generated file.
+
 ## Before you push: the self-review
 
 The same handful of defects keep coming back. Walk the diff against this list.
