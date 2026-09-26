@@ -10,6 +10,13 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.12.2] — 2026-09-26
+
+The first release where every binary was run on the platform it is for
+before it was published.
+
 ### Changed
 
 - **Each platform builds its own binaries.** The Release workflow used to
@@ -529,7 +536,8 @@ stored analysis is rebuilt once, because the database layout changed.
 Earlier releases predate this changelog. See the
 [releases page](https://github.com/MarkusAugust/linelord/releases).
 
-[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.12.2...HEAD
+[0.12.2]: https://github.com/MarkusAugust/linelord/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/MarkusAugust/linelord/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/MarkusAugust/linelord/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/MarkusAugust/linelord/compare/v0.10.0...v0.11.0
