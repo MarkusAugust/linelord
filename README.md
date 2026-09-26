@@ -1,6 +1,6 @@
 <div align="center">
 
-<h1>👑 ⚔️ LineLord ⚔️ 👑</h1>
+<h1>LineLord</h1>
 
 ## The Barbarian's Guide to Git Repository Conquest
 
@@ -10,22 +10,22 @@
 >
 > — Gorvek the Ironbane
 
-## ⚔️ What is LineLord?
+## What is LineLord?
 
 Know, O Prince, that between the years when repositories were young and the rise of the great codebases, there was an age undreamed of. And unto this came **LineLord**, forged in the fires of the Ashen Vale and destined to track every line of code and every warrior who dared shape the digital realm.
 
 LineLord is a CLI tool that wields the ancient power of `git blame` to reveal who truly holds your codebase. No sorcery, no far-off oracles, no mystical dependencies — only the raw strength of native git commands, an SQLite scroll to remember what it read, and the honest arithmetic of lines that still stand.
 
-### 🏰 What Gorvek Brings to the Battlefield
+### What Gorvek Brings to the Battlefield
 
-- **🗡️ Native Git Power** — every number comes from git itself, and works wherever git draws breath
-- **🧠 Honest Identity** — one warrior is one email address; `.mailmap` is how you say otherwise, and LineLord will draft it for you
-- **📊 Battle Reports** — who holds what, how old it is, and who conquered which ground
-- **⏳ Code Longevity** — how long the code still standing has stood, and with `--history`, how long code actually lasts before it falls
-- **🪓 Brutal Barbarian Rankings** — territory owned, files held alone, code that outlived a year
-- **🎨 The Forbidden Lands** — because surveying a codebase should feel like surviving the Blood Mist
+- **Native Git Power** — every number comes from git itself, and works wherever git draws breath
+- **Honest Identity** — one warrior is one email address; `.mailmap` is how you say otherwise, and LineLord will draft it for you
+- **Battle Reports** — who holds what, how old it is, and who conquered which ground
+- **Code Longevity** — how long the code still standing has stood, and with `--history`, how long code actually lasts before it falls
+- **Brutal Barbarian Rankings** — territory owned, files held alone, code that outlived a year
+- **The Forbidden Lands** — because surveying a codebase should feel like surviving the Blood Mist
 
-## 🏹 Claim Your Weapon
+## Claim Your Weapon
 
 Homebrew forges it, as trusted as a Galdane battle-axe:
 
@@ -43,7 +43,7 @@ brew update && brew upgrade linelord
 If LineLord answers with Gorvek's wisdom, your weapon is ready. Linux and macOS
 are the realms it walks; each release carries a binary for every one of them.
 
-## ⚔️ Enter the Battlefield
+## Enter the Battlefield
 
 ```bash
 linelord                                # survey the repository you stand in
@@ -101,7 +101,7 @@ to, the analysis runs anyway and simply remembers nothing.
 - On Code Longevity: **m**, **a**, **l** re-sort by median, mean and lines; **h** and **s** by half-life and survival once the history is walked
 - On the `.mailmap` draft: **w** writes what it proposes
 
-## 🛡️ What Gets Analysed
+## What Gets Analysed
 
 _"These are the true scrolls of power, written by mortal hands with sweat and blood. LineLord honours them, for they bear the mark of genuine battle against the demonic corruption of bugs."_
 
@@ -112,19 +112,19 @@ counts.
 
 _"What Galdane warrior has time for scrolls that weigh more than a war hammer? LineLord casts these aside, for they are the spawn of Zytera's corruption and code generation, not true craftsmanship."_
 
-- ❌ **Binary files** — git decides, by the same rule it uses when choosing
+- **Binary files** — git decides, by the same rule it uses when choosing
   whether to show you a diff. If `git diff` prints the contents, LineLord
   counts them; if it says `Binary files differ`, it does not. So an SVG
   counts, being markup somebody wrote, and a blob with an unfamiliar
   extension does not
-- ❌ **Generated files** — `package-lock.json`, `yarn.lock` and their kin,
+- **Generated files** — `package-lock.json`, `yarn.lock` and their kin,
   matched as proper globs, so a directory is excluded only when a whole path
   segment matches: `checkout/` is not `out/`
-- ❌ **Build artifacts** — `dist/`, `build/`, `node_modules/`
-- ❌ **Bloated files** — anything over the threshold, 50 KB unless you say otherwise
-- ❌ **Untracked files** — whatever `.gitignore` keeps out of the repository was never in the realm
-- ❌ **Uncommitted changes** — the analysis runs against `HEAD`, so unsaved edits are neither counted nor credited to anyone
-- ❌ **Blank lines** — banished from the realm, though they keep their line numbers
+- **Build artifacts** — `dist/`, `build/`, `node_modules/`
+- **Bloated files** — anything over the threshold, 50 KB unless you say otherwise
+- **Untracked files** — whatever `.gitignore` keeps out of the repository was never in the realm
+- **Uncommitted changes** — the analysis runs against `HEAD`, so unsaved edits are neither counted nor credited to anyone
+- **Blank lines** — banished from the realm, though they keep their line numbers
 
 Disagree with a verdict? `.gitattributes` settles it, for git and LineLord
 alike:
@@ -134,14 +134,14 @@ generated.sql binary     # count it as a blob, though it is text
 weird.dat     diff       # count it as text, though git would guess otherwise
 ```
 
-## 📊 The Battle Reports
+## The Battle Reports
 
 Five scrolls await on the menu. On the first three, **↑↓ and Enter** open one
 warrior in full: their share of the codebase and the files they hold the most
 of, how old that code is and where the oldest of it sits, and — once the
 history has been walked — what became of everything they ever wrote.
 
-### 📊 Repository Overview
+### Repository Overview
 
 The realm at a glance: how many files were surveyed and how many set aside as
 binary, generated or bloated; how many lines still stand; and every warrior
@@ -152,7 +152,7 @@ Titles run from **legend** down to **peasant** and are handed out in rank
 order, the crown, the silver and the bronze marking the three who hold the
 most. A warrior wears one title, the same on every screen.
 
-### 🪓 Brutal Barbarian Rankings
+### Brutal Barbarian Rankings
 
 A ranking by conquest rather than by volume. Every metric counts lines that
 are **still alive in `HEAD`**:
@@ -171,7 +171,7 @@ Weighed together they make the **Gorvek score**, which decides the placing;
 whoever leads a category is decorated for it. Every warrior is one row under
 named columns, and the legend beneath the table says what each column counts.
 
-### ⏳ Code Longevity
+### Code Longevity
 
 How old is the code still standing, and whose? For every surviving line, how
 long ago was the commit that last touched it — per warrior, and for the
@@ -234,12 +234,12 @@ moved on since, the screen says which revision the history describes and
 leaves the columns empty rather than draw a curve about a realm that no
 longer exists.
 
-### 🧾 Draft a .mailmap, and ℹ️ About
+### Draft a .mailmap, and About
 
-The fourth scroll is told of under [Who is one warrior](#-who-is-one-warrior).
+The fourth scroll is told of under [Who is one warrior](#who-is-one-warrior).
 The fifth is Gorvek explaining himself.
 
-## ⚖️ What the Numbers Are, and Are Not
+## What the Numbers Are, and Are Not
 
 _"The theming is a joke about conquest. The numbers are not."_ — This matters
 more than any figure above it, and so it stands on the screens as well as
@@ -250,7 +250,7 @@ here.
   `HEAD` are counted.
 - **Age is when a line was last changed, not when it was written.** A
   reformatting, a linter sweep or a mass rename resets it for everything it
-  touches; without [`.git-blame-ignore-revs`](#-when-a-reformatting-rewrote-everything)
+  touches; without [`.git-blame-ignore-revs`](#when-a-reformatting-rewrote-everything)
   the figures measure the formatter's calendar.
 - **Old code is stable code, which is not the same as good code.** The code
   nobody dares touch scores exactly as well as the code that earned its place.
@@ -261,7 +261,7 @@ here.
   the lines do, how hard they were to write, or what else the warrior did
   that week.
 
-## 🔥 When a Reformatting Rewrote Everything
+## When a Reformatting Rewrote Everything
 
 One commit that runs a formatter over the whole repository changes every line
 without changing what any of them mean. Left alone, `git blame` credits the
@@ -298,7 +298,7 @@ with an explanation rather than quietly analysing without it: carrying on
 would hand the reformatting back to whoever ran it, on every screen, and store
 that in the scroll of memory as though it were right.
 
-## 🧠 Who Is One Warrior
+## Who Is One Warrior
 
 An email address is an identity. Two commits belong to the same warrior when
 git says they do, and nothing is inferred from names. That makes the merging
@@ -382,7 +382,7 @@ of each pair then vanished from the ranking while the other was credited with
 their deeds. Use it to find candidates for a `.mailmap`, never to trust the
 output; the point of the file is that a person, not a heuristic, decided.
 
-## 🏗️ Architecture — Ports and Adapters
+## Architecture — Ports and Adapters
 
 LineLord is built as a hexagon. The core knows how to count lines and who
 holds them; it does not know that git is a program, that the cache is a
@@ -458,14 +458,14 @@ core, from values. A screen never runs a query, and a test of a calculation
 never needs a database.
 
 
-## 🗡️ Contributing to the Saga
+## Contributing to the Saga
 
 Bug reports, feature requests and pull requests are welcome at the
 [repository](https://github.com/MarkusAugust/linelord). Before you draw
 steel, read [CONTRIBUTING.md](CONTRIBUTING.md): the gate every change passes
 through, the shape of the code, the theme, and how a release is cut.
 
-## 📄 License
+## License
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
@@ -473,7 +473,7 @@ LineLord is open source software released under the **GNU General Public License
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 LineLord stands on the shoulders of these mighty open source warriors:
 
