@@ -48,7 +48,7 @@ export interface TestRepo {
   writeFiles(files: Record<string, string | Uint8Array>): Promise<void>
   /** Current HEAD SHA. */
   head(): Promise<string>
-  /** Remove the temporary directory. */
+  /** Remove the temporary directory, if this helper created it. */
   cleanup(): Promise<void>
 }
 
@@ -57,6 +57,14 @@ export interface CreateTestRepoOptions {
   defaultAuthor?: TestAuthor
   /** Branch the repository starts on. Defaults to `main`. */
   initialBranch?: string
+  /**
+   * Where to build the repository. Defaults to a fresh temporary directory,
+   * which is what a test wants. A caller that names one owns it: `cleanup`
+   * removes only directories this helper created itself, so a build script
+   * pointing at a path in the working tree cannot have it deleted from under
+   * it.
+   */
+  root?: string
 }
 
 const DEFAULT_AUTHOR: TestAuthor = {
@@ -142,7 +150,11 @@ export async function createTestRepo(
 ): Promise<TestRepo> {
   const { defaultAuthor = DEFAULT_AUTHOR, initialBranch = 'main' } = options
 
-  const root = await mkdtemp(join(tmpdir(), 'linelord-test-'))
+  const ownsRoot = options.root === undefined
+  const root = options.root ?? (await mkdtemp(join(tmpdir(), 'linelord-test-')))
+  if (!ownsRoot) {
+    await mkdir(root, { recursive: true })
+  }
   const git = (args: string[], extraEnv?: Record<string, string>) =>
     runGit(root, args, extraEnv)
 
@@ -214,6 +226,7 @@ export async function createTestRepo(
     },
 
     async cleanup() {
+      if (!ownsRoot) return
       await rm(root, { force: true, recursive: true })
     },
   }

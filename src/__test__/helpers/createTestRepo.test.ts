@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { readFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createTestRepo, type TestRepo, toGitDate } from './createTestRepo'
 
@@ -157,5 +159,32 @@ describe('createTestRepo', () => {
 
   it('rejects an unparseable commit date instead of silently using now', async () => {
     expect(() => toGitDate('ikke en dato')).toThrow()
+  })
+
+  it('builds the repository where it is told to, for fixtures that outlive a test', async () => {
+    const parent = await mkdtemp(join(tmpdir(), 'linelord-root-'))
+    const root = join(parent, 'demo-repo')
+
+    repo = await createTestRepo({ root })
+    await repo.commit({ message: 'first', write: { 'a.ts': 'const a = 1\n' } })
+
+    expect(repo.path).toBe(root)
+    const tracked = (await repo.git(['ls-files'])).trim()
+    expect(tracked).toBe('a.ts')
+
+    await rm(parent, { force: true, recursive: true })
+  })
+
+  it('leaves a directory it did not create alone when cleaning up', async () => {
+    const parent = await mkdtemp(join(tmpdir(), 'linelord-root-'))
+    const root = join(parent, 'demo-repo')
+
+    const given = await createTestRepo({ root })
+    await given.commit({ message: 'first', write: { 'a.ts': 'const a = 1\n' } })
+    await given.cleanup()
+
+    expect(existsSync(root)).toBe(true)
+
+    await rm(parent, { force: true, recursive: true })
   })
 })
