@@ -482,6 +482,17 @@ export function createLineLord(
       )
       historyRun = run
       historyReading = await readHistory()
+
+      // The walk meets contributors the present has forgotten: somebody whose
+      // every line has since been rewritten is absent from HEAD's analysis and
+      // present in the history all the same. It writes them to the authors it
+      // stores, but `analysis` was read before the walk, so without rereading
+      // it their row is drawn and their name is not -- and a row for a warrior
+      // it cannot name shows nobody, which is the opposite of what the history
+      // is for. The reread is one query beside a walk that has just spent
+      // minutes reading revisions.
+      analysis = await store.loadAnalysis()
+
       return run
     } finally {
       lock?.release()

@@ -10,6 +10,7 @@ import { lineLord } from '../../__test__/helpers/lineLord'
 import { findRepositoryRoot } from '../../adapters/git/spawnGit'
 import { resolveCachePath } from '../../adapters/sqlite/cacheLocation'
 import { acquireCacheLock } from '../../adapters/sqlite/cacheMaintenance'
+import { survivalByAuthor } from '../longevity'
 
 /**
  * Walking the history through the service the interface uses.
@@ -20,6 +21,7 @@ import { acquireCacheLock } from '../../adapters/sqlite/cacheMaintenance'
  */
 
 const GORVEK = { name: 'Gorvek of Bonereach', email: 'gorvek@bonereach.realm' }
+const NASK = { name: 'Brother Nask', email: 'nask@thurn.realm' }
 const MONTHLY = { interval: 'month' as const, maxSnapshots: 60 }
 
 describe('gatherHistory', () => {
@@ -145,6 +147,45 @@ describe('gatherHistory', () => {
       delete process.env.XDG_CACHE_HOME
       await rm(cacheHome, { force: true, recursive: true })
     }
+  }, 60000)
+
+  it('names a contributor only the history saw, whose every line is gone', async () => {
+    repo = await createTestRepo()
+    await repo.commit({
+      message: 'the invocation of Thurn',
+      author: NASK,
+      date: new Date('2025-01-10T10:00:00Z'),
+      write: { 'rites.ts': 'one\ntwo\nthree\n' },
+    })
+    await repo.commit({
+      message: 'Thurn is not invoked before a ledger entry',
+      author: GORVEK,
+      date: new Date('2025-06-10T10:00:00Z'),
+      write: { 'ledger.ts': 'kept\n' },
+      remove: ['rites.ts'],
+    })
+
+    const service = lineLord(repo.path, 50 * 1024, { history: MONTHLY })
+    await service.initialize()
+
+    // Before the walk he is genuinely absent: nothing he wrote survives in
+    // HEAD, so the analysis of HEAD has never heard of him.
+    expect(service.getAnalysis().authors.map((one) => one.email)).not.toContain(
+      NASK.email,
+    )
+
+    await service.gatherHistory()
+
+    // The walk wrote him into the authors it stores, so the analysis the
+    // screens and the report read has to be reread -- otherwise his row is
+    // there and nameless, which shows nobody.
+    const authors = service.getAnalysis().authors
+    expect(authors.map((one) => one.email)).toContain(NASK.email)
+
+    const survival = survivalByAuthor(service.getHistory().history, authors)
+    const forgotten = survival.find((one) => one.survivingLines === 0)
+    expect(forgotten?.name).toBe(NASK.name)
+    expect(forgotten?.email).toBe(NASK.email)
   }, 60000)
 
   it('reports the progress of a walk that can take minutes', async () => {
