@@ -10,7 +10,19 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **A contributor the present has forgotten is named.** With `--history`,
+  somebody whose every line has since been rewritten gets a row of their own —
+  they are precisely who the history exists to show. That row was drawn without
+  a name or an address, so it showed nobody.
+
+  The walk writes those contributors to the stored analysis, but the analysis
+  the screens read had been loaded before the walk ran, so the name was in the
+  database and not in the value doing the naming. It is read again once the
+  walk is done, which costs one query beside a walk that has just spent
+  minutes. No number moved: the rows, the survival rates and the half-lives
+  were all correct already.
 
 ## [0.12.4] — 2026-09-26
 
