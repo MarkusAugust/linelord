@@ -7,7 +7,9 @@ import {
   ageOfAuthors,
   ageOfRepository,
   type HistoryReading,
+  halfLifeOf,
   survivalByAuthor,
+  withForgottenContributors,
 } from '../../../core/longevity'
 import type { AnalysisData } from '../../../core/model'
 import type { WarriorSource } from '../../../core/warrior'
@@ -67,11 +69,9 @@ function sortWarriors(
     // has no half-life known either way, and sorting it to either end would
     // be a claim -- it goes last, after everything that was measured.
     const life = (one: AuthorLongevity): number | null => {
-      const found = survival.get(one.authorId)
-      if (!found) return null
-      if (found.halfLifeDays !== null) return found.halfLifeDays
-      const watched = found.survivalCurve.at(-1)?.ageDays ?? 0
-      return watched > 0 ? Number.POSITIVE_INFINITY : null
+      const found = halfLifeOf(survival.get(one.authorId))
+      if (found.kind === 'unknown') return null
+      return found.kind === 'outlasted' ? Number.POSITIVE_INFINITY : found.days
     }
     return sorted.sort((a, b) => {
       const left = life(a)
@@ -90,71 +90,25 @@ function sortWarriors(
 }
 
 /**
- * Put back the people the present has forgotten.
- *
- * The table is built from the analysis of HEAD, so somebody whose every line
- * has since been rewritten has no row in it -- and they are precisely the
- * case the history exists to show. They are given a row with nothing in the
- * columns that describe surviving code, because they have none.
- */
-function withForgottenContributors(
-  warriors: AuthorLongevity[],
-  survival: Map<number, AuthorSurvivalWithIdentity>,
-): AuthorLongevity[] {
-  const present = new Set(warriors.map((one) => one.authorId))
-  const forgotten: AuthorLongevity[] = []
-
-  for (const [authorId, one] of survival) {
-    if (present.has(authorId) || one.linesEverWritten === 0) continue
-    forgotten.push({
-      authorId,
-      name: one.name,
-      email: one.email,
-      survivingLines: 0,
-      medianAgeDays: Number.NaN,
-      meanAgeDays: Number.NaN,
-      p10AgeDays: Number.NaN,
-      p90AgeDays: Number.NaN,
-      oldestLine: null,
-      newestLine: null,
-      ageHistogram: {
-        underAWeek: 0,
-        weekToMonth: 0,
-        oneToThreeMonths: 0,
-        threeToTwelveMonths: 0,
-        oneToTwoYears: 0,
-        overTwoYears: 0,
-      },
-      activeSpanDays: 0,
-    })
-  }
-
-  return [...warriors, ...forgotten]
-}
-
-/**
  * The half-life column, or a reason there is not one.
  *
  * A dash on its own reads as "this person has no half-life", which is a
  * claim. The line under the table says which of the two it is: no history
- * gathered, or a history about a different revision.
+ * gathered, or a history about a different revision. Which of the three
+ * things the figure itself can say is `halfLifeOf`'s to decide, so that the
+ * screen and anything else reading the same numbers agree.
  */
 function halfLifeColumn(
   history: HistoryState,
   survival: AuthorSurvivalWithIdentity | undefined,
 ): string {
-  if (history.kind !== 'current' || !survival) return '—'.padStart(11)
-  if (survival.halfLifeDays === null) {
-    // Two different things wear the same null. A cohort watched for months
-    // that never halved has outlasted the window, and "> 3m" says so. One
-    // seen at a single snapshot was never watched across any span at all, so
-    // nothing is known -- and "> <1d" would be a measurement where there is
-    // none.
-    const watched = survival.survivalCurve.at(-1)?.ageDays ?? 0
-    if (watched <= 0) return '—'.padStart(11)
-    return `> ${formatAge(watched)}`.padStart(11)
+  if (history.kind !== 'current') return '—'.padStart(11)
+  const life = halfLifeOf(survival)
+  if (life.kind === 'unknown') return '—'.padStart(11)
+  if (life.kind === 'outlasted') {
+    return `> ${formatAge(life.days)}`.padStart(11)
   }
-  return formatAge(survival.halfLifeDays).padStart(11)
+  return formatAge(life.days).padStart(11)
 }
 
 /**

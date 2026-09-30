@@ -34,7 +34,30 @@ because the earlier answer was wrong.
   terminal and the JSON report say what the numbers are not in one set of
   words rather than two. Nothing on any screen changed.
 
+### Added
+
+- **A demo page, under `site/`.** `bun run site` builds the fixture
+  repository, analyses it with `--json --history` and writes a static page from
+  that report. It is not a web interface to LineLord: nothing is analysed when
+  the page loads, and there is no server. It shows what the command-line tool
+  reports, with the numbers read at build time.
+
 ### Fixed
+
+- **The Code Longevity screen and anything else reading the numbers now agree
+  about the half-life.** Whether a half-life is measured, outlasted the history,
+  or is simply unknown was decided inside the terminal screen, so a second
+  reader of the same figures — the JSON report, and the page built from it —
+  showed a dash where the screen said "> 3y 4m". A dash claims nothing is
+  known; "> 3y 4m" says the work outlived everything the history watched. The
+  rule is `halfLifeOf` in the core now, and both read it. The screen says what
+  it always said.
+
+- **Contributors the present has forgotten reach the report.** Which warriors
+  get a row was also decided in the terminal screen, so a reader of the JSON
+  saw fewer warriors than the terminal did. `withForgottenContributors` is in
+  the core, and the report carries those rows with `null` ages rather than a
+  zero that would sort as the newest code in the repository.
 
 - **A contributor the present has forgotten is named.** With `--history`,
   somebody whose every line has since been rewritten gets a row of their own —

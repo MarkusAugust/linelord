@@ -1,0 +1,249 @@
+/*
+ * The page wants to read like the terminal it is showing, without pretending
+ * to be a terminal emulator: one monospace family, block characters for the
+ * bars and the histograms, and no colour carrying meaning on its own.
+ */
+
+:root {
+  --ink: #e8e2d4;
+  --ink-dim: #9a9383;
+  --paper: #14110d;
+  --paper-raised: #1d1913;
+  --rule: #332c22;
+  --steel: #c8a34a;
+  --blood: #a8452f;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --ink: #221c14;
+    --ink-dim: #5f5748;
+    --paper: #f4efe4;
+    --paper-raised: #fffdf7;
+    --rule: #d8cfbb;
+    --steel: #8a6d1f;
+    --blood: #8c3423;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+main {
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 2.5rem 16px 4rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 8vw, 3.2rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+h2 {
+  margin: 2.5rem 0 0.75rem;
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+
+.tagline {
+  margin: 0.25rem 0 1.5rem;
+  color: var(--ink-dim);
+}
+
+.quote {
+  margin: 0 0 1.5rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--blood);
+  color: var(--ink);
+}
+
+.attribution {
+  display: block;
+  color: var(--ink-dim);
+}
+
+.note,
+.aside,
+.lede {
+  color: var(--ink-dim);
+  max-width: 62ch;
+}
+
+.lede {
+  color: var(--ink);
+}
+
+/* The menu is the terminal's menu: one screen visible at a time. */
+.menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 2rem 0 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+}
+
+.menu-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  background: var(--paper-raised);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  border-color: var(--steel);
+}
+
+.menu-item.active {
+  border-color: var(--steel);
+  color: var(--steel);
+}
+
+.menu-item:focus-visible {
+  outline: 2px solid var(--steel);
+  outline-offset: 2px;
+}
+
+.menu-number {
+  color: var(--ink-dim);
+}
+
+.panel {
+  padding-top: 0.5rem;
+}
+
+/* Tables carry the numbers, and scroll rather than reflow on a phone. */
+table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+th,
+td {
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid var(--rule);
+}
+
+th {
+  color: var(--ink-dim);
+  font-weight: normal;
+  letter-spacing: 0.04em;
+}
+
+td.num,
+th:has(+ td.num) {
+  text-align: right;
+}
+
+.num {
+  text-align: right;
+}
+
+.warrior {
+  display: block;
+}
+
+.address,
+.title {
+  display: block;
+  color: var(--ink-dim);
+  font-size: 0.85em;
+}
+
+.bar,
+.spark {
+  color: var(--steel);
+  letter-spacing: -0.05em;
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.2rem 1rem;
+  margin: 1.5rem 0 0;
+  color: var(--ink-dim);
+}
+
+.legend dt {
+  color: var(--steel);
+}
+
+.legend dd {
+  margin: 0;
+}
+
+.candidates {
+  padding-left: 1.2rem;
+}
+
+.candidates ul {
+  padding-left: 1.2rem;
+  list-style: none;
+}
+
+pre {
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  overflow-x: auto;
+}
+
+code,
+kbd {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 0 0.3em;
+}
+
+kbd {
+  color: var(--steel);
+}
+
+.disclaimer {
+  padding-left: 1.2rem;
+  max-width: 68ch;
+}
+
+footer {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+}
+
+a {
+  color: var(--steel);
+}

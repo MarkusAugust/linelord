@@ -22,6 +22,7 @@ import {
   type HistoryReading,
   type RepositoryLongevity,
   survivalByAuthor,
+  withForgottenContributors,
 } from './longevity'
 import type { AnalysisData } from './model'
 import {
@@ -69,6 +70,26 @@ export interface ReportRepository {
   unresolvedIgnoreRevs: AnalysisContext['unresolvedIgnoreRevs']
 }
 
+/**
+ * One warrior's longevity, with the ages as JSON can carry them.
+ *
+ * A contributor whose every line has since been rewritten has no surviving
+ * code to be any age, which the core states as `NaN` -- and NaN is not JSON.
+ * Null says the same thing in a form a caller can read, and it says it as a
+ * third value rather than as a zero that would sort as the newest code in the
+ * repository.
+ */
+export interface ReportAuthorLongevity
+  extends Omit<
+    AuthorLongevity,
+    'medianAgeDays' | 'meanAgeDays' | 'p10AgeDays' | 'p90AgeDays'
+  > {
+  medianAgeDays: number | null
+  meanAgeDays: number | null
+  p10AgeDays: number | null
+  p90AgeDays: number | null
+}
+
 export interface ReportHistory {
   /**
    * The revision the walk describes. A history about some other revision is a
@@ -90,7 +111,7 @@ export interface Report {
   rankings: BarbarianRanking[]
   longevity: {
     repository: RepositoryLongevity
-    authors: AuthorLongevity[]
+    authors: ReportAuthorLongevity[]
   }
   identityCandidates: IdentityMerge[]
   /** Files that were meant to be read and could not be. */
@@ -104,12 +125,37 @@ export interface Report {
   disclaimer: readonly string[]
 }
 
+/** A finite age, or null where there is no surviving code to have one. */
+const age = (days: number): number | null =>
+  Number.isFinite(days) ? days : null
+
+function toReportLongevity(one: AuthorLongevity): ReportAuthorLongevity {
+  return {
+    ...one,
+    medianAgeDays: age(one.medianAgeDays),
+    meanAgeDays: age(one.meanAgeDays),
+    p10AgeDays: age(one.p10AgeDays),
+    p90AgeDays: age(one.p90AgeDays),
+  }
+}
+
 export function buildReport(
   data: AnalysisData,
   options: ReportOptions,
 ): Report {
   const { now, context, history } = options
   const stats = repositoryStats(data)
+
+  const walked = history ? survivalByAuthor(history.history, data.authors) : []
+  const survival = new Map(walked.map((one) => [one.authorId, one]))
+
+  // The same rows the Code Longevity screen draws, including the people the
+  // present has forgotten -- a site built from this must not show fewer
+  // warriors than the terminal does.
+  const longevityAuthors = withForgottenContributors(
+    ageOfAuthors(data, now),
+    survival,
+  ).map(toReportLongevity)
 
   return {
     schemaVersion: REPORT_SCHEMA_VERSION,
@@ -141,7 +187,7 @@ export function buildReport(
 
     longevity: {
       repository: ageOfRepository(data, now),
-      authors: ageOfAuthors(data, now),
+      authors: longevityAuthors,
     },
 
     identityCandidates: options.identityMerges,
@@ -152,7 +198,7 @@ export function buildReport(
         ? {
             describes: history.describes,
             snapshotCount: history.history.snapshots.length,
-            authors: survivalByAuthor(history.history, data.authors),
+            authors: walked,
           }
         : null,
 

@@ -31,6 +31,8 @@ function sampleAnalysis() {
         rank: 2,
         title: 'vanquisher',
       }),
+      // Holds no line in HEAD. Only the history remembers him.
+      author(3, { name: 'Brother Nask', email: 'nask@thurn.realm' }),
     ],
     files: [
       file(1, 'src/ledger.ts', { size: 6000, totalLines: 6 }),
@@ -194,6 +196,53 @@ describe('buildReport', () => {
     expect(report.history?.describes).toBe(context.headSha)
     expect(report.history?.snapshotCount).toBe(2)
     expect(report.history?.authors[0]?.linesEverWritten).toBe(6)
+  })
+
+  it('gives a row to a contributor the history remembers and HEAD does not', () => {
+    const cohortMonth = secondsAt('2023-01-01T00:00:00Z')
+    const report = buildReport(sampleAnalysis(), {
+      ...options,
+      history: {
+        describes: context.headSha,
+        history: {
+          snapshots: [
+            {
+              id: 1,
+              commitSha: 'aaa',
+              snapshotTimestamp: secondsAt('2023-02-01T00:00:00Z'),
+              totalLines: 9,
+            },
+            {
+              id: 2,
+              commitSha: 'bbb',
+              snapshotTimestamp: secondsAt('2023-08-01T00:00:00Z'),
+              totalLines: 6,
+            },
+          ],
+          // Author 3 holds nothing in HEAD, so ageOfAuthors has no row for
+          // them at all -- and they are exactly who the history is for.
+          cohortLines: [
+            { snapshotId: 1, authorId: 1, cohortMonth, lineCount: 6 },
+            { snapshotId: 2, authorId: 1, cohortMonth, lineCount: 6 },
+            { snapshotId: 1, authorId: 3, cohortMonth, lineCount: 3 },
+          ],
+        },
+      },
+    })
+
+    const forgotten = report.longevity.authors.find(
+      (one) => one.survivingLines === 0,
+    )
+    expect(forgotten).toBeDefined()
+    expect(forgotten?.authorId).toBe(3)
+
+    // Null, not NaN: NaN is not JSON, and "no surviving code to be old" is a
+    // real state rather than a missing number.
+    expect(forgotten?.medianAgeDays).toBeNull()
+    expect(forgotten?.p90AgeDays).toBeNull()
+
+    const roundTripped = JSON.parse(JSON.stringify(report))
+    expect(roundTripped).toEqual(report)
   })
 
   it('reports no history when the walk recorded no revisions at all', () => {

@@ -3,6 +3,7 @@ import {
   ageOfAuthors,
   ageOfRepository,
   filesByAge,
+  halfLifeOf,
   survivalByAuthor,
 } from '../longevity'
 import type { AnalysisData, BlameLineRecord } from '../model'
@@ -396,5 +397,49 @@ describe('survivalByAuthor', () => {
     expect(gorvek?.linesEverWritten).toBe(10)
     expect(gorvek?.survivingLines).toBe(4)
     expect(gorvek?.survivalRate).toBeCloseTo(0.4, 5)
+  })
+})
+
+describe('halfLifeOf', () => {
+  const base = {
+    authorId: 1,
+    linesEverWritten: 10,
+    survivingLines: 5,
+    survivalRate: 0.5,
+  }
+
+  it('reports a measured half-life as the number it is', () => {
+    expect(
+      halfLifeOf({ ...base, halfLifeDays: 90, survivalCurve: [] }),
+    ).toEqual({ kind: 'measured', days: 90 })
+  })
+
+  it('separates code that outlasted the window from code never watched', () => {
+    // Watched across a span and never halved: the work outlived everything the
+    // history saw, which is an answer.
+    expect(
+      halfLifeOf({
+        ...base,
+        halfLifeDays: null,
+        survivalCurve: [
+          { ageDays: 0, fractionAlive: 1 },
+          { ageDays: 120, fractionAlive: 0.9 },
+        ],
+      }),
+    ).toEqual({ kind: 'outlasted', days: 120 })
+
+    // Seen once, across no span at all: nothing is known either way, and a
+    // number here would be a measurement where there is none.
+    expect(
+      halfLifeOf({
+        ...base,
+        halfLifeDays: null,
+        survivalCurve: [{ ageDays: 0, fractionAlive: 1 }],
+      }),
+    ).toEqual({ kind: 'unknown' })
+  })
+
+  it('knows nothing about somebody the history never saw', () => {
+    expect(halfLifeOf(undefined)).toEqual({ kind: 'unknown' })
   })
 })

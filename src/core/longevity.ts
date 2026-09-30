@@ -391,3 +391,72 @@ export function survivalByAuthor(
     email: identities.get(one.authorId)?.email ?? '',
   }))
 }
+
+/**
+ * Put back the people the present has forgotten.
+ *
+ * The table is built from the analysis of HEAD, so somebody whose every line
+ * has since been rewritten has no row in it -- and they are precisely the
+ * case the history exists to show. They are given a row with nothing in the
+ * columns that describe surviving code, because they have none.
+ */
+/**
+ * What is known about how long somebody's work lasts.
+ *
+ * Three answers, not two. A measured half-life is a number. Work watched
+ * across a span that never halved outlived everything the history saw, which
+ * is an answer and reads as "> N". Work the history saw at a single snapshot
+ * was never watched across any span, so nothing is known either way -- and a
+ * dash has to mean that, and only that, or it quietly claims the code was
+ * short-lived.
+ */
+export type HalfLife =
+  | { kind: 'measured'; days: number }
+  | { kind: 'outlasted'; days: number }
+  | { kind: 'unknown' }
+
+export function halfLifeOf(survival: AuthorSurvival | undefined): HalfLife {
+  if (!survival) return { kind: 'unknown' }
+  if (survival.halfLifeDays !== null) {
+    return { kind: 'measured', days: survival.halfLifeDays }
+  }
+  const watched = survival.survivalCurve.at(-1)?.ageDays ?? 0
+  return watched > 0
+    ? { kind: 'outlasted', days: watched }
+    : { kind: 'unknown' }
+}
+
+export function withForgottenContributors(
+  warriors: AuthorLongevity[],
+  survival: Map<number, AuthorSurvivalWithIdentity>,
+): AuthorLongevity[] {
+  const present = new Set(warriors.map((one) => one.authorId))
+  const forgotten: AuthorLongevity[] = []
+
+  for (const [authorId, one] of survival) {
+    if (present.has(authorId) || one.linesEverWritten === 0) continue
+    forgotten.push({
+      authorId,
+      name: one.name,
+      email: one.email,
+      survivingLines: 0,
+      medianAgeDays: Number.NaN,
+      meanAgeDays: Number.NaN,
+      p10AgeDays: Number.NaN,
+      p90AgeDays: Number.NaN,
+      oldestLine: null,
+      newestLine: null,
+      ageHistogram: {
+        underAWeek: 0,
+        weekToMonth: 0,
+        oneToThreeMonths: 0,
+        threeToTwelveMonths: 0,
+        oneToTwoYears: 0,
+        overTwoYears: 0,
+      },
+      activeSpanDays: 0,
+    })
+  }
+
+  return [...warriors, ...forgotten]
+}

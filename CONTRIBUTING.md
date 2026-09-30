@@ -133,7 +133,11 @@ no 1.0.0. Releases are cut by the maintainer:
 
 Homebrew and the binaries on each release are the whole distribution story.
 There is no npm package, no web interface and no Windows build, and none of
-those is coming.
+those is coming. "No web interface" means nobody drives LineLord through a
+browser: there is no server, no hosted analysis and no GUI. The demo site under
+`site/` is a different thing — a page that shows what the command-line tool
+reports, built from a generated fixture repository at build time, serving
+nothing and analysing nothing on request.
 
 `--json` prints the analysis for another program to read, and exists so the
 demo site can be built from LineLord's own numbers. It is the one
