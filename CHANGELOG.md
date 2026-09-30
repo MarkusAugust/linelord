@@ -10,7 +10,29 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **`--json` writes the analysis for another program to read**, and stops.
+  This reverses a documented non-goal: the demo site needs LineLord's own
+  numbers from a fixture repository, and every way of getting them without an
+  output flag was a worse version of the flag. The payload carries a
+  `schemaVersion`, the revision it describes, the exclusion counts, every
+  contributor, the rankings, the longevity figures, the identity candidates
+  nothing merged, and the disclaimer the screens carry. With `--history` the
+  survival figures come with it. Progress goes to standard error so standard
+  output is the report alone. No number moved: every field is derived by the
+  same functions the screens call.
+
+  It is the only thing LineLord does without drawing a screen, and the only
+  flag exempt from also being reachable from the menu — a dump for another
+  program has no menu entry that would mean anything. `--json` and
+  `--write-mailmap` together are refused rather than resolved by order.
+
+### Changed
+
+- **`honestyNotes` moved from the Ink resources into the core**, so that the
+  terminal and the JSON report say what the numbers are not in one set of
+  words rather than two. Nothing on any screen changed.
 
 ## [0.12.4] — 2026-09-26
 

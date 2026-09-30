@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { render } from 'ink-testing-library'
-import { HONESTY_NOTES } from '../../resources/honestyNotes'
+import { HONESTY_NOTES } from '../../../../core/honestyNotes'
 import { HonestyNote } from '../HonestyNote'
 
 describe('HonestyNote', () => {

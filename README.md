@@ -62,6 +62,8 @@ linelord --ignore-rev 1a2b3c4           # look past a reformatting commit, for t
 linelord --fuzzy-authors                # guess who is who from names (see below — it lies)
 linelord --write-mailmap                # draft a .mailmap from those guesses, and stop
 
+linelord --json                         # write the analysis as JSON and stop
+
 linelord --history                      # also read the past, and how long code lasted
 linelord --history --snapshot-interval=quarter --max-snapshots=24
 
@@ -381,6 +383,28 @@ often enough to matter: it took `mk@firma.no` for `ml@firma.no`, `john@` for
 of each pair then vanished from the ranking while the other was credited with
 their deeds. Use it to find candidates for a `.mailmap`, never to trust the
 output; the point of the file is that a person, not a heuristic, decided.
+
+## Handing the Numbers to Another Program
+
+`--json` writes the whole analysis to standard output and stops — the same
+numbers the screens show, as one value something else can read:
+
+```bash
+linelord --json > conquest.json
+linelord --json --history          # the survival figures come with it
+```
+
+Progress goes to standard error, so standard output is the report and nothing
+else and may be piped straight into a parser. The payload carries a
+`schemaVersion`, the revision it describes, what was set aside as binary,
+generated or bloated, every contributor with their share, the rankings, the
+longevity figures, the identity candidates nothing merged, and — because a
+count of lines is nowhere more likely to be mistaken for a measure of a person
+— the same disclaimer the screens carry.
+
+It is the one thing LineLord does without drawing a screen, and it exists so
+the numbers can be published without being reimplemented. Everything else
+lives in the terminal.
 
 ## Architecture — Ports and Adapters
 

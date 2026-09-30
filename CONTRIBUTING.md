@@ -132,5 +132,12 @@ no 1.0.0. Releases are cut by the maintainer:
    with `build_only`, which builds and smoke-tests without publishing.
 
 Homebrew and the binaries on each release are the whole distribution story.
-There is no npm package, no `--json` output, no web interface and no Windows
-build, and none of those is coming.
+There is no npm package, no web interface and no Windows build, and none of
+those is coming.
+
+`--json` prints the analysis for another program to read, and exists so the
+demo site can be built from LineLord's own numbers. It is the one
+non-interactive path: the terminal interface is still the whole of the
+interactive surface, with no plain-text fallback for the screens. Its shape is
+something callers may depend on, so changing it is a behaviour change and the
+CHANGELOG says what moved.
