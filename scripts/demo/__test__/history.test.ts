@@ -78,6 +78,31 @@ describe('DEMO_HISTORY', () => {
     expect(addresses.size).toBeGreaterThan(2)
   })
 
+  it('kills some of the work, so a half-life is measurable at all', () => {
+    const removed = DEMO_HISTORY.flatMap((commit) => commit.remove ?? [])
+    expect(removed.length).toBeGreaterThan(0)
+  })
+
+  it('has one warrior the present has forgotten, whose every line is gone', () => {
+    const removed = new Set(
+      DEMO_HISTORY.flatMap((commit) => commit.remove ?? []),
+    )
+
+    const writtenBy = new Map<string, Set<string>>()
+    for (const commit of DEMO_HISTORY) {
+      for (const path of Object.keys(commit.write ?? {})) {
+        const paths = writtenBy.get(commit.author.email) ?? new Set<string>()
+        paths.add(path)
+        writtenBy.set(commit.author.email, paths)
+      }
+    }
+
+    const forgotten = [...writtenBy.entries()].filter(([, paths]) =>
+      [...paths].every((path) => removed.has(path)),
+    )
+    expect(forgotten.length).toBeGreaterThan(0)
+  })
+
   it('names exactly one reformatting commit, which .git-blame-ignore-revs exists to look past', () => {
     const reformatting = DEMO_HISTORY.filter((commit) => commit.reformatting)
     expect(reformatting.length).toBe(1)

@@ -76,6 +76,16 @@ export const DEMO_AUTHORS = {
     name: 'Sarn the Faceless',
     email: 'sarn@kell.realm',
   },
+  /**
+   * Everything he wrote is gone. He is here because the history exists to
+   * show precisely the person the present has forgotten: with no surviving
+   * lines he is absent from every screen that reads HEAD, and the survival
+   * figures are the only place he appears at all.
+   */
+  nask: {
+    name: 'Brother Nask',
+    email: 'nask@thurn.realm',
+  },
 } as const satisfies Record<string, DemoAuthor>
 
 /** A file long enough to count as legacy, and to make one day a massive battle. */
@@ -146,6 +156,46 @@ function riverWatch(): string {
   ].join('\n')
 }
 
+/** Nask's work, written early and deleted before the present. */
+function invocation(): string {
+  const verses = Array.from(
+    { length: 34 },
+    (_, index) => `  invoke('verse-${index}', ${index})`,
+  )
+  return [
+    "import { rateFor } from './tithe'",
+    '',
+    'export function invokeThurn(): void {',
+    ...verses,
+    '  void rateFor',
+    '}',
+    '',
+  ].join('\n')
+}
+
+/**
+ * What the long rites were cut down to. Most of the old file dies here, which
+ * is what gives the cohort it belonged to a half-life the history can measure:
+ * a fixture where nothing is ever rewritten reports a dash in that column and
+ * teaches nobody what the column is for.
+ */
+function shortenedRites(): string {
+  const rites = Array.from(
+    { length: 38 },
+    (_, index) => `  recordRite(${index}, 'rite-${index}', ${index % 7})`,
+  )
+  return [
+    'function readTitheRolls(rolls) {',
+    '  var total = 0',
+    ...rites,
+    '  return total',
+    '}',
+    '',
+    'module.exports = { readTitheRolls }',
+    '',
+  ].join('\n')
+}
+
 /** Over the 50 KB threshold, so the analysis sets it aside unread. */
 function bloatedRoster(): string {
   const rows = Array.from(
@@ -165,7 +215,7 @@ function sigil(): Uint8Array {
   ])
 }
 
-const { gorvek, gorvekAtKell, drusk, sarn } = DEMO_AUTHORS
+const { gorvek, gorvekAtKell, drusk, nask, sarn } = DEMO_AUTHORS
 
 export const DEMO_HISTORY: readonly DemoCommit[] = [
   {
@@ -200,6 +250,12 @@ export const DEMO_HISTORY: readonly DemoCommit[] = [
     author: gorvek,
     ago: years(4) - 11,
     write: { 'src/legacy/oldrites.js': legacyRites() },
+  },
+  {
+    message: 'The invocation of Thurn, before every reckoning',
+    author: nask,
+    ago: years(4) - 20,
+    write: { 'src/rites/invocation.ts': invocation() },
   },
   {
     message: 'Drusk sets the rates, and keeps them',
@@ -293,6 +349,18 @@ export const DEMO_HISTORY: readonly DemoCommit[] = [
         '',
       ].join('\n'),
     },
+  },
+  {
+    message: 'Thurn is not invoked before a ledger entry',
+    author: gorvek,
+    ago: years(2) - months(2),
+    remove: ['src/rites/invocation.ts'],
+  },
+  {
+    message: 'Cut the old rites down to the ones still read',
+    author: gorvek,
+    ago: years(1) + months(9),
+    write: { 'src/legacy/oldrites.js': shortenedRites() },
   },
   {
     message: 'Double quotes throughout. Not authorship.',
