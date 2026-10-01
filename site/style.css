@@ -34,6 +34,27 @@
 }
 
 /*
+ * The torch's position, registered so it can be animated at all.
+ *
+ * An unregistered custom property has no type, so the browser cannot
+ * interpolate between two values of it and a transition on it does nothing —
+ * the mask simply snaps to each new coordinate. Declaring the syntax is what
+ * turns the jump into a glide, and it is the whole reason these two are here
+ * rather than written straight into the gradient.
+ */
+@property --tx {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 70%;
+}
+
+@property --ty {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 25%;
+}
+
+/*
  * The blade, lit by the pointer.
  *
  * The darkness is the mask's, not the image's: the picture is a lit blade on
@@ -59,8 +80,18 @@
   filter: contrast(1.35) brightness(0.72);
 
   /* Set by the pointer; these are the fallback until it moves. */
-  --tx: 70vw;
-  --ty: 25vh;
+  --tx: 70%;
+  --ty: 25%;
+
+  /*
+   * The light trails the pointer rather than teleporting to it. Linear, not
+   * eased: the torch is chasing a moving target and an ease-out reads as lag.
+   * Each update interrupts the one before it, which is what makes a stream of
+   * discrete coordinates look like one continuous sweep.
+   */
+  transition:
+    --tx 140ms linear,
+    --ty 140ms linear;
 
   /*
    * The gradient is written out at both properties rather than held in a
@@ -106,6 +137,14 @@
 @media (pointer: coarse), (hover: none) {
   .blade {
     opacity: 0.72;
+    /*
+     * Longer, because a finger arrives rather than travels: a tap is a single
+     * coordinate a long way from the last one, and at 140ms that still reads
+     * as a jump. At 320ms the light sweeps across to meet it.
+     */
+    transition:
+      --tx 320ms ease-out,
+      --ty 320ms ease-out;
     -webkit-mask-image: radial-gradient(
       circle 300px at var(--tx) var(--ty),
       #000 0%,
@@ -131,6 +170,7 @@
   .blade {
     --tx: 72% !important;
     --ty: 22% !important;
+    transition: none !important;
   }
 }
 
