@@ -97,25 +97,36 @@
 }
 
 /*
- * No pointer to carry a torch, so there is nothing to follow. A fixed, fainter
- * sliver in a corner rather than a blank screen — and rather than a blade that
- * a phone can never find.
+ * A finger is a pointer. Touch fires pointermove while it is down, so dragging
+ * or scrolling sweeps the torch across the steel, which is the same gesture
+ * the mouse makes and wants no special case. What a phone does need is a
+ * wider, brighter circle: the screen is small, often held in daylight, and a
+ * 240px window at the opacity a monitor wants is invisible out there.
  */
 @media (pointer: coarse), (hover: none) {
   .blade {
-    /*
-     * !important because the pointer writes --tx and --ty as inline styles,
-     * and an inline style beats a stylesheet rule. Without it the promise
-     * these two blocks make -- that the torch holds still -- would be a
-     * comment rather than a behaviour.
-     */
-    --tx: 78% !important;
-    --ty: 18% !important;
-    opacity: 0.3;
+    opacity: 0.72;
+    -webkit-mask-image: radial-gradient(
+      circle 300px at var(--tx) var(--ty),
+      #000 0%,
+      rgba(0, 0, 0, 0.75) 50%,
+      transparent 82%
+    );
+    mask-image: radial-gradient(
+      circle 300px at var(--tx) var(--ty),
+      #000 0%,
+      rgba(0, 0, 0, 0.75) 50%,
+      transparent 82%
+    );
   }
 }
 
-/* A light that chases the cursor is motion, and some people have asked for none. */
+/*
+ * A light that chases the pointer is motion, and some people have asked for
+ * none. !important because the pointer writes --tx and --ty as inline styles,
+ * and an inline style beats a stylesheet rule — without it this block would be
+ * a comment rather than a behaviour.
+ */
 @media (prefers-reduced-motion: reduce) {
   .blade {
     --tx: 72% !important;

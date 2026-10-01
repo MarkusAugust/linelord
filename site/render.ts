@@ -373,6 +373,7 @@ export function renderSite(report: Report): string {
   <body
     data-signals="{view: '${SCREENS[0]?.id}', tx: 50, ty: 30}"
     data-on:pointermove__window__passive__throttle.16ms="$tx = evt.clientX; $ty = evt.clientY"
+    data-on:pointerdown__window__passive="$tx = evt.clientX; $ty = evt.clientY"
   >
     <div
       class="blade"
