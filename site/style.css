@@ -62,14 +62,38 @@
   --tx: 70vw;
   --ty: 25vh;
 
-  --torch: radial-gradient(
+  /*
+   * The gradient is written out at both properties rather than held in a
+   * custom property and pulled in with var(). Safari has long been unreliable
+   * about an unregistered custom property standing in for a whole mask value,
+   * and the failure is not a missing torch but a missing mask — the full
+   * rectangle of steel over the page.
+   */
+  -webkit-mask-image: radial-gradient(
     circle 240px at var(--tx) var(--ty),
     #000 0%,
     rgba(0, 0, 0, 0.72) 45%,
     transparent 78%
   );
-  -webkit-mask-image: var(--torch);
-  mask-image: var(--torch);
+  mask-image: radial-gradient(
+    circle 240px at var(--tx) var(--ty),
+    #000 0%,
+    rgba(0, 0, 0, 0.72) 45%,
+    transparent 78%
+  );
+}
+
+/*
+ * A browser that cannot mask at all would otherwise show the whole plate of
+ * steel across the page. Nothing is better than that.
+ */
+@supports not (
+    (mask-image: radial-gradient(#000, transparent)) or
+    (-webkit-mask-image: radial-gradient(#000, transparent))
+  ) {
+  .blade {
+    display: none;
+  }
 }
 
 /*
@@ -79,25 +103,23 @@
  */
 @media (pointer: coarse), (hover: none) {
   .blade {
-    --torch: radial-gradient(
-      circle at 78% 18%,
-      #000 0%,
-      rgba(0, 0, 0, 0.5) 40%,
-      transparent 70%
-    );
-    opacity: 0.22;
+    /*
+     * !important because the pointer writes --tx and --ty as inline styles,
+     * and an inline style beats a stylesheet rule. Without it the promise
+     * these two blocks make -- that the torch holds still -- would be a
+     * comment rather than a behaviour.
+     */
+    --tx: 78% !important;
+    --ty: 18% !important;
+    opacity: 0.3;
   }
 }
 
 /* A light that chases the cursor is motion, and some people have asked for none. */
 @media (prefers-reduced-motion: reduce) {
   .blade {
-    --torch: radial-gradient(
-      circle at 72% 22%,
-      #000 0%,
-      rgba(0, 0, 0, 0.5) 40%,
-      transparent 70%
-    );
+    --tx: 72% !important;
+    --ty: 22% !important;
   }
 }
 
