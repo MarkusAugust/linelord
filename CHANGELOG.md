@@ -10,6 +10,13 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.13.0] — 2026-10-01
+
+The release where LineLord's numbers could be read by something other than a
+terminal, and a page was built from them.
+
 ### Added
 
 - **`--json` writes the analysis for another program to read**, and stops.
@@ -628,7 +635,8 @@ stored analysis is rebuilt once, because the database layout changed.
 Earlier releases predate this changelog. See the
 [releases page](https://github.com/MarkusAugust/linelord/releases).
 
-[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.12.4...HEAD
+[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/MarkusAugust/linelord/compare/v0.12.4...v0.13.0
 [0.12.4]: https://github.com/MarkusAugust/linelord/compare/v0.12.3...v0.12.4
 [0.12.3]: https://github.com/MarkusAugust/linelord/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/MarkusAugust/linelord/compare/v0.12.1...v0.12.2
