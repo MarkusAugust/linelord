@@ -238,7 +238,7 @@ longer exists.
 
 ### Draft a .mailmap, and About
 
-The fourth scroll is told of under [Who is one warrior](#who-is-one-warrior).
+The fourth scroll is told of under [One warrior, many names](#one-warrior-many-names).
 The fifth is Gorvek explaining himself.
 
 ## What the Numbers Are, and Are Not
@@ -300,7 +300,7 @@ with an explanation rather than quietly analysing without it: carrying on
 would hand the reformatting back to whoever ran it, on every screen, and store
 that in the scroll of memory as though it were right.
 
-## Who Is One Warrior
+## One Warrior, Many Names
 
 An email address is an identity. Two commits belong to the same warrior when
 git says they do, and nothing is inferred from names. That makes the merging

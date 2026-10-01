@@ -28,19 +28,23 @@ because the earlier answer was wrong.
   program has no menu entry that would mean anything. `--json` and
   `--write-mailmap` together are refused rather than resolved by order.
 
+- **A demo page, under `site/`.** `bun run site` builds the fixture
+  repository, analyses it with `--json --history` and writes a static page from
+  that report. It is not a web interface to LineLord: nothing is analysed when
+  the page loads, and there is no server. It shows what the command-line tool
+  reports, with the numbers read at build time.
+
 ### Changed
 
 - **`honestyNotes` moved from the Ink resources into the core**, so that the
   terminal and the JSON report say what the numbers are not in one set of
   words rather than two. Nothing on any screen changed.
 
-### Added
-
-- **A demo page, under `site/`.** `bun run site` builds the fixture
-  repository, analyses it with `--json --history` and writes a static page from
-  that report. It is not a web interface to LineLord: nothing is analysed when
-  the page loads, and there is no server. It shows what the command-line tool
-  reports, with the numbers read at build time.
+- **The README section "Who Is One Warrior" is now "One Warrior, Many Names".**
+  It reads as the question the section answers, which works as a heading and
+  not as a label — and the demo page needed it as a label. The anchor moves
+  with it, so a link to `#who-is-one-warrior` no longer resolves; the one in
+  this repository was updated. Nothing the section says has changed.
 
 ### Fixed
 
