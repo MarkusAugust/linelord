@@ -21,6 +21,14 @@ import { halfLifeOf } from '../src/core/longevity'
 import type { Report } from '../src/core/report'
 
 /*
+ * The blade behind the page is lit by the pointer and by nothing else. Two
+ * signals carry the cursor, a radial mask in the stylesheet decides how much
+ * of the steel that lets through, and the guards that matter — no pointer, a
+ * viewer who asked for less motion, the light theme — are media queries there
+ * rather than conditions here. Datastar's own `data-match-media` would have
+ * expressed them, but it is a Pro attribute and this page loads the free
+ * bundle.
+ *
  * The attribute forms are the ones Datastar 1.0.4 actually defines:
  * `data-signals="{name: value}"` (or `data-signals:name`), and `data-on:click`
  * with a colon. `data-signals-view` and `data-on-click` are not Datastar
@@ -362,7 +370,15 @@ export function renderSite(report: Report): string {
     <link rel="stylesheet" href="style.css" />
     <script type="module" src="${DATASTAR}"></script>
   </head>
-  <body data-signals="{view: '${SCREENS[0]?.id}'}">
+  <body
+    data-signals="{view: '${SCREENS[0]?.id}', tx: 50, ty: 30}"
+    data-on:pointermove__window__passive__throttle.16ms="$tx = evt.clientX; $ty = evt.clientY"
+  >
+    <div
+      class="blade"
+      aria-hidden="true"
+      data-style="{'--tx': $tx + 'px', '--ty': $ty + 'px'}"
+    ></div>
     <main>
       ${renderHeader(report)}
       ${menu()}

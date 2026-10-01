@@ -33,6 +33,74 @@
   box-sizing: border-box;
 }
 
+/*
+ * The blade, lit by the pointer.
+ *
+ * The darkness is the mask's, not the image's: the picture is a lit blade on
+ * black, and what makes it "barely there" is that only a circle of it is ever
+ * let through. Opacity is capped because the steel carries real highlights and
+ * the tables have to stay readable over them.
+ */
+.blade {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("blade.jpg");
+  background-size: cover;
+  background-position: center;
+  opacity: 0.38;
+
+  /* Set by the pointer; these are the fallback until it moves. */
+  --tx: 70vw;
+  --ty: 25vh;
+
+  --torch: radial-gradient(
+    circle 380px at var(--tx) var(--ty),
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 40%,
+    transparent 72%
+  );
+  -webkit-mask-image: var(--torch);
+  mask-image: var(--torch);
+}
+
+/*
+ * No pointer to carry a torch, so there is nothing to follow. A fixed, fainter
+ * sliver in a corner rather than a blank screen — and rather than a blade that
+ * a phone can never find.
+ */
+@media (pointer: coarse), (hover: none) {
+  .blade {
+    --torch: radial-gradient(
+      circle at 78% 18%,
+      #000 0%,
+      rgba(0, 0, 0, 0.5) 40%,
+      transparent 70%
+    );
+    opacity: 0.22;
+  }
+}
+
+/* A light that chases the cursor is motion, and some people have asked for none. */
+@media (prefers-reduced-motion: reduce) {
+  .blade {
+    --torch: radial-gradient(
+      circle at 72% 22%,
+      #000 0%,
+      rgba(0, 0, 0, 0.5) 40%,
+      transparent 70%
+    );
+  }
+}
+
+/* Dark steel on pale paper is a smudge, not a blade. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .blade {
+    display: none;
+  }
+}
+
 body {
   margin: 0;
   padding: 0;
