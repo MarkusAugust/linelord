@@ -35,7 +35,7 @@ export const SCREENS = [
   { id: 'overview', label: 'Repository Overview' },
   { id: 'rankings', label: 'Brutal Barbarian Rankings' },
   { id: 'longevity', label: 'Code Longevity' },
-  { id: 'identity', label: 'Who Is One Warrior' },
+  { id: 'identity', label: 'One Warrior, Many Names' },
 ] as const
 
 /** Everything interpolated into the page goes through this. Named `escapeHtml`
@@ -346,7 +346,7 @@ export function renderSite(report: Report): string {
     panel('overview', 'Repository Overview', renderOverview(report)),
     panel('rankings', 'Brutal Barbarian Rankings', renderRankings(report)),
     panel('longevity', 'Code Longevity', renderLongevity(report)),
-    panel('identity', 'Who Is One Warrior', renderIdentity(report)),
+    panel('identity', 'One Warrior, Many Names', renderIdentity(report)),
   ].join('')
 
   return `<!doctype html>
