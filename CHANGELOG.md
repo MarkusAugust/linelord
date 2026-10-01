@@ -12,6 +12,76 @@ because the earlier answer was wrong.
 
 Nothing yet.
 
+## [0.13.0] — 2026-10-01
+
+The release where LineLord's numbers could be read by something other than a
+terminal, and a page was built from them.
+
+### Added
+
+- **`--json` writes the analysis for another program to read**, and stops.
+  This reverses a documented non-goal: the demo site needs LineLord's own
+  numbers from a fixture repository, and every way of getting them without an
+  output flag was a worse version of the flag. The payload carries a
+  `schemaVersion`, the revision it describes, the exclusion counts, every
+  contributor, the rankings, the longevity figures, the identity candidates
+  nothing merged, and the disclaimer the screens carry. With `--history` the
+  survival figures come with it. Progress goes to standard error so standard
+  output is the report alone. No number moved: every field is derived by the
+  same functions the screens call.
+
+  It is the only thing LineLord does without drawing a screen, and the only
+  flag exempt from also being reachable from the menu — a dump for another
+  program has no menu entry that would mean anything. `--json` and
+  `--write-mailmap` together are refused rather than resolved by order.
+
+- **A demo page, under `site/`.** `bun run site` builds the fixture
+  repository, analyses it with `--json --history` and writes a static page from
+  that report. It is not a web interface to LineLord: nothing is analysed when
+  the page loads, and there is no server. It shows what the command-line tool
+  reports, with the numbers read at build time.
+
+### Changed
+
+- **`honestyNotes` moved from the Ink resources into the core**, so that the
+  terminal and the JSON report say what the numbers are not in one set of
+  words rather than two. Nothing on any screen changed.
+
+- **The README section "Who Is One Warrior" is now "One Warrior, Many Names".**
+  It reads as the question the section answers, which works as a heading and
+  not as a label — and the demo page needed it as a label. The anchor moves
+  with it, so a link to `#who-is-one-warrior` no longer resolves; the one in
+  this repository was updated. Nothing the section says has changed.
+
+### Fixed
+
+- **The Code Longevity screen and anything else reading the numbers now agree
+  about the half-life.** Whether a half-life is measured, outlasted the history,
+  or is simply unknown was decided inside the terminal screen, so a second
+  reader of the same figures — the JSON report, and the page built from it —
+  showed a dash where the screen said "> 3y 4m". A dash claims nothing is
+  known; "> 3y 4m" says the work outlived everything the history watched. The
+  rule is `halfLifeOf` in the core now, and both read it. The screen says what
+  it always said.
+
+- **Contributors the present has forgotten reach the report.** Which warriors
+  get a row was also decided in the terminal screen, so a reader of the JSON
+  saw fewer warriors than the terminal did. `withForgottenContributors` is in
+  the core, and the report carries those rows with `null` ages rather than a
+  zero that would sort as the newest code in the repository.
+
+- **A contributor the present has forgotten is named.** With `--history`,
+  somebody whose every line has since been rewritten gets a row of their own —
+  they are precisely who the history exists to show. That row was drawn without
+  a name or an address, so it showed nobody.
+
+  The walk writes those contributors to the stored analysis, but the analysis
+  the screens read had been loaded before the walk ran, so the name was in the
+  database and not in the value doing the naming. It is read again once the
+  walk is done, which costs one query beside a walk that has just spent
+  minutes. No number moved: the rows, the survival rates and the half-lives
+  were all correct already.
+
 ## [0.12.4] — 2026-09-26
 
 The release where the quotes became Gallowmark's too.
@@ -565,7 +635,8 @@ stored analysis is rebuilt once, because the database layout changed.
 Earlier releases predate this changelog. See the
 [releases page](https://github.com/MarkusAugust/linelord/releases).
 
-[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.12.4...HEAD
+[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/MarkusAugust/linelord/compare/v0.12.4...v0.13.0
 [0.12.4]: https://github.com/MarkusAugust/linelord/compare/v0.12.3...v0.12.4
 [0.12.3]: https://github.com/MarkusAugust/linelord/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/MarkusAugust/linelord/compare/v0.12.1...v0.12.2

@@ -26,6 +26,8 @@ export const CLI_HELP = `
 ║                    revs does (repeatable)                    ║
 ║   --write-mailmap  Draft a .mailmap from the guesses         ║
 ║                    (also on the menu once LineLord starts)   ║
+║   --json           Write the analysis as JSON and stop,      ║
+║                    for another program to read               ║
 ║   --help           Show this help                            ║
 ║                                                              ║
 ║ EXAMPLES:                                                    ║

@@ -1,0 +1,10 @@
+# The demo page. `site` regenerates the fixture repository, analyses it with
+# --json --history, and writes the page from the report — so the numbers are
+# LineLord's own, read at build time, and the commit dates are resolved against
+# the moment of the build rather than drifting with the calendar.
+[build]
+  command = "bun run site"
+  publish = "site/dist"
+
+[build.environment]
+  BUN_VERSION = "1.3.14"

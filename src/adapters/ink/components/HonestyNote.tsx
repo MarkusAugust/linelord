@@ -1,5 +1,5 @@
 import { Box, Text } from 'ink'
-import { HONESTY_NOTES, type HonestyTopic } from '../resources/honestyNotes'
+import { HONESTY_NOTES, type HonestyTopic } from '../../../core/honestyNotes'
 
 type HonestyNoteProps = {
   topic: HonestyTopic

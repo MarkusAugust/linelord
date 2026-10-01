@@ -11,8 +11,9 @@ import {
   removeCacheFor,
 } from '../adapters/sqlite/cacheMaintenance'
 import { DEFAULT_CONCURRENCY } from '../core/concurrency'
-import { createLineLord } from '../core/lineLord'
+import { createLineLord, type ProgressReport } from '../core/lineLord'
 import { writeMailmap } from '../core/mailmap'
+import { buildReport } from '../core/report'
 import { DEFAULT_MAX_SNAPSHOTS } from '../core/snapshots'
 import { CLI_HELP } from './cliHelp'
 import {
@@ -72,6 +73,10 @@ const cli = meow(CLI_HELP, {
       default: false,
     },
     writeMailmap: {
+      type: 'boolean',
+      default: false,
+    },
+    json: {
       type: 'boolean',
       default: false,
     },
@@ -218,6 +223,60 @@ if (cli.flags.clearCache) {
       ? `⚔️  Forgot the stored analysis of ${repoPath}.`
       : `⚔️  Nothing was stored for ${repoPath}.`,
   )
+  process.exit(0)
+}
+
+// Two non-interactive paths that both end the program, so asking for both is
+// asking for two different things at once. Refused rather than resolved by
+// declaration order: silently dropping one is how a flag gets documented for a
+// year while never doing anything.
+if (cli.flags.json && cli.flags.writeMailmap) {
+  exitWithError(
+    '--json and --write-mailmap cannot be used together.',
+    '--json reports the analysis; --write-mailmap changes a file. Run them separately.',
+  )
+}
+
+/**
+ * The analysis as JSON, for another program to read -- the demo site is built
+ * from it. Progress goes to stderr so that stdout is the report and nothing
+ * else, which is what lets a caller pipe it straight into a parser.
+ */
+if (cli.flags.json) {
+  const packageJson = require('../../package.json')
+  const service = createLineLord(ports, repoPath, thresholdBytes, {
+    useCache: cli.flags.cache,
+    refresh: cli.flags.refresh,
+    authorPolicy: cli.flags.fuzzyAuthors ? 'loose' : 'strict',
+    ignoreRevisions: cli.flags.ignoreRev,
+    concurrency: cli.flags.concurrency,
+    history,
+  })
+
+  let lastNote = ''
+  const note: ProgressReport = (_current, _total, message) => {
+    if (message === lastNote) return
+    lastNote = message
+    process.stderr.write(`${message}\n`)
+  }
+
+  await service.initialize(note)
+  if (service.wantsHistory()) {
+    await service.gatherHistory(note)
+  }
+
+  const report = buildReport(service.getAnalysis(), {
+    now: new Date(),
+    version: packageJson.version,
+    repoPath,
+    context: service.getAnalysisContext(),
+    identityMerges: service.getIdentityMerges(),
+    history: service.wantsHistory() ? service.getHistory() : null,
+    failures: service.getFailures(),
+  })
+
+  service.close()
+  process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
   process.exit(0)
 }
 
