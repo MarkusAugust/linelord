@@ -49,17 +49,24 @@
   background-image: url("blade.jpg");
   background-size: cover;
   background-position: center;
-  opacity: 0.38;
+  /*
+   * A wide, soft, dim torch reads as haze rather than steel: the grain is lost
+   * to the falloff long before the eye finds it. A tighter circle with a
+   * harder edge and more contrast shows the forge marks, and keeps the lit
+   * area small enough that the text it crosses stays legible.
+   */
+  opacity: 0.58;
+  filter: contrast(1.35) brightness(0.72);
 
   /* Set by the pointer; these are the fallback until it moves. */
   --tx: 70vw;
   --ty: 25vh;
 
   --torch: radial-gradient(
-    circle 380px at var(--tx) var(--ty),
+    circle 240px at var(--tx) var(--ty),
     #000 0%,
-    rgba(0, 0, 0, 0.55) 40%,
-    transparent 72%
+    rgba(0, 0, 0, 0.72) 45%,
+    transparent 78%
   );
   -webkit-mask-image: var(--torch);
   mask-image: var(--torch);
