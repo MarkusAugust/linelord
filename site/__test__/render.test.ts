@@ -169,7 +169,7 @@ describe('renderSite', () => {
     // The forms Datastar 1.0.4 defines. A dash where the colon belongs is not
     // an attribute Datastar knows, and it fails silently: no error, no signal,
     // and every panel hidden.
-    expect(html).toContain(`data-signals="{view: '${SCREENS[0]?.id}'}"`)
+    expect(html).toContain(`data-signals="{view: '${SCREENS[0]?.id}'`)
     expect(html).not.toMatch(/data-signals-|data-on-click/)
   })
 
@@ -214,6 +214,16 @@ describe('renderSite', () => {
     expect(html).toContain('gorvek@kell.realm')
     expect(html).toContain('the same name')
     expect(html).toMatch(/nothing was merged/i)
+  })
+
+  it('answers whether writing the file merges them, because the page is asked', () => {
+    const html = renderSite(sampleReport())
+
+    // Not by LineLord, and then yes by git on the next run. A page that says
+    // only the first half reads as "nothing happens", which is wrong.
+    expect(html).toMatch(/so are they merged/i)
+    expect(html).toMatch(/one warrior/i)
+    expect(html).toContain('git blame')
   })
 
   it('says the reformatting commit was looked past', () => {
@@ -322,6 +332,29 @@ describe('renderSite', () => {
     // A dash here would claim the history knows nothing, when what it knows is
     // that the work outlived everything it watched.
     expect(html).toContain('&gt; 3y 4m')
+  })
+
+  it('lights the blade from the pointer, and hides it from a screen reader', () => {
+    const html = renderSite(sampleReport())
+
+    expect(html).toContain('class="blade"')
+    expect(html).toContain('aria-hidden="true"')
+    // The custom properties the stylesheet positions the torch with. Quoted
+    // keys, because an unquoted `--tx` is not a property name Datastar's key
+    // handling would leave alone.
+    expect(html).toContain(
+      `data-style="{'--tx': $tx + 'px', '--ty': $ty + 'px'}"`,
+    )
+    expect(html).toContain('tx: 50')
+    expect(html).toContain('ty: 30')
+  })
+
+  it('throttles the pointer, and listens passively, so scrolling is not held up', () => {
+    const html = renderSite(sampleReport())
+
+    expect(html).toMatch(
+      /data-on:pointermove__window__passive__throttle\.16ms="\$tx = evt\.clientX; \$ty = evt\.clientY"/,
+    )
   })
 
   it('escapes what it puts in the page, so a name cannot close a tag', () => {

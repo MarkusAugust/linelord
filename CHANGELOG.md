@@ -10,7 +10,16 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **The `.mailmap` draft says what writing it actually does.** Both the README
+  and the demo page described drafting the file and stopped there, which reads
+  as though nothing happens. The answer is in two steps and the order is the
+  point: LineLord never merges anybody, before or after; but `.mailmap` is
+  git's own file and `git blame` applies it before LineLord sees a line, so
+  from the next run the two are one warrior because git says so. Both now say
+  that, and say that the file is hashed into the cache fingerprint, so writing
+  it reads the repository again rather than serving the old numbers.
 
 ## [0.13.0] — 2026-10-01
 

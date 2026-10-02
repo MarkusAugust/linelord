@@ -33,6 +33,186 @@
   box-sizing: border-box;
 }
 
+/*
+ * The torch's position, registered so it can be animated at all.
+ *
+ * An unregistered custom property has no type, so the browser cannot
+ * interpolate between two values of it and a transition on it does nothing —
+ * the mask simply snaps to each new coordinate. Declaring the syntax is what
+ * turns the jump into a glide, and it is the whole reason these two are here
+ * rather than written straight into the gradient.
+ */
+@property --tx {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 70%;
+}
+
+@property --ty {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 25%;
+}
+
+/*
+ * The blade, lit by the pointer.
+ *
+ * The darkness is the mask's, not the image's: the picture is a lit blade on
+ * black, and what makes it "barely there" is that only a circle of it is ever
+ * let through. Opacity is capped because the steel carries real highlights and
+ * the tables have to stay readable over them.
+ */
+.blade {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("blade.jpg");
+  background-size: cover;
+  background-position: center;
+  /*
+   * A wide, soft, dim torch reads as haze rather than steel: the grain is lost
+   * to the falloff long before the eye finds it. A tighter circle with a
+   * harder edge and more contrast shows the forge marks, and keeps the lit
+   * area small enough that the text it crosses stays legible.
+   */
+  /*
+   * Held as variables so the light theme can swap the treatment without
+   * restating the geometry below it.
+   */
+  --blade-opacity: 0.3;
+  --blade-filter: contrast(1.35) brightness(0.72);
+  --blade-blend: normal;
+
+  opacity: var(--blade-opacity);
+  filter: var(--blade-filter);
+  mix-blend-mode: var(--blade-blend);
+
+  /* Set by the pointer; these are the fallback until it moves. */
+  --tx: 70%;
+  --ty: 25%;
+
+  /*
+   * The light trails the pointer rather than teleporting to it. Linear, not
+   * eased: the torch is chasing a moving target and an ease-out reads as lag.
+   * Each update interrupts the one before it, which is what makes a stream of
+   * discrete coordinates look like one continuous sweep.
+   */
+  transition:
+    --tx 140ms linear,
+    --ty 140ms linear;
+
+  /*
+   * The gradient is written out at both properties rather than held in a
+   * custom property and pulled in with var(). Safari has long been unreliable
+   * about an unregistered custom property standing in for a whole mask value,
+   * and the failure is not a missing torch but a missing mask — the full
+   * rectangle of steel over the page.
+   */
+  -webkit-mask-image: radial-gradient(
+    circle 240px at var(--tx) var(--ty),
+    #000 0%,
+    rgba(0, 0, 0, 0.72) 45%,
+    transparent 78%
+  );
+  mask-image: radial-gradient(
+    circle 240px at var(--tx) var(--ty),
+    #000 0%,
+    rgba(0, 0, 0, 0.72) 45%,
+    transparent 78%
+  );
+}
+
+/*
+ * A browser that cannot mask at all would otherwise show the whole plate of
+ * steel across the page. Nothing is better than that.
+ */
+@supports not (
+    (mask-image: radial-gradient(#000, transparent)) or
+    (-webkit-mask-image: radial-gradient(#000, transparent))
+  ) {
+  .blade {
+    display: none;
+  }
+}
+
+/*
+ * A finger is a pointer. Touch fires pointermove while it is down, so dragging
+ * or scrolling sweeps the torch across the steel, which is the same gesture
+ * the mouse makes and wants no special case. What a phone does need is a
+ * wider, brighter circle: the screen is small, often held in daylight, and a
+ * 240px window at the opacity a monitor wants is invisible out there.
+ */
+@media (pointer: coarse), (hover: none) {
+  .blade {
+    /*
+     * Only the circle widens here. This block used to set `opacity` straight,
+     * which beat the themed `opacity: var(--blade-opacity)` above it — so a
+     * phone in light mode wore the highest opacity in the stylesheet instead
+     * of the lowest. A theme's treatment has to survive the device's.
+     */
+    /*
+     * Longer, because a finger arrives rather than travels: a tap is a single
+     * coordinate a long way from the last one, and at 140ms that still reads
+     * as a jump. At 320ms the light sweeps across to meet it.
+     */
+    transition:
+      --tx 320ms ease-out,
+      --ty 320ms ease-out;
+    -webkit-mask-image: radial-gradient(
+      circle 300px at var(--tx) var(--ty),
+      #000 0%,
+      rgba(0, 0, 0, 0.75) 50%,
+      transparent 82%
+    );
+    mask-image: radial-gradient(
+      circle 300px at var(--tx) var(--ty),
+      #000 0%,
+      rgba(0, 0, 0, 0.75) 50%,
+      transparent 82%
+    );
+  }
+}
+
+/*
+ * A light that chases the pointer is motion, and some people have asked for
+ * none. !important because the pointer writes --tx and --ty as inline styles,
+ * and an inline style beats a stylesheet rule — without it this block would be
+ * a comment rather than a behaviour.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .blade {
+    --tx: 72% !important;
+    --ty: 22% !important;
+    transition: none !important;
+  }
+}
+
+/*
+ * Light mode gets the same steel read as a shadow rather than a gleam.
+ *
+ * Inverted, the picture's black ground turns white and disappears into the
+ * paper, and the lit bevel becomes the dark mark the torch finds; multiplied,
+ * it darkens the page where the blade is instead of laying grey over it. This
+ * block used to be `display: none`, on the untested assumption that dark steel
+ * on pale paper could only be a smudge — which meant every visitor whose
+ * device prefers light never saw the effect at all.
+ */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .blade {
+    --blade-opacity: 0.2;
+    --blade-filter: invert(1) contrast(1.2) brightness(1.02);
+    --blade-blend: multiply;
+  }
+}
+
+/* The same, for a page told explicitly which theme to wear. */
+:root[data-theme="light"] .blade {
+  --blade-opacity: 0.2;
+  --blade-filter: invert(1) contrast(1.2) brightness(1.02);
+  --blade-blend: multiply;
+}
+
 body {
   margin: 0;
   padding: 0;

@@ -21,6 +21,14 @@ import { halfLifeOf } from '../src/core/longevity'
 import type { Report } from '../src/core/report'
 
 /*
+ * The blade behind the page is lit by the pointer and by nothing else. Two
+ * signals carry the cursor, a radial mask in the stylesheet decides how much
+ * of the steel that lets through, and the guards that matter — no pointer, a
+ * viewer who asked for less motion, the light theme — are media queries there
+ * rather than conditions here. Datastar's own `data-match-media` would have
+ * expressed them, but it is a Pro attribute and this page loads the free
+ * bundle.
+ *
  * The attribute forms are the ones Datastar 1.0.4 actually defines:
  * `data-signals="{name: value}"` (or `data-signals:name`), and `data-on:click`
  * with a colon. `data-signals-view` and `data-on-click` are not Datastar
@@ -283,11 +291,20 @@ function renderIdentity(report: Report): string {
     <ul class="candidates">${candidates}</ul>
     <p class="lede">
       <code>--write-mailmap</code>, or <kbd>w</kbd> on that screen, drafts these
-      into a <code>.mailmap</code> — the file git itself reads. They are guesses,
-      and the guessing is wrong often enough to matter, so read them before
-      committing them:
+      into a <code>.mailmap</code>. They are guesses, and the guessing is wrong
+      often enough to matter, so read them before committing them:
     </p>
-    <pre class="draft">${draft}</pre>`
+    <pre class="draft">${draft}</pre>
+    <p class="lede">
+      <strong>So are they merged?</strong> Not by LineLord, which counts
+      addresses before you write the file and after. But <code>.mailmap</code>
+      is git's own file, and <code>git blame</code> applies it
+      <em>before</em> LineLord sees a single line — so from the next run the two
+      are one warrior, with one row and one share, because git says they are the
+      same person rather than because a heuristic guessed it. The decision lives
+      in a file you wrote, where <code>git shortlog</code> reads it too, and a
+      wrong guess is a line to delete rather than a verdict to argue with.
+    </p>`
 }
 
 function renderHeader(report: Report): string {
@@ -362,7 +379,16 @@ export function renderSite(report: Report): string {
     <link rel="stylesheet" href="style.css" />
     <script type="module" src="${DATASTAR}"></script>
   </head>
-  <body data-signals="{view: '${SCREENS[0]?.id}'}">
+  <body
+    data-signals="{view: '${SCREENS[0]?.id}', tx: 50, ty: 30}"
+    data-on:pointermove__window__passive__throttle.16ms="$tx = evt.clientX; $ty = evt.clientY"
+    data-on:pointerdown__window__passive="$tx = evt.clientX; $ty = evt.clientY"
+  >
+    <div
+      class="blade"
+      aria-hidden="true"
+      data-style="{'--tx': $tx + 'px', '--ty': $ty + 'px'}"
+    ></div>
     <main>
       ${renderHeader(report)}
       ${menu()}

@@ -372,8 +372,23 @@ On the menu it is `w` that writes; from the command line the lines are
 appended and each one reported, `+` for added and `=` for already there.
 Nothing is ever overwritten or removed: entries you wrote by hand stay exactly
 as they are, and a wrong guess is a line to delete, not a decision to undo.
-Once a line is in `.mailmap`, git applies it and the guess is never made
-again.
+### So are they merged, or not?
+
+Both, in order, and the order is the point. LineLord never merges anybody: it
+counts addresses, before you write the file and after. But `.mailmap` is git's
+own file, and `git blame` applies it *before* LineLord sees a single line — so
+from the next run the two are one warrior, with one row, one share and one
+title, because git says they are the same person and not because a heuristic
+guessed it.
+
+That is why the merging is explicit and reviewable rather than clever. The
+decision lives in a file you wrote, in your repository, where `git shortlog`
+and every other tool reads it too — and a wrong guess is a line to delete
+rather than a verdict to argue with.
+
+The stored analysis notices. `.mailmap` is hashed into the cache fingerprint,
+so adding, changing or deleting it reads the repository again rather than
+serving numbers worked out when the file said something else.
 
 **Read what it wrote before committing it.** The guessing is
 `--fuzzy-authors` — the old behaviour, which matched names and addresses that
