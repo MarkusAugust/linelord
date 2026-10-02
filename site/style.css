@@ -80,7 +80,7 @@
    * Held as variables so the light theme can swap the treatment without
    * restating the geometry below it.
    */
-  --blade-opacity: 0.58;
+  --blade-opacity: 0.3;
   --blade-filter: contrast(1.35) brightness(0.72);
   --blade-blend: normal;
 
@@ -145,7 +145,12 @@
  */
 @media (pointer: coarse), (hover: none) {
   .blade {
-    opacity: 0.72;
+    /*
+     * Only the circle widens here. This block used to set `opacity` straight,
+     * which beat the themed `opacity: var(--blade-opacity)` above it — so a
+     * phone in light mode wore the highest opacity in the stylesheet instead
+     * of the lowest. A theme's treatment has to survive the device's.
+     */
     /*
      * Longer, because a finger arrives rather than travels: a tap is a single
      * coordinate a long way from the last one, and at 140ms that still reads
@@ -195,7 +200,7 @@
  */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) .blade {
-    --blade-opacity: 0.42;
+    --blade-opacity: 0.2;
     --blade-filter: invert(1) contrast(1.2) brightness(1.02);
     --blade-blend: multiply;
   }
@@ -203,7 +208,7 @@
 
 /* The same, for a page told explicitly which theme to wear. */
 :root[data-theme="light"] .blade {
-  --blade-opacity: 0.42;
+  --blade-opacity: 0.2;
   --blade-filter: invert(1) contrast(1.2) brightness(1.02);
   --blade-blend: multiply;
 }
