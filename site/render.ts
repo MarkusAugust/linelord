@@ -291,11 +291,20 @@ function renderIdentity(report: Report): string {
     <ul class="candidates">${candidates}</ul>
     <p class="lede">
       <code>--write-mailmap</code>, or <kbd>w</kbd> on that screen, drafts these
-      into a <code>.mailmap</code> — the file git itself reads. They are guesses,
-      and the guessing is wrong often enough to matter, so read them before
-      committing them:
+      into a <code>.mailmap</code>. They are guesses, and the guessing is wrong
+      often enough to matter, so read them before committing them:
     </p>
-    <pre class="draft">${draft}</pre>`
+    <pre class="draft">${draft}</pre>
+    <p class="lede">
+      <strong>So are they merged?</strong> Not by LineLord, which counts
+      addresses before you write the file and after. But <code>.mailmap</code>
+      is git's own file, and <code>git blame</code> applies it
+      <em>before</em> LineLord sees a single line — so from the next run the two
+      are one warrior, with one row and one share, because git says they are the
+      same person rather than because a heuristic guessed it. The decision lives
+      in a file you wrote, where <code>git shortlog</code> reads it too, and a
+      wrong guess is a line to delete rather than a verdict to argue with.
+    </p>`
 }
 
 function renderHeader(report: Report): string {

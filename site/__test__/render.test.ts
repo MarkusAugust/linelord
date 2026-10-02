@@ -216,6 +216,16 @@ describe('renderSite', () => {
     expect(html).toMatch(/nothing was merged/i)
   })
 
+  it('answers whether writing the file merges them, because the page is asked', () => {
+    const html = renderSite(sampleReport())
+
+    // Not by LineLord, and then yes by git on the next run. A page that says
+    // only the first half reads as "nothing happens", which is wrong.
+    expect(html).toMatch(/so are they merged/i)
+    expect(html).toMatch(/one warrior/i)
+    expect(html).toContain('git blame')
+  })
+
   it('says the reformatting commit was looked past', () => {
     const html = renderSite(sampleReport())
 
