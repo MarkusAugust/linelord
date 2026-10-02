@@ -76,8 +76,17 @@
    * harder edge and more contrast shows the forge marks, and keeps the lit
    * area small enough that the text it crosses stays legible.
    */
-  opacity: 0.58;
-  filter: contrast(1.35) brightness(0.72);
+  /*
+   * Held as variables so the light theme can swap the treatment without
+   * restating the geometry below it.
+   */
+  --blade-opacity: 0.58;
+  --blade-filter: contrast(1.35) brightness(0.72);
+  --blade-blend: normal;
+
+  opacity: var(--blade-opacity);
+  filter: var(--blade-filter);
+  mix-blend-mode: var(--blade-blend);
 
   /* Set by the pointer; these are the fallback until it moves. */
   --tx: 70%;
@@ -174,11 +183,29 @@
   }
 }
 
-/* Dark steel on pale paper is a smudge, not a blade. */
+/*
+ * Light mode gets the same steel read as a shadow rather than a gleam.
+ *
+ * Inverted, the picture's black ground turns white and disappears into the
+ * paper, and the lit bevel becomes the dark mark the torch finds; multiplied,
+ * it darkens the page where the blade is instead of laying grey over it. This
+ * block used to be `display: none`, on the untested assumption that dark steel
+ * on pale paper could only be a smudge — which meant every visitor whose
+ * device prefers light never saw the effect at all.
+ */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) .blade {
-    display: none;
+    --blade-opacity: 0.42;
+    --blade-filter: invert(1) contrast(1.2) brightness(1.02);
+    --blade-blend: multiply;
   }
+}
+
+/* The same, for a page told explicitly which theme to wear. */
+:root[data-theme="light"] .blade {
+  --blade-opacity: 0.42;
+  --blade-filter: invert(1) contrast(1.2) brightness(1.02);
+  --blade-blend: multiply;
 }
 
 body {
