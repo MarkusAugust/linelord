@@ -427,3 +427,31 @@ footer {
 a {
   color: var(--steel);
 }
+
+/* The Søbernetics mark. Small on purpose: it says who made this, it is not a headline. The
+   letters take the colour of the text around them and the slashed O falls back to the brand red,
+   since this page carries its own stylesheet and none of Fristil's tokens. */
+.sobernetics {
+  display: inline-block;
+  margin-top: 1.5rem;
+  color: inherit;
+  opacity: 0.5;
+  transition: opacity 120ms ease;
+}
+
+.sobernetics:hover,
+.sobernetics:focus-visible {
+  opacity: 1;
+}
+
+.sobernetics svg {
+  display: block;
+  height: 18px;
+  width: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sobernetics {
+    transition: none;
+  }
+}
