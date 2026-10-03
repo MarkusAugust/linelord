@@ -508,7 +508,15 @@ through, the shape of the code, the theme, and how a release is cut.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
+Copyright (C) 2026 August Søberg-Klyver.
+
 LineLord is open source software released under the **GNU General Public License v3.0 (GPL-3)**.
+
+LineLord is free software: you can redistribute it and/or modify it under the terms of the GNU
+General Public License as published by the Free Software Foundation, version 3. It is distributed
+in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [LICENSE](LICENSE) file for the full
+terms.
 
 ---
 
@@ -524,3 +532,12 @@ LineLord stands on the shoulders of these mighty open source warriors:
 - **[Biome](https://biomejs.dev/)** and **[TypeScript](https://www.typescriptlang.org/)** — the forge
 
 _All dependencies use permissive licenses and remain under their original terms._
+
+---
+
+<a href="https://sobernetics.no">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/sobernetics-dark.svg">
+    <img alt="Søbernetics" src=".github/sobernetics-light.svg" height="18">
+  </picture>
+</a>

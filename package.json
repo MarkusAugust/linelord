@@ -6,7 +6,7 @@
   "type": "module",
   "description": "Analyze git blame data with developer contribution statistics",
   "license": "GPL-3.0-only",
-  "author": "MarkusAugust",
+  "author": "August Søberg-Klyver",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MarkusAugust/linelord.git"

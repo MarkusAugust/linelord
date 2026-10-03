@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 /**
  * The demo page, written from one `--json` report.
  *
@@ -337,6 +339,11 @@ function renderHeader(report: Report): string {
     </header>`
 }
 
+const SOBERNETICS = readFileSync(
+  new URL('sobernetics.svg', import.meta.url),
+  'utf8',
+)
+
 function renderFooter(report: Report): string {
   return `
     <footer>
@@ -355,6 +362,7 @@ brew install linelord</pre>
         rewritten. Source at
         <a href="https://github.com/MarkusAugust/linelord">github.com/MarkusAugust/linelord</a>.
       </p>
+      <a class="sobernetics" href="https://sobernetics.no">${SOBERNETICS}</a>
     </footer>`
 }
 

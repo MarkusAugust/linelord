@@ -427,3 +427,28 @@ footer {
 a {
   color: var(--steel);
 }
+
+/* The Søbernetics mark. Small on purpose, and small is the whole of how it stays quiet: the
+   opacity this first had took it below the contrast required of a link. Subtlety is size, not a
+   washed-out colour. The red is Søbernetics' own and does not follow this page's palette. */
+.sobernetics {
+  --sobernetics-accent: #f44851;
+  display: inline-block;
+  margin-top: 1.5rem;
+  color: var(--ink-dim);
+}
+
+@media (prefers-color-scheme: light) {
+  .sobernetics { --sobernetics-accent: #c8102e; }
+}
+
+.sobernetics:hover,
+.sobernetics:focus-visible {
+  color: var(--ink);
+}
+
+.sobernetics svg {
+  display: block;
+  height: 18px;
+  width: auto;
+}
