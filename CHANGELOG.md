@@ -10,6 +10,11 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+## [1.0.0-rc.3] — 2026-10-04
+
+The third release candidate for 1.0.0: The Warrior's Guide explains the
+rankings, and only the top few are crowned.
+
 ### Changed
 
 - **Only the top few are crowned, and somebody is always a peasant.** The
@@ -790,7 +795,8 @@ stored analysis is rebuilt once, because the database layout changed.
 Earlier releases predate this changelog. See the
 [releases page](https://github.com/MarkusAugust/linelord/releases).
 
-[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v1.0.0-rc.2...HEAD
+[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v1.0.0-rc.3...HEAD
+[1.0.0-rc.3]: https://github.com/MarkusAugust/linelord/compare/v1.0.0-rc.2...v1.0.0-rc.3
 [1.0.0-rc.2]: https://github.com/MarkusAugust/linelord/compare/v1.0.0-rc.1...v1.0.0-rc.2
 [1.0.0-rc.1]: https://github.com/MarkusAugust/linelord/compare/v0.14.0...v1.0.0-rc.1
 [0.14.0]: https://github.com/MarkusAugust/linelord/compare/v0.13.0...v0.14.0
