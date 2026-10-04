@@ -518,6 +518,16 @@ in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the i
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [LICENSE](LICENSE) file for the full
 terms.
 
+It costs nothing, and every released version stays GPL-3: that permission cannot be withdrawn,
+not even by me. Run it on anything, including closed source, with no obligation at all. The
+obligation begins only if you pass a modified LineLord on to someone else.
+
+The name LineLord and the mark are not part of that grant. Fork the code freely; do not call the
+result LineLord.
+
+Contributions: issues are always welcome. Pull requests are taken after a conversation, and
+whoever contributes signs [CLA.md](CLA.md).
+
 ---
 
 ## Acknowledgments
