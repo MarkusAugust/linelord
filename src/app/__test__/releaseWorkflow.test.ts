@@ -160,14 +160,17 @@ describe('release workflow, with a native renderer and pre-releases', () => {
     )
   })
 
-  it('never points the Homebrew tap at a pre-release', () => {
-    // Every brew upgrade installs what the tap names. Guarded on the manual
-    // tag too, so a tap sync cannot be pointed at a release candidate either.
+  it('points the Homebrew tap at a pre-release too', () => {
+    // Release candidates reach users through brew upgrade, by the
+    // maintainer's choice; only GitHub's "latest" is kept for a final release.
     const condition = tapJob.slice(
       tapJob.indexOf('if: >-'),
       tapJob.indexOf('runs-on:'),
     )
-    expect(condition).toContain("!contains(inputs.tag || github.ref_name, '-')")
+    expect(condition).not.toContain(
+      "contains(inputs.tag || github.ref_name, '-')",
+    )
+    expect(condition).toContain("needs.release.result == 'success'")
   })
 })
 

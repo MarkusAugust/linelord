@@ -126,8 +126,9 @@ LineLord follows Semantic Versioning. A feature is a minor bump and a fix is a
 patch; from 1.0.0, a change that breaks something a person or a script relies
 on — the `--json` schema, a flag, a key — is a major bump. A pre-release is
 `X.Y.Z-rc.N`, starting at `rc.1`: the Release workflow marks a tag with a
-hyphen as a pre-release and never points the Homebrew tap at it. Releases are
-cut by the maintainer:
+hyphen as a pre-release and does not make it GitHub's latest release, but the
+Homebrew tap is updated for it like any other, so `brew upgrade` brings the
+release candidate. Releases are cut by the maintainer:
 
 1. On a branch, stamp the version and date over `## [Unreleased]` in
    `CHANGELOG.md`, add the compare links, leave `Unreleased` empty, and merge
@@ -138,7 +139,7 @@ cut by the maintainer:
    builds the macOS binaries on a macOS runner and the Linux ones on a Linux
    runner, starts the one each can and checks the other's architecture,
    publishes the GitHub release from a job that runs no other code, and
-   updates the Homebrew tap unless it is a pre-release.
+   updates the Homebrew tap.
    A change to the build is proven first by running the workflow by hand
    with `build_only`, which builds and smoke-tests without publishing.
 
