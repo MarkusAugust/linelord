@@ -10,22 +10,25 @@ import { C } from '../theme'
 const REPOSITORY = 'https://github.com/MarkusAugust/linelord'
 const SOBERNETICS = 'https://sobernetics.no'
 
-/** A two-column line: a term, and what it means. */
+/**
+ * A two-column line: a term, and what it means. The term's column is as wide
+ * as the longest name in its list needs; a list of marks (✅ ❌ •) needs only
+ * the mark and a space, and the text follows straight after.
+ */
 function Pair({
   term,
   meaning,
   colour = C.cyan,
+  width = 26,
 }: {
   term: string
   meaning: string
   colour?: string
+  width?: number
 }) {
   return (
     <box style={{ flexDirection: 'row', flexShrink: 0, paddingRight: 3 }}>
-      <text
-        fg={colour}
-        style={{ width: 26, flexShrink: 0 }}
-      >{`  ${term}`}</text>
+      <text fg={colour} style={{ width, flexShrink: 0 }}>{`  ${term}`}</text>
       <text fg={C.gray} style={{ flexGrow: 1, flexShrink: 1 }}>
         {meaning}
       </text>
@@ -106,44 +109,57 @@ export function About() {
           <Heading>📊 WHAT GETS COUNTED</Heading>
           <Pair
             term="✅"
+            width={5}
             meaning="lines alive in HEAD, in text files git tracks"
             colour={C.green}
           />
           <Pair
             term="❌"
+            width={5}
             meaning="blank lines, and lines of only whitespace"
             colour={C.red}
           />
           <Pair
             term="❌"
+            width={5}
             meaning="binary files, and files over the threshold: 50 KB, or -t"
             colour={C.red}
           />
           <Pair
             term="❌"
+            width={5}
             meaning="lock files, minified and bundled code, test snapshots, compiled output, archives and generated directories"
             colour={C.red}
           />
-          <Pair term="❌" meaning="changes not yet committed" colour={C.red} />
+          <Pair
+            term="❌"
+            width={5}
+            meaning="changes not yet committed"
+            colour={C.red}
+          />
 
           <Heading>⚡ BATTLE-TESTED WISDOM</Heading>
           <Pair
             term="•"
+            width={4}
             meaning="Age is when a line was last changed, not when it was written"
             colour={C.text}
           />
           <Pair
             term="•"
+            width={4}
             meaning="A great refactor moves territory to whoever ran it — unless .git-blame-ignore-revs looks past it"
             colour={C.text}
           />
           <Pair
             term="•"
+            width={4}
             meaning="Warriors are told apart by email address; .mailmap unites them, in git as well as here"
             colour={C.text}
           />
           <Pair
             term="•"
+            width={4}
             meaning="Nothing ever leaves your machine: no network, no telemetry. The cache is in ~/.cache/linelord"
             colour={C.text}
           />

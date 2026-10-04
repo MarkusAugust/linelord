@@ -73,3 +73,23 @@ describe('About', () => {
     expect(screen.frame()).toContain(`Version ${packageJson.version}`)
   })
 })
+
+describe('About, the marks in a list', () => {
+  it('puts the text right after a mark, not in the column the long names need', async () => {
+    const { shell } = await import('../../__test__/harness')
+    const driven = await shell(
+      { initialScreens: [{ kind: 'menu' }, { kind: 'about' }] },
+      { width: 140, height: 60 },
+    )
+    try {
+      const frame = driven.frame()
+      expect(frame).toMatch(/✅ {1,3}lines alive in HEAD/)
+      expect(frame).toMatch(/❌ {1,3}blank lines/)
+      expect(frame).toMatch(/• Age is when a line was last changed/)
+      // The names still have their column.
+      expect(frame).toMatch(/Native git {6,}every number comes from git blame/)
+    } finally {
+      driven.done()
+    }
+  })
+})
