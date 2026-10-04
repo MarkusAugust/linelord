@@ -130,6 +130,47 @@ describe('release workflow', () => {
   })
 })
 
+describe('release workflow, with a native renderer and pre-releases', () => {
+  const tapJob = workflow.slice(workflow.indexOf('  update-homebrew-tap:'))
+
+  it('installs the native library for both processors of each system', () => {
+    // bun installs the renderer's native library only for the machine it runs
+    // on. Each runner builds for both of its system's processors, so without
+    // the other one that binary compiles and then cannot start.
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, matched as written in the workflow
+    expect(buildJob).toContain("--os=${{ matrix.os }} --cpu='*'")
+    expect(buildJob).toContain('os: darwin')
+    expect(buildJob).toContain('os: linux')
+  })
+
+  it('starts the binary it can run, rather than only asking its version', () => {
+    // --version exits before the native library is loaded.
+    expect(buildJob).toContain('scripts/smoke_tui.py ./linelord-macos-arm64')
+    expect(buildJob).toContain('scripts/smoke_tui.py ./linelord-linux-x64')
+  })
+
+  it('marks a tag with a hyphen as a pre-release, and not as the latest', () => {
+    expect(releaseJob).toContain(
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, matched as written in the workflow
+      "prerelease: ${{ contains(github.ref_name, '-') }}",
+    )
+    expect(releaseJob).toContain(
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, matched as written in the workflow
+      "make_latest: ${{ !contains(github.ref_name, '-') }}",
+    )
+  })
+
+  it('never points the Homebrew tap at a pre-release', () => {
+    // Every brew upgrade installs what the tap names. Guarded on the manual
+    // tag too, so a tap sync cannot be pointed at a release candidate either.
+    const condition = tapJob.slice(
+      tapJob.indexOf('if: >-'),
+      tapJob.indexOf('runs-on:'),
+    )
+    expect(condition).toContain("!contains(inputs.tag || github.ref_name, '-')")
+  })
+})
+
 describe('cli argument handling', () => {
   const cli = readFileSync(join(import.meta.dir, '..', 'cli.ts'), 'utf8')
 

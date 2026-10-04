@@ -5,7 +5,7 @@
  *                                     # there, else fetches it with the GitHub CLI
  *   bun run sync-lore path/lore.json  # reads that file
  *
- * Writes src/adapters/ink/resources/gallowmarkQuotes.ts. The farewell quotes
+ * Writes src/adapters/opentui/resources/gallowmarkQuotes.ts. The farewell quotes
  * and the analysis messages come from there; nothing here is edited by hand.
  * LineLord itself makes no network call: this is a development step, and the
  * generated file is committed.
@@ -15,7 +15,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const OUT = join(ROOT, 'src/adapters/ink/resources/gallowmarkQuotes.ts')
+const OUT = join(ROOT, 'src/adapters/opentui/resources/gallowmarkQuotes.ts')
 const SIBLING = join(ROOT, '../../gallowmark/dist/lore.json')
 const PROJECT = 'linelord'
 const POOLS = [

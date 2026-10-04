@@ -1,11 +1,8 @@
 #!/usr/bin/env bun
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { render } from 'ink'
 import meow from 'meow'
-import React from 'react'
-import App from '../adapters/ink/App'
-import { createScreen } from '../adapters/ink/terminal'
+import { runInterface } from '../adapters/opentui/run'
 import { resolveCachePath } from '../adapters/sqlite/cacheLocation'
 import {
   removeAllCaches,
@@ -114,7 +111,7 @@ if (cli.flags.version) {
 }
 
 /**
- * Everything below runs before Ink is rendered, so writing to stderr here is
+ * Everything below runs before the interface takes the screen, so writing to stderr here is
  * safe -- it is the only place in the program where that is true.
  */
 function exitWithError(message: string, ...hints: string[]): never {
@@ -317,25 +314,12 @@ if (cli.flags.writeMailmap) {
   process.exit(0)
 }
 
-const screen = createScreen(process.stdout)
-
-const element = React.createElement(App, {
-  ports,
-  clearScreen: screen.clear,
-  repoPath: repoPath,
-  thresholdKB: thresholdKB,
+await runInterface(ports, repoPath, {
+  thresholdBytes,
   useCache: cli.flags.cache,
   refresh: cli.flags.refresh,
   authorPolicy: cli.flags.fuzzyAuthors ? 'loose' : 'strict',
-  ignoreRevisions: cli.flags.ignoreRev,
+  ignoreRevisions: cli.flags.ignoreRev ?? [],
   concurrency: cli.flags.concurrency,
   history,
-})
-
-const app = render(element)
-screen.attach(app)
-const { waitUntilExit } = app
-
-waitUntilExit().then(() => {
-  process.exit(0)
 })

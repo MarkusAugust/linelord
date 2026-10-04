@@ -4,7 +4,7 @@
 >
 > — Gorvek of Bonereach
 
-LineLord is a Bun + TypeScript + Ink + Drizzle/SQLite CLI that reads
+LineLord is a Bun + TypeScript + OpenTUI + Drizzle/SQLite CLI that reads
 `git blame` and reports who holds which line. **The numbers it prints are the
 product.** A change that makes the code nicer and the numbers wrong is a bad
 change, and a reviewer will say so.
@@ -36,9 +36,14 @@ behind an escape code; it has.
 - **Update README and CHANGELOG in the same commit as the behaviour change.**
   The CHANGELOG says, in plain words, what moved and why; where a change
   moves the numbers, it says so.
-- **Nothing writes to stdout or stderr while Ink is mounted.** Collect
-  failures and render them; `getFailures()` on the LineLord record and the
-  `AnalysisContext` exist for this.
+- **Nothing writes to stdout or stderr while the interface holds the
+  screen.** Collect failures and render them; `getFailures()` on the
+  LineLord record and the `AnalysisContext` exist for this.
+- **Keys go through the one keymap** (`src/adapters/opentui/keymap.ts`): the
+  arrows and vim's keys ask for the same things on every screen, and a
+  screen says what they mean for it through `useScreenKeys`. A screen key of
+  its own must be one the keymap leaves alone, and the screen's hint names
+  it.
 - **Every feature is reachable from inside the interface**, not only as a
   flag. Flags stay, for scripting; add the menu entry too.
 - **User-facing options are command-line flags, never environment variables.**
@@ -86,7 +91,7 @@ and do not invent a third register. **A name that is not in the canon is not
 used here**: add it to Gallowmark first, then to LineLord.
 
 The farewell quotes and the analysis messages are the canon's as well: they
-are generated into `src/adapters/ink/resources/gallowmarkQuotes.ts` by
+are generated into `src/adapters/opentui/resources/gallowmarkQuotes.ts` by
 `bun run sync-lore` (from a sibling checkout of Gallowmark, or fetched with
 the GitHub CLI). Add or change a quote in Gallowmark's `quotes/`, rebuild its
 export, run the sync here, and commit the generated file.
