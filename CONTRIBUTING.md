@@ -122,17 +122,23 @@ The same handful of defects keep coming back. Walk the diff against this list.
 
 ## Versions and releases
 
-LineLord stays in 0.x. A feature is a minor bump, a fix is a patch; there is
-no 1.0.0. Releases are cut by the maintainer:
+LineLord follows Semantic Versioning. A feature is a minor bump and a fix is a
+patch; from 1.0.0, a change that breaks something a person or a script relies
+on — the `--json` schema, a flag, a key — is a major bump. A pre-release is
+`X.Y.Z-rc.N`, starting at `rc.1`: the Release workflow marks a tag with a
+hyphen as a pre-release and never points the Homebrew tap at it. Releases are
+cut by the maintainer:
 
 1. On a branch, stamp the version and date over `## [Unreleased]` in
    `CHANGELOG.md`, add the compare links, leave `Unreleased` empty, and merge
    it through a pull request with CI green.
 2. On `master`, `bun run publish:minor` or `bun run publish:patch` bumps the
-   version, tags it and pushes both. The Release workflow builds the macOS
-   binaries on a macOS runner and the Linux ones on a Linux runner, runs the
-   one each can and checks the other's architecture, publishes the GitHub
-   release from a job that runs no other code, and updates the Homebrew tap.
+   version, tags it and pushes both. A pre-release is set by name instead:
+   `npm version 1.0.0-rc.1 && bun run tag-release`. The Release workflow
+   builds the macOS binaries on a macOS runner and the Linux ones on a Linux
+   runner, starts the one each can and checks the other's architecture,
+   publishes the GitHub release from a job that runs no other code, and
+   updates the Homebrew tap unless it is a pre-release.
    A change to the build is proven first by running the workflow by hand
    with `build_only`, which builds and smoke-tests without publishing.
 
