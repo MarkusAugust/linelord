@@ -1,4 +1,7 @@
 export const rankedTitles = [
+  // THE EPIC FIVE (0-4) are worn only by the top three to five warriors.
+  // 5-23 are part of the order but not handed out by getDistributedTitles;
+  // everyone below the crowned is spread from 'barbarian' (24) to 'peasant'.
   // HIGHBORN TITLES (0-11) - 12 titles
   'legend', // 0 - Mythical, greatest of all
   'line breaker', // 1 - Ultimate coder
@@ -74,64 +77,43 @@ export const getTitleRange = (startRank: number, endRank: number): string[] => {
   return rankedTitles.slice(startRank, endRank + 1)
 }
 
+/** The titles that sound like something: only the top few ever wear them. */
+export const EPIC_TITLES: readonly string[] = rankedTitles.slice(0, 5)
+
+/** Where the humbler titles begin, the ones everyone below the crowned is given. */
+const HUMBLE_FROM = rankedTitles.indexOf('barbarian')
+
 /**
- * Hand out `count` titles from one tier, in rank order.
+ * The titles for a realm of `numDevs` warriors, in rank order.
  *
- * When the tier has room for everyone, each developer takes the next title,
- * which is what this has always done. When there are more developers than
- * titles, positions are compressed proportionally onto the tier instead.
- * Walking off the end of the tier is not an option: it used to run past the
- * table entirely, and every rank beyond title fifty came back as the literal
- * string "unknown" -- 30 of 100 contributors, 110 of 200, displayed as their
- * title. Repeating a title in a large team is a cosmetic compromise; telling
- * someone their rank is "unknown" is a bug.
+ * The titles are a joke, and the joke only works if few are crowned and
+ * somebody is always at the bottom. So the top three to five -- fewer in a
+ * small realm -- take the epic titles in order, and everyone else is spread
+ * evenly from "barbarian" down to the last title of all, so the last place
+ * is always a peasant. With more warriors than humble titles, neighbours
+ * share one.
  */
-const titlesFromTier = (
-  count: number,
-  start: number,
-  end: number,
-): string[] => {
-  const span = end - start + 1
-
-  return Array.from({ length: count }, (_, index) =>
-    getTitleByRank(
-      start + (count <= span ? index : Math.floor((index * span) / count)),
-    ),
-  )
-}
-
-// Function to get evenly distributed titles based on number of developers
 export const getDistributedTitles = (numDevs: number): string[] => {
   if (numDevs <= 0) return []
+  if (numDevs === 1) return [getTitleByRank(0)]
 
-  const highbornRange = { start: 0, end: 11 } // 12 titles
-  const middleRange = { start: 12, end: 37 } // 26 titles
-  const lowbornRange = { start: 38, end: 49 } // 12 titles
-
-  if (numDevs === 1) {
-    // Single dev gets the best title
-    return [getTitleByRank(0)]
-  }
-
-  if (numDevs === 2) {
-    // Best and worst
-    return [getTitleByRank(0), getTitleByRank(49)]
-  }
-
-  if (numDevs === 3) {
-    // Best from each tier
-    return [getTitleByRank(0), getTitleByRank(12), getTitleByRank(38)]
-  }
-
-  // For 4+ devs, distribute titles in strict rank order
-  const highbornCount = Math.max(1, Math.floor(numDevs * 0.2))
-  const lowbornCount = Math.max(1, Math.floor(numDevs * 0.2))
-  const middleCount = numDevs - highbornCount - lowbornCount
+  const crowned = Math.min(
+    EPIC_TITLES.length,
+    numDevs <= 4 ? numDevs - 1 : Math.round(numDevs / 4) + 2,
+  )
+  const rest = numDevs - crowned
+  const last = rankedTitles.length - 1
 
   return [
-    ...titlesFromTier(highbornCount, highbornRange.start, highbornRange.end),
-    ...titlesFromTier(middleCount, middleRange.start, middleRange.end),
-    ...titlesFromTier(lowbornCount, lowbornRange.start, lowbornRange.end),
+    ...EPIC_TITLES.slice(0, crowned),
+    ...Array.from({ length: rest }, (_, index) =>
+      getTitleByRank(
+        rest === 1
+          ? last
+          : HUMBLE_FROM +
+              Math.round((index * (last - HUMBLE_FROM)) / (rest - 1)),
+      ),
+    ),
   ]
 }
 

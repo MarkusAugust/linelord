@@ -6,6 +6,9 @@ import { useScreenKeys } from '../keys'
 import { useList, useScrollPage } from '../list'
 import { C } from '../theme'
 
+/** The left column of a two-column list: two spaces of indent and the term. */
+export const TERM_COLUMN = 32
+
 function Blocks({ blocks }: { blocks: Block[] }) {
   return (
     <>
@@ -57,7 +60,10 @@ function Blocks({ blocks }: { blocks: Block[] }) {
                       paddingRight: 3,
                     }}
                   >
-                    <text fg={C.green} style={{ width: 28, flexShrink: 0 }}>
+                    <text
+                      fg={C.green}
+                      style={{ width: TERM_COLUMN, flexShrink: 0 }}
+                    >
                       {`  ${term}`}
                     </text>
                     <text fg={C.gray} style={{ flexGrow: 1, flexShrink: 1 }}>
@@ -118,28 +124,33 @@ export function Guide() {
           paddingLeft: 1,
           paddingRight: 1,
           width: wide ? 44 : '100%',
+          // Stacked above the page, the list scrolls in five rows rather
+          // than taking the height the chapter needs.
+          height: wide ? undefined : Math.min(GUIDE.length, 5) + 2,
           flexShrink: 0,
         }}
       >
-        {GUIDE.map((one, index) => {
-          const here = index === chapters.selected
-          return (
-            <box
-              key={one.title}
-              id={chapters.idOf(index)}
-              style={{ backgroundColor: here ? C.selected : undefined }}
-            >
-              <text
-                wrapMode="none"
-                attributes={here ? TextAttributes.BOLD : TextAttributes.NONE}
+        <scrollbox ref={chapters.scroll} style={{ flexGrow: 1 }}>
+          {GUIDE.map((one, index) => {
+            const here = index === chapters.selected
+            return (
+              <box
+                key={one.title}
+                id={chapters.idOf(index)}
+                style={{ backgroundColor: here ? C.selected : undefined }}
               >
-                <span fg={C.green}>{here ? '› ' : '  '}</span>
-                <span>{`${one.icon} `}</span>
-                <span fg={here ? C.green : C.text}>{one.title}</span>
-              </text>
-            </box>
-          )
-        })}
+                <text
+                  wrapMode="none"
+                  attributes={here ? TextAttributes.BOLD : TextAttributes.NONE}
+                >
+                  <span fg={C.green}>{here ? '› ' : '  '}</span>
+                  <span>{`${one.icon} `}</span>
+                  <span fg={here ? C.green : C.text}>{one.title}</span>
+                </text>
+              </box>
+            )
+          })}
+        </scrollbox>
       </box>
       {chapter && (
         <box

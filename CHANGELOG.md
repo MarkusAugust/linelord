@@ -10,6 +10,30 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+### Changed
+
+- **Only the top few are crowned, and somebody is always a peasant.** The
+  top fifth took highborn titles and the middle of the list was nearly as
+  grand — vanquisher, slayer, berserker — so in a realm of five, four sounded
+  epic; and the lowborn titles were handed out from the top of their list, so
+  the last place was a potter, a baker or a dock worker, and nobody was a
+  peasant below sixty warriors. Now the top three to five take legend, line
+  breaker, conqueror, destroyer and warlord, and everyone else is spread from
+  barbarian down to peasant, so the last place is always a peasant. The
+  titles change on every screen and in `--json`; no number moves.
+
+### Added
+
+- **The Warrior's Guide explains the rankings.** Nothing on screen said what
+  a Battle Scar or a Solo Quest is, how the Gorvek score is weighed, what
+  earns an achievement, or why somebody is a peasant. Four new chapters do:
+  every measure with the rule that counts it (over 5,000 bytes or a legacy
+  extension or path word for a scar, more than 100 lines in a day for a
+  massive battle), the score's weights and bonuses, the achievements and how
+  titles follow the share of lines relative to the others, and how to read
+  Code Longevity's median, spread, half-life and survival. The rules and
+  weights are read from the code that applies them. No number moved.
+
 ## [1.0.0-rc.2] — 2026-10-04
 
 The second release candidate for 1.0.0: one fix to the About page.

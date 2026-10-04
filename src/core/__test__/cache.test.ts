@@ -15,6 +15,7 @@ import {
   type FingerprintInputs,
   computeFingerprint as fingerprintThrough,
 } from '../cache'
+import { getDistributedTitles } from '../rankedTitles'
 
 const files = createNodeFiles()
 const computeFingerprint = (inputs: FingerprintInputs) =>
@@ -48,11 +49,25 @@ describe('computeFingerprint', () => {
       'ignore_revs',
       'ignore_rules',
       'mailmap',
+      'ranking_rules',
       'schema_version',
       'threshold_bytes',
     ])
     expect(fingerprint.analysis_version).toBe(String(ANALYSIS_VERSION))
     expect(fingerprint.schema_version).toBe('2')
+  })
+
+  it('hashes the titles the ranking actually hands out', async () => {
+    // Titles are stored with the analysis. A cache from before the rule
+    // changed showed the old titles -- the last place a dock worker after the
+    // rule had made every last place a peasant -- until the repository moved.
+    const fingerprint = await computeFingerprint(INPUTS)
+    const handedOut = Array.from({ length: 120 }, (_, at) =>
+      getDistributedTitles(at + 1),
+    )
+    expect(fingerprint.ranking_rules).toBe(
+      createHash('sha256').update(JSON.stringify(handedOut)).digest('hex'),
+    )
   })
 
   it('hashes the blame options the analysis actually runs', async () => {
@@ -150,6 +165,7 @@ describe('decideCacheUse', () => {
     blame_options: 'options-hash',
     mailmap: '',
     ignore_rules: 'rules-hash',
+    ranking_rules: 'titles-hash',
   }
 
   it('analyses when there is nothing stored', () => {
@@ -250,6 +266,7 @@ describe('decideCacheUse', () => {
         'the rules for which files are analysed changed',
       ],
       [{ blame_options: 'other' }, 'the options blame is run with changed'],
+      [{ ranking_rules: 'other' }, 'the way titles are handed out changed'],
     ]
 
     for (const [difference, expected] of cases) {

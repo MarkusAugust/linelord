@@ -36,7 +36,8 @@ describe("The Warrior's Guide", () => {
 
   it('says what writing .mailmap does, everywhere and for everyone', async () => {
     const screen = await guide({ width: 160, height: 60 })
-    await screen.press('j', 'j')
+    // Found by name, not by counting chapters, so a new chapter does not move it.
+    await screen.press('/', ...'mailmap', 'enter')
     const frame = screen.frame()
     expect(frame).toContain(
       'git log, git shortlog and git blame show the merged name',
@@ -50,7 +51,8 @@ describe("The Warrior's Guide", () => {
 
   it('reads on with PgDn and Enter, and starts a new chapter at its top', async () => {
     const screen = await guide({ width: 140, height: 20 })
-    await screen.press('j', 'j')
+    // Found by name, not by counting chapters, so a new chapter does not move it.
+    await screen.press('/', ...'mailmap', 'enter')
     expect(screen.frame()).not.toContain('LineLord only ever adds lines')
     await screen.press('pgdn', 'pgdn', 'enter', 'ctrl-d')
     expect(screen.frame()).toContain('LineLord only ever adds lines')
@@ -62,5 +64,23 @@ describe("The Warrior's Guide", () => {
     const screen = await guide({ width: 80, height: 40 })
     expect(screen.frame()).toContain('Getting around')
     expect(screen.frame()).toContain('Every screen answers the same keys')
+  })
+})
+
+describe('Guide, in a small terminal', () => {
+  it('keeps the chapter list short so the chapter has room, and follows the selection', async () => {
+    // Eleven chapters stacked above the page left five lines of text at 80x24.
+    const screen = await guide({ width: 80, height: 24 })
+    expect(screen.frame()).toContain('Ctrl-u Ctrl-d')
+    await screen.press('G')
+    expect(screen.frame()).toMatch(/› .*Flags, for scripts/)
+  })
+})
+
+describe('Guide, the names in the left column', () => {
+  it('keeps the longest achievement on one line', async () => {
+    const screen = await guide({ width: 160, height: 60 })
+    await screen.press('/', ...'Achievements', 'enter')
+    expect(screen.frame()).toContain('Veteran of a Hundred Battles')
   })
 })

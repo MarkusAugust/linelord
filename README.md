@@ -183,9 +183,11 @@ beneath the name. The address is what tells two warriors of one name apart.
 **m** merges warriors you know to be one person — see
 [Merging warriors who are one person](#merging-warriors-who-are-one-person).
 
-Titles run from **legend** down to **peasant** and are handed out in rank
-order, the crown, the silver and the bronze marking the three who hold the
-most. A warrior wears one title, the same on every screen.
+Titles follow the share of lines, relative to the other warriors. Only the
+top three to five are crowned — **legend**, **line breaker**, **conqueror**,
+**destroyer**, **warlord** — and everyone else is spread from **barbarian**
+down to **peasant**, so the last place is always a peasant. The crown, the
+silver and the bronze mark the three who hold the most. A warrior wears one title, the same on every screen.
 
 ### Brutal Barbarian Rankings
 
@@ -279,8 +281,13 @@ longer exists.
 
 Merging is told of under [One warrior, many names](#one-warrior-many-names).
 **The Warrior's Guide** is this README's working parts at the size of a
-screen: getting around, what is counted, what writing `.mailmap` does to git
-as well as to LineLord, reformattings, the cache, the history, and the flags.
+screen: getting around; what is counted; the rankings measure by measure,
+with the rule behind each — what makes a file legacy-looking, how many lines
+make a massive battle; how the Gorvek score is weighed; what earns an
+achievement and how titles are handed out; how to read Code Longevity; what
+writing `.mailmap` does to git as well as to LineLord; reformattings, the
+cache, the history, and the flags. The rules it gives are read from the code
+that applies them, so the two cannot disagree.
 **About** is Gorvek explaining himself, with the version, the licence and
 where to find the source.
 

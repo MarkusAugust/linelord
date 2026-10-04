@@ -4,6 +4,7 @@ import { BLAME_OPTIONS } from '../ports/git'
 import { ANALYSIS_VERSION } from './analysisVersion'
 import type { AuthorPolicy } from './identity'
 import { ignoredFileExtensions, ignoredFilePatterns } from './ignoreFiles'
+import { getDistributedTitles } from './rankedTitles'
 
 /**
  * Whether a stored analysis may be reused, and if not, why not.
@@ -114,6 +115,14 @@ export async function computeFingerprint(
     // while the set has to keep being compared every run.
     ignore_revs: sha256([...ignoredRevisions].sort().join(' ')),
     ignore_rules: sha256(ignoreRules),
+    // Titles are stored with the analysis, so a change in how they are handed
+    // out has to read the realm again -- hashed from what the rule hands out
+    // for every size of realm up to 120, not from a number someone must bump.
+    ranking_rules: sha256(
+      JSON.stringify(
+        Array.from({ length: 120 }, (_, at) => getDistributedTitles(at + 1)),
+      ),
+    ),
   }
 }
 
@@ -170,6 +179,9 @@ function describeChange(
   }
   if (key === 'blame_options') {
     return 'the options blame is run with changed'
+  }
+  if (key === 'ranking_rules') {
+    return 'the way titles are handed out changed'
   }
   return `${key} changed`
 }
