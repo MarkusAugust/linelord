@@ -10,6 +10,17 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Leaving a screen taller than the terminal no longer leaves it blank.**
+  Going back from the Repository Overview to the menu wiped the terminal and
+  then drew nothing, until some other key was pressed. Ink draws a frame
+  taller than the terminal by clearing it, without updating its own record of
+  what is on screen, so the menu it had drawn before looked unchanged and was
+  not written again. The screen is now cleared through Ink as well, so it
+  forgets the frame and draws the next one. It showed only when the overview
+  was taller than the terminal and the menu was not.
+
 ### Changed
 
 - **The `.mailmap` draft says what writing it actually does.** Both the README
