@@ -10,6 +10,11 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-10-04
+
+The release where a person can say who is one warrior, whether or not the
+guessing noticed.
+
 ### Added
 
 - **Warriors who are one person can be merged by hand, even when nothing
@@ -683,7 +688,8 @@ stored analysis is rebuilt once, because the database layout changed.
 Earlier releases predate this changelog. See the
 [releases page](https://github.com/MarkusAugust/linelord/releases).
 
-[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/MarkusAugust/linelord/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/MarkusAugust/linelord/compare/v0.12.4...v0.13.0
 [0.12.4]: https://github.com/MarkusAugust/linelord/compare/v0.12.3...v0.12.4
 [0.12.3]: https://github.com/MarkusAugust/linelord/compare/v0.12.2...v0.12.3
