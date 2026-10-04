@@ -117,8 +117,12 @@ The same handful of defects keep coming back. Walk the diff against this list.
 
 ## Versions and releases
 
-LineLord stays in 0.x. A feature is a minor bump, a fix is a patch; there is
-no 1.0.0. Releases are cut by the maintainer:
+LineLord follows Semantic Versioning. A feature is a minor bump and a fix is a
+patch; from 1.0.0, a change that breaks something a person or a script relies
+on — the `--json` schema, a flag, a key — is a major bump. A pre-release is
+`X.Y.Z-rc.N`, starting at `rc.1`, and must not reach the Homebrew tap; the
+Release workflow does not yet tell one apart, so that changes before the
+first is tagged. Releases are cut by the maintainer:
 
 1. On a branch, stamp the version and date over `## [Unreleased]` in
    `CHANGELOG.md`, add the compare links, leave `Unreleased` empty, and merge
