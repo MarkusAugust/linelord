@@ -76,3 +76,11 @@ describe('Guide, in a small terminal', () => {
     expect(screen.frame()).toMatch(/› .*Flags, for scripts/)
   })
 })
+
+describe('Guide, the names in the left column', () => {
+  it('keeps the longest achievement on one line', async () => {
+    const screen = await guide({ width: 160, height: 60 })
+    await screen.press('/', ...'Achievements', 'enter')
+    expect(screen.frame()).toContain('Veteran of a Hundred Battles')
+  })
+})

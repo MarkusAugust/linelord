@@ -10,6 +10,7 @@ import {
 import { EPIC_TITLES, getDistributedTitles } from '../../../core/rankedTitles'
 import { type Block, GUIDE } from '../guide'
 import { MEASURE_NAMES } from '../parts'
+import { TERM_COLUMN } from '../screens/Guide'
 
 /** Everything a chapter says, as one string. */
 function said(title: string): string {
@@ -79,7 +80,7 @@ describe("The Warrior's Guide on the rankings", () => {
             expect(line.length).toBeLessThanOrEqual(64)
         if (block.kind === 'pairs')
           for (const [term] of block.pairs)
-            expect(term.length).toBeLessThanOrEqual(30)
+            expect(term.length, term).toBeLessThanOrEqual(TERM_COLUMN - 3)
       }
     }
   })

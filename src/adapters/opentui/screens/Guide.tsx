@@ -6,6 +6,9 @@ import { useScreenKeys } from '../keys'
 import { useList, useScrollPage } from '../list'
 import { C } from '../theme'
 
+/** The left column of a two-column list: two spaces of indent and the term. */
+export const TERM_COLUMN = 32
+
 function Blocks({ blocks }: { blocks: Block[] }) {
   return (
     <>
@@ -57,7 +60,10 @@ function Blocks({ blocks }: { blocks: Block[] }) {
                       paddingRight: 3,
                     }}
                   >
-                    <text fg={C.green} style={{ width: 28, flexShrink: 0 }}>
+                    <text
+                      fg={C.green}
+                      style={{ width: TERM_COLUMN, flexShrink: 0 }}
+                    >
                       {`  ${term}`}
                     </text>
                     <text fg={C.gray} style={{ flexGrow: 1, flexShrink: 1 }}>
