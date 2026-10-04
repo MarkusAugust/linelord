@@ -38,9 +38,11 @@ jobs:
           - name: macos
             runs-on: macos-latest
             script: release:macos
+            os: darwin
           - name: linux
             runs-on: ubuntu-24.04
             script: release:linux
+            os: linux
     name: build (${{ matrix.name }})
     runs-on: ${{ matrix.runs-on }}
     # Builds only. The release is written by a job that runs none of this.
@@ -63,8 +65,12 @@ jobs:
         with:
           bun-version: 1.3.14
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      # The interface draws through a native library, one per system and
+      # processor, and bun installs only the one for the machine it runs on.
+      # Each runner builds for both processors of its system, so it needs both:
+      # without the other, that binary compiles and then fails to start.
+      - name: Install dependencies, with the native libraries for both processors
+        run: bun install --frozen-lockfile --os=${{ matrix.os }} --cpu='*'
 
       - name: Run tests
         run: bun test
@@ -85,6 +91,9 @@ jobs:
             tar -xzf "$archive"
           done
           ./linelord-macos-arm64 --version
+          # --version exits before the interface loads its native library, so
+          # the binary this runner can run is also started, drawn and left.
+          python3 ../scripts/smoke_tui.py ./linelord-macos-arm64
           file linelord-macos-arm64 | grep -q 'arm64'
           file linelord-macos-intel | grep -q 'x86_64'
           rm -f linelord-macos-arm64 linelord-macos-intel
@@ -98,6 +107,7 @@ jobs:
             tar -xzf "$archive"
           done
           ./linelord-linux-x64 --version
+          python3 ../scripts/smoke_tui.py ./linelord-linux-x64
           file linelord-linux-x64   | grep -q 'x86-64'
           file linelord-linux-arm64 | grep -q 'ARM aarch64'
           rm -f linelord-linux-x64 linelord-linux-arm64
@@ -152,6 +162,10 @@ jobs:
             release/checksums.txt
           generate_release_notes: true
           tag_name: ${{ github.ref_name }}
+          # A tag with a hyphen -- v1.0.0-rc.1 -- is a pre-release: marked as
+          # one, and never made the latest release a download link points at.
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          make_latest: ${{ !contains(github.ref_name, '-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -165,10 +179,13 @@ jobs:
     # reach this job at all -- but a failed release must still stop the tap
     # from being pointed at a release that was never published, and a
     # build-only run publishes nothing to sync to.
+    # And never for a pre-release: every `brew upgrade` installs what the tap
+    # names, so a release candidate there is a release candidate for everyone.
     if: >-
       always()
       && ((github.event_name == 'workflow_dispatch' && inputs.build_only != true)
           || needs.release.result == 'success')
+      && !contains(inputs.tag || github.ref_name, '-')
     runs-on: ubuntu-24.04
     # Only reads this repository's release metadata. The write it performs is
     # to the tap, authorised by HOMEBREW_TAP_TOKEN rather than by this token.

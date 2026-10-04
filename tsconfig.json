@@ -6,6 +6,8 @@
     "module": "Preserve",
     "moduleDetection": "force",
     "jsx": "react-jsx",
+    "jsxImportSource": "@opentui/react",
+    "resolveJsonModule": true,
     "allowJs": true,
     "types": ["bun"],
 

@@ -87,9 +87,8 @@ describe('GitService - failures are collected, not printed', () => {
   })
 
   it('writes nothing to the console during a normal run', async () => {
-    // Ink owns the terminal. Its patchConsole relocates stray output above the
-    // frame rather than letting it overwrite the app, but the message still
-    // arrives from nowhere and is gone on the next render.
+    // The interface owns the terminal while it runs, and stray output lands
+    // in the middle of what it has drawn, to be gone on the next frame.
     repo = await createTestRepo()
     await repo.commit({
       message: 'ordinary',

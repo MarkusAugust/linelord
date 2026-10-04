@@ -10,6 +10,67 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+### Changed
+
+- **The interface is full screen, and drawn with OpenTUI instead of Ink.**
+  Ink wrote a screen taller than the terminal by clearing it and writing all
+  of it, so every keypress on the Brutal Barbarian Rankings left the view at
+  the bottom, and the selection scrolled out of sight above. LineLord now
+  takes the whole terminal while it runs — and gives it back exactly as it
+  was when you leave — and every list and long page scrolls inside it, with
+  the selection always on screen. Header and footer stay put; panels go
+  beside or below as the terminal allows; columns that do not fit are set
+  aside one at a time, in a fixed order, and the table says how many, rather
+  than a number being cut through the middle. The binaries carry the
+  renderer's native library, and the release builds start each one and look
+  at its first screen before anything is published.
+- **One keymap for every screen, the arrows and vim's alike.** ↑↓ and j k,
+  PgUp PgDn and Ctrl-b Ctrl-f, Ctrl-u Ctrl-d, Home End and gg G, → l Enter to
+  open, ← h Esc to go back, `/` to search names and addresses with n N for
+  the next match, `:42` to go to the 42nd, and `:q`, `:x`, `:q!` or q to
+  leave — on every screen, where only the main menu knew `:q` before. `?`
+  shows the keys and what the numbers on that screen mean. Coming back to a
+  screen finds it as you left it.
+- **Code Longevity changes its order with o.** m, a, l, h and s re-sorted it
+  before; h and l are now back and open, so o steps through median, mean,
+  surviving lines and, once the history is walked, half-life and survival.
+- **The rankings list every warrior,** not the first ten, and the battle
+  record of the one under the cursor stands below the table when the
+  terminal is tall enough.
+- **The main menu has eight entries, 1–8,** and its tidings — what was read
+  afresh, what was looked past, who may be one person, what could not be
+  read — have a panel of their own.
+
+### Added
+
+- **Every bar is a part of a whole, and says which.** A warrior's lines are a
+  part of every line in HEAD; files held, of every file; file types, of every
+  type; days, of every day a surviving line was last touched — `11,481 of
+  31,400 lines  36.6%` — and behind it their place among the warriors, `2nd
+  of 16`, `=` when shared. The wholes are counted from the lines with the
+  rules the metrics use, because file types and days can be shared and do
+  not add up across warriors. No number moved: these are the same metrics,
+  shown against what they are a part of.
+- **One page for one warrior,** reached from every list: what they hold,
+  their battle record, achievements, how old their code is, what became of
+  it, the files they hold the most of, and where the oldest sits.
+- **The Warrior's Guide,** on the menu: getting around, what is counted, what
+  writing .mailmap does — to git log, shortlog and blame as well, for
+  everyone once committed, without rewriting a commit — and how to change it,
+  reformattings, the cache, the history and the flags.
+
+### Fixed
+
+- **About said things that were not so.** It said LineLord skipped only
+  binaries and oversized files, showed no commit history although --history
+  walks it, and pointed to ignore patterns nobody can write. It now says what
+  is counted and what is set aside, that nothing leaves the machine and where
+  the cache is, the version, the licence and the copyright, and links to the
+  source and to sobernetics.no.
+- **A path that is no repository fails, saying so,** in the interface as on
+  the command line. It was analysed as an empty realm and reported as ready,
+  with nobody in it; only the checks before it kept that from showing.
+
 ## [0.14.0] — 2026-10-04
 
 The release where a person can say who is one warrior, whether or not the

@@ -18,7 +18,7 @@ import {
   formatAge,
   formatSpread,
   renderAgeSparkline,
-} from '../src/adapters/ink/format/ageFormatting'
+} from '../src/adapters/opentui/format/ageFormatting'
 import { halfLifeOf } from '../src/core/longevity'
 import type { Report } from '../src/core/report'
 
@@ -245,9 +245,8 @@ function renderLongevity(report: Report): string {
       <tbody>${rows}</tbody>
     </table>
     <p class="aside">
-      In the terminal <kbd>m</kbd>, <kbd>a</kbd> and <kbd>l</kbd> re-sort by
-      median, mean and lines, and <kbd>h</kbd> and <kbd>s</kbd> by half-life and
-      survival once the history is walked.
+      In the terminal <kbd>o</kbd> changes the order: median, mean and lines,
+      and half-life and survival once the history is walked.
     </p>`
 }
 

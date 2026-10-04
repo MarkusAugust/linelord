@@ -96,13 +96,27 @@ to, the analysis runs anyway and simply remembers nothing.
 
 ### Commanding the Realm
 
-- **↑↓** and **Enter** — choose, and open
-- **1–9** — leap straight to a menu entry
-- **ESC** or **q** — retreat one screen, or leave the realm
-- **:q** or **:x** — leave as a vim warrior would, from the main menu
-- On Code Longevity: **m**, **a**, **l** re-sort by median, mean and lines; **h** and **s** by half-life and survival once the history is walked
-- On Repository Overview: **m** merges warriors who are one person, starting from the one highlighted
-- On the merge: **Enter** takes a suggestion, **Space** marks a warrior, **w** writes the merge
+LineLord takes the whole terminal while it runs and gives it back exactly as
+it was when you leave. Every screen answers the same keys, and the arrows and
+vim's keys do the same thing — use whichever your hands know:
+
+| Keys | |
+| --- | --- |
+| **↑ ↓**, **k j** | one up or down |
+| **PgUp PgDn**, **Ctrl-b Ctrl-f** | a page |
+| **Ctrl-u Ctrl-d** | half a page |
+| **Home End**, **gg G** | the first, the last |
+| **→ l Enter** | open what is under the cursor |
+| **← h Esc** | back to the screen before |
+| **/** text, **n N** | search names and addresses as you type; the next and previous match |
+| **:42** | go to the 42nd |
+| **:q :x :q! q** | leave the realm |
+| **?** | the keys, and what the numbers on this screen mean |
+
+A few screens have keys of their own, and say so on the bottom line: **1–8**
+on the main menu, **m** on the Repository Overview to merge, **o** on Code
+Longevity to change the order, **Space** and **w** when merging. Lists scroll
+with the selection, and coming back to a screen finds it as you left it.
 
 ## What Gets Analysed
 
@@ -139,10 +153,26 @@ weird.dat     diff       # count it as text, though git would guess otherwise
 
 ## The Battle Reports
 
-Five scrolls await on the menu. On the first three, **↑↓ and Enter** open one
-warrior in full: their share of the codebase and the files they hold the most
-of, how old that code is and where the oldest of it sits, and — once the
+The main hall offers the battle reports, the merge, **The Warrior's Guide**
+and an account of Gorvek himself, and beside them the tidings: what was read
+afresh and what came from the scroll of memory, which commits were looked
+past, who may be one person, and what could not be read.
+
+From any list, **Enter** opens one warrior in full, on one page that scrolls:
+what they hold of the realm, their battle record, how old their code is and
+where the oldest of it sits, the files they hold the most of, and — once the
 history has been walked — what became of everything they ever wrote.
+
+Every bar on every screen is a part of a whole, and says which whole: lines
+of every line in `HEAD`, files of every file, file types of every type, days
+of every day a surviving line was last touched. Behind it stands the
+warrior's place — `2nd of 16`, `=2nd` when the place is shared, nothing when
+they hold none of it:
+
+```
+Ancient Code          11,481 of 31,400 lines      36.6% ███████▎        2nd of 16
+Massive Battles            9 of 16 days           56.3% ███████████▎    1st of 16
+```
 
 ### Repository Overview
 
@@ -174,7 +204,11 @@ are **still alive in `HEAD`**:
 
 Weighed together they make the **Gorvek score**, which decides the placing;
 whoever leads a category is decorated for it. Every warrior is one row under
-named columns, and the legend beneath the table says what each column counts.
+named columns, and **?** says what each column counts. When the terminal is
+too narrow for every column, columns are set aside one at a time, in a fixed
+order, and the table says how many are only in the battle record — a number
+is never cut through the middle. Where the terminal is tall enough, the
+battle record of the warrior under the cursor stands below the table.
 
 ### Code Longevity
 
@@ -193,7 +227,9 @@ Oldest line still standing: old.ts:1 — 3y 8m old
 ```
 
 Sorted by the **median**, not the mean: one ancient file somebody still holds
-drags a mean across years and the median not at all. The last column is the
+drags a mean across years and the median not at all. **o** changes the order
+— mean, surviving lines, and, once the history is walked, half-life and
+survival. The last column is the
 age histogram, newest code on the left and oldest on the right, so the shape
 of what remains of someone's work is readable at a glance.
 
@@ -217,7 +253,7 @@ previous sample and carries the rest across, which is the difference between
 minutes and an afternoon, but it is still the slow road.
 
 With the history walked, the **Half-life** column fills, and the warrior's
-scroll draws the curve:
+page draws the curve:
 
 ```
 What became of it
@@ -239,11 +275,14 @@ moved on since, the screen says which revision the history describes and
 leaves the columns empty rather than draw a curve about a realm that no
 longer exists.
 
-### Merge Warriors, and About
+### Merge Warriors, the Guide, and About
 
-The fourth scroll is told of under
-[One warrior, many names](#one-warrior-many-names). The fifth is Gorvek
-explaining himself.
+Merging is told of under [One warrior, many names](#one-warrior-many-names).
+**The Warrior's Guide** is this README's working parts at the size of a
+screen: getting around, what is counted, what writing `.mailmap` does to git
+as well as to LineLord, reformattings, the cache, the history, and the flags.
+**About** is Gorvek explaining himself, with the version, the licence and
+where to find the source.
 
 ## What the Numbers Are, and Are Not
 
@@ -336,10 +375,10 @@ The default merges nobody, yet it does not keep quiet about what it saw. When
 two contributors look like one person, the menu screen says so, and says why:
 
 ```
-⚠ 1 contributor may have committed under more than one address:
+⚠ 1 warrior may have committed under more than one address:
   Gorvek of Bonereach <gorvek@firma.no>
     ← gorvek@privat.no — the names "gorvek of bonereach" and "gorvek" are alike
-  Nothing was merged. Pick "Merge warriors who are one person" below to take the ones that are right.
+Nothing was merged. Pick 🤝 Merge to take the ones that are right.
 ```
 
 Both addresses still count apart and keep their own places in the ranking. The
@@ -357,11 +396,9 @@ stable boy, so LineLord does the drudgery. The guessing is run as a question —
 top, each with its reason:
 
 ```
-Suggested, because they look alike:
+Suggested, because they look alike — guesses, and wrong often enough to matter:
 › Gorvek of Bonereach <gorvek@firma.no>
       ← gorvek@privat.no — the names "gorvek of bonereach" and "gorvek" are alike
-⚠ These are guesses, and wrong often enough to matter: they have taken
-erik.hansen@ for erika.hansen@ before now.
 ```
 
 **Enter** takes one. Nothing is merged by being suggested: taking it goes
@@ -385,7 +422,7 @@ and the lines are shown before anything is written:
 These lines are added to .mailmap:
   Gorvek of Bonereach <gorvek@firma.no> <4711+vurn@users.noreply.github.com>
 
-Nothing is written until you press 'w' · Esc to go back
+Nothing is written until you press w
 ```
 
 **w** appends them to `.mailmap`, and **Enter** reads the repository again, so
@@ -484,10 +521,10 @@ closed over by `createLineLord`.
                                         │ builds       │ renders
                                         ▼              ▼
    ┌──────────────────┐   ┌───────────────────────┐   ┌──────────────────────┐
-   │ adapters/git     │   │       src/core        │   │    adapters/ink      │
-   │  spawnGit        │──▶│                       │◀──│  App · components    │
-   │  blamePorcelain  │   │  model  ownership     │   │  hooks · format      │
-   └────────┬─────────┘   │  ranking  longevity   │   │  resources · menu    │
+   │ adapters/git     │   │       src/core        │   │  adapters/opentui    │
+   │  spawnGit        │──▶│                       │◀──│  App · Shell · data  │
+   │  blamePorcelain  │   │  model  ownership     │   │  screens · keymap    │
+   └────────┬─────────┘   │  ranking  longevity   │   │  format · resources  │
             │ GitPort     │  barbarian  identity  │   └──────────────────────┘
             │ GitFactory  │  analyse  history     │            reads values,
    ┌────────┴─────────┐   │  cohorts  snapshots   │            calls functions
@@ -529,8 +566,12 @@ binary and parses its output at the edge. `sqlite` keeps the analysis in the
 database LineLord has always used, on disk under the cache directory or in
 memory; `memory` keeps it in arrays for tests, and one contract test in
 `src/ports/__test__` is run against both so they cannot drift apart. `fs` is
-Node's file system. `ink` is the terminal interface: screens that read the
-analysis as values and call the core's functions, and nothing else.
+Node's file system. `opentui` is the terminal interface: full-screen screens
+drawn with [OpenTUI](https://github.com/anomalyco/opentui), which read the
+analysis as values and call the core's functions, and nothing else. `data.ts`
+reads the repository through the ports; `Shell` draws whatever it read, so a
+screen can be tested from an analysis built by hand. One keymap (`keymap.ts`)
+decides what every key asks for, and each screen what that means for it.
 
 **The app** (`src/app`) is the composition root. `ports.ts` is the one place
 the real adapters are chosen; `cli.ts` parses the flags, resolves the
@@ -578,11 +619,10 @@ whoever contributes signs [CLA.md](CLA.md).
 
 LineLord stands on the shoulders of these mighty open source warriors:
 
-- **[ink](https://github.com/vadimdemedes/ink)** and **[react](https://reactjs.org/)** — the terminal interface
+- **[OpenTUI](https://github.com/anomalyco/opentui)** and **[react](https://react.dev/)** — the terminal interface
 - **[meow](https://github.com/sindresorhus/meow)** — CLI argument parsing
 - **[drizzle-orm](https://orm.drizzle.team/)** — the SQLite scroll of memory
 - **[fastest-levenshtein](https://github.com/ka-weihe/fastest-levenshtein)** — the identity guessing
-- **[picocolors](https://github.com/alexeyraspopov/picocolors)** — terminal colours
 - **[Biome](https://biomejs.dev/)** and **[TypeScript](https://www.typescriptlang.org/)** — the forge
 
 _All dependencies use permissive licenses and remain under their original terms._

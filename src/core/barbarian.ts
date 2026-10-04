@@ -101,15 +101,19 @@ function dayOf(timestamp: number): number {
   return Math.floor(timestamp / (24 * 60 * 60))
 }
 
+/** A year before `now`, in whole seconds, as the stored author time is kept. */
+function ancientCutoffFor(now: Date): number {
+  const oneYearAgo = new Date(now)
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+  return Math.floor(oneYearAgo.getTime() / 1000)
+}
+
 /** Every metric for every author who holds a line. */
 function collectMetrics(
   data: AnalysisData,
   now: Date,
 ): Map<number, BarbarianWarriorMetrics> {
-  const oneYearAgo = new Date(now)
-  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
-  // Whole seconds, to compare against the stored author time as a number.
-  const ancientCutoff = Math.floor(oneYearAgo.getTime() / 1000)
+  const ancientCutoff = ancientCutoffFor(now)
 
   const files = new Map(data.files.map((file) => [file.id, file]))
 
@@ -172,6 +176,135 @@ function collectMetrics(
   }
 
   return byAuthor
+}
+
+/**
+ * The whole each metric is a part of, counted over every surviving line.
+ *
+ * A bar that shows a warrior's part of the realm needs to know what the realm
+ * holds, and that is not always the sum of the warriors. A line belongs to
+ * one author, so lines add up. A file type, a day, or a file nobody holds a
+ * majority of do not: two warriors can share a day, and a file split evenly
+ * is held by nobody. So each whole is counted from the lines themselves,
+ * with the same rules the metrics use.
+ */
+export interface RealmTotals {
+  /** Every surviving line. */
+  lines: number
+  /** Surviving lines in large or legacy-looking files. */
+  legacyLines: number
+  /** Surviving lines last touched more than a year ago. */
+  ancientLines: number
+  /** Files that hold at least one surviving line. */
+  files: number
+  /** Distinct file extensions among those files. */
+  extensions: number
+  /** Distinct days any surviving line was last touched. */
+  days: number
+}
+
+/** Each metric the rankings show, the whole it is a part of, and its unit. */
+export const REALM_MEASURES: Array<{
+  key: keyof BarbarianWarriorMetrics
+  of: keyof RealmTotals
+  unit: string
+  read: (metrics: BarbarianWarriorMetrics) => number
+}> = [
+  {
+    key: 'battleScars',
+    of: 'legacyLines',
+    unit: 'lines',
+    read: (m) => m.battleScars,
+  },
+  {
+    key: 'territoryConquered',
+    of: 'files',
+    unit: 'files',
+    read: (m) => m.territoryConquered,
+  },
+  {
+    key: 'soloQuestVictories',
+    of: 'files',
+    unit: 'files',
+    read: (m) => m.soloQuestVictories,
+  },
+  {
+    key: 'weaponMastery',
+    of: 'extensions',
+    unit: 'file types',
+    read: (m) => m.weaponMastery,
+  },
+  {
+    key: 'ancientCodeSurvival',
+    of: 'ancientLines',
+    unit: 'lines',
+    read: (m) => m.ancientCodeSurvival,
+  },
+  {
+    key: 'massiveBattles',
+    of: 'days',
+    unit: 'days',
+    read: (m) => m.massiveBattles,
+  },
+  {
+    key: 'totalCampaigns',
+    of: 'days',
+    unit: 'days',
+    read: (m) => m.totalCampaigns,
+  },
+]
+
+export function realmTotals(
+  data: AnalysisData,
+  now: Date = new Date(),
+): RealmTotals {
+  const ancientCutoff = ancientCutoffFor(now)
+  const files = new Map(data.files.map((file) => [file.id, file]))
+  const held = new Set<number>()
+  const extensions = new Set<string>()
+  const days = new Set<number>()
+  let lines = 0
+  let legacyLines = 0
+  let ancientLines = 0
+
+  for (const line of data.lines) {
+    const file = files.get(line.fileId)
+    if (!file) continue
+    lines += 1
+    held.add(file.id)
+    if (looksLegacy(file)) legacyLines += 1
+    if (file.extension !== null) extensions.add(file.extension)
+    if (line.commitTimestamp !== null) {
+      days.add(dayOf(line.commitTimestamp))
+      if (line.commitTimestamp < ancientCutoff) ancientLines += 1
+    }
+  }
+
+  return {
+    lines,
+    legacyLines,
+    ancientLines,
+    files: held.size,
+    extensions: extensions.size,
+    days: days.size,
+  }
+}
+
+/**
+ * Where a warrior stands on one metric: one more than the number of warriors
+ * with strictly more, so warriors who tie share a place, and say so.
+ */
+export function placeAmong(
+  rankings: BarbarianRanking[],
+  read: (metrics: BarbarianWarriorMetrics) => number,
+  authorId: number,
+): { place: number; of: number; shared: boolean } | null {
+  const warrior = rankings.find((one) => one.authorId === authorId)
+  if (!warrior) return null
+  const value = read(warrior.metrics)
+  const ahead = rankings.filter((one) => read(one.metrics) > value).length
+  const level = rankings.filter((one) => read(one.metrics) === value).length
+  return { place: ahead + 1, of: rankings.length, shared: level > 1 }
 }
 
 /**

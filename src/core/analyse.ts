@@ -61,8 +61,8 @@ export interface AnalysisOutcome extends AnalysisRun {
   /**
    * Files that could not be read, collected rather than printed.
    *
-   * Writing to stdout or stderr while Ink holds the terminal puts text where
-   * the UI is drawing. The interface reports these instead.
+   * Writing to stdout or stderr while the interface holds the terminal puts
+   * text where it is drawing. The interface reports these instead.
    */
   failures: AnalysisFailure[]
 }
