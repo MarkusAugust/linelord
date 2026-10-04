@@ -10,6 +10,12 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+## [1.0.0-rc.1] — 2026-10-04
+
+The first release candidate for 1.0.0: the whole interface drawn again, full
+screen, and the first release LineLord has left 0.x for. A pre-release —
+Homebrew stays on 0.14.0 until 1.0.0 itself.
+
 ### Changed
 
 - **The interface is full screen, and drawn with OpenTUI instead of Ink.**
@@ -749,7 +755,8 @@ stored analysis is rebuilt once, because the database layout changed.
 Earlier releases predate this changelog. See the
 [releases page](https://github.com/MarkusAugust/linelord/releases).
 
-[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v1.0.0-rc.1...HEAD
+[1.0.0-rc.1]: https://github.com/MarkusAugust/linelord/compare/v0.14.0...v1.0.0-rc.1
 [0.14.0]: https://github.com/MarkusAugust/linelord/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/MarkusAugust/linelord/compare/v0.12.4...v0.13.0
 [0.12.4]: https://github.com/MarkusAugust/linelord/compare/v0.12.3...v0.12.4
