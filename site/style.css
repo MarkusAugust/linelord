@@ -439,7 +439,9 @@ a {
 }
 
 @media (prefers-color-scheme: light) {
-  .sobernetics { --sobernetics-accent: #c8102e; }
+  .sobernetics {
+    --sobernetics-accent: #c8102e;
+  }
 }
 
 .sobernetics:hover,
