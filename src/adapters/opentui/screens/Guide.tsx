@@ -118,28 +118,33 @@ export function Guide() {
           paddingLeft: 1,
           paddingRight: 1,
           width: wide ? 44 : '100%',
+          // Stacked above the page, the list scrolls in five rows rather
+          // than taking the height the chapter needs.
+          height: wide ? undefined : Math.min(GUIDE.length, 5) + 2,
           flexShrink: 0,
         }}
       >
-        {GUIDE.map((one, index) => {
-          const here = index === chapters.selected
-          return (
-            <box
-              key={one.title}
-              id={chapters.idOf(index)}
-              style={{ backgroundColor: here ? C.selected : undefined }}
-            >
-              <text
-                wrapMode="none"
-                attributes={here ? TextAttributes.BOLD : TextAttributes.NONE}
+        <scrollbox ref={chapters.scroll} style={{ flexGrow: 1 }}>
+          {GUIDE.map((one, index) => {
+            const here = index === chapters.selected
+            return (
+              <box
+                key={one.title}
+                id={chapters.idOf(index)}
+                style={{ backgroundColor: here ? C.selected : undefined }}
               >
-                <span fg={C.green}>{here ? '› ' : '  '}</span>
-                <span>{`${one.icon} `}</span>
-                <span fg={here ? C.green : C.text}>{one.title}</span>
-              </text>
-            </box>
-          )
-        })}
+                <text
+                  wrapMode="none"
+                  attributes={here ? TextAttributes.BOLD : TextAttributes.NONE}
+                >
+                  <span fg={C.green}>{here ? '› ' : '  '}</span>
+                  <span>{`${one.icon} `}</span>
+                  <span fg={here ? C.green : C.text}>{one.title}</span>
+                </text>
+              </box>
+            )
+          })}
+        </scrollbox>
       </box>
       {chapter && (
         <box

@@ -68,8 +68,17 @@ export interface BarbarianRanking {
  */
 export const LEGACY_FILE_SIZE_BYTES = 5000
 
-export const LEGACY_EXTENSIONS = new Set(['.js', '.php', '.asp', '.jsp'])
-export const LEGACY_PATH_WORDS = ['legacy', 'old', 'deprecated']
+export const LEGACY_EXTENSIONS: ReadonlySet<string> = new Set([
+  '.js',
+  '.php',
+  '.asp',
+  '.jsp',
+])
+export const LEGACY_PATH_WORDS: readonly string[] = [
+  'legacy',
+  'old',
+  'deprecated',
+]
 
 /** A day on which this many of a warrior's surviving lines were last touched. */
 export const MASSIVE_BATTLE_LINES = 100
@@ -365,7 +374,7 @@ export function gorvekScore(metrics: BarbarianWarriorMetrics): number {
   return Math.round(totalScore * 100) / 100
 }
 
-export const ACHIEVEMENTS: Array<{
+export const ACHIEVEMENTS: ReadonlyArray<{
   metric: keyof BarbarianWarriorMetrics
   title: string
 }> = [

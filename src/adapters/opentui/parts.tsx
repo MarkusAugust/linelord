@@ -1,6 +1,7 @@
 import { TextAttributes } from '@opentui/core'
 import {
   type BarbarianRanking,
+  MASSIVE_BATTLE_LINES,
   placeAmong,
   REALM_MEASURES,
   type RealmTotals,
@@ -46,8 +47,7 @@ export const MEASURE_NAMES: Record<
   massiveBattles: {
     short: 'Mass',
     label: 'Massive Battles',
-    explanation:
-      'days when over 100 of their surviving lines were last touched',
+    explanation: `days when over ${MASSIVE_BATTLE_LINES} of their surviving lines were last touched`,
   },
   totalCampaigns: {
     short: 'Camp',

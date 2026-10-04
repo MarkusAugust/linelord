@@ -183,9 +183,11 @@ beneath the name. The address is what tells two warriors of one name apart.
 **m** merges warriors you know to be one person — see
 [Merging warriors who are one person](#merging-warriors-who-are-one-person).
 
-Titles run from **legend** down to **peasant** and are handed out in rank
-order, the crown, the silver and the bronze marking the three who hold the
-most. A warrior wears one title, the same on every screen.
+Titles follow the share of lines, relative to the other warriors. Only the
+top three to five are crowned — **legend**, **line breaker**, **conqueror**,
+**destroyer**, **warlord** — and everyone else is spread from **barbarian**
+down to **peasant**, so the last place is always a peasant. The crown, the
+silver and the bronze mark the three who hold the most. A warrior wears one title, the same on every screen.
 
 ### Brutal Barbarian Rankings
 

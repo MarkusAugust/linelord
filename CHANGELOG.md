@@ -10,6 +10,18 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+### Changed
+
+- **Only the top few are crowned, and somebody is always a peasant.** The
+  top fifth took highborn titles and the middle of the list was nearly as
+  grand — vanquisher, slayer, berserker — so in a realm of five, four sounded
+  epic; and the lowborn titles were handed out from the top of their list, so
+  the last place was a potter, a baker or a dock worker, and nobody was a
+  peasant below sixty warriors. Now the top three to five take legend, line
+  breaker, conqueror, destroyer and warlord, and everyone else is spread from
+  barbarian down to peasant, so the last place is always a peasant. The
+  titles change on every screen and in `--json`; no number moves.
+
 ### Added
 
 - **The Warrior's Guide explains the rankings.** Nothing on screen said what

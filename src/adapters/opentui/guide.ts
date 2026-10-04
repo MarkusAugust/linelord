@@ -14,8 +14,17 @@ import {
   MASSIVE_BATTLE_LINES,
   SCORE_WEIGHTS,
 } from '../../core/barbarian'
+import { EPIC_TITLES, getDistributedTitles } from '../../core/rankedTitles'
 import { MEASURE_NAMES } from './parts'
 import { steady } from './theme'
+
+/** What the last place is called in realms of a few sizes, from the rule itself. */
+const TITLE_EXAMPLES = [5, 16, 60]
+  .map(
+    (size) =>
+      `with ${size} warriors, the last is ${getDistributedTitles(size).at(-1)}`,
+  )
+  .join('; ')
 
 export type Block =
   | { kind: 'text'; text: string }
@@ -113,11 +122,11 @@ export const GUIDE: Chapter[] = [
         pairs: [
           [
             MEASURE_NAMES.survivingLines.label,
-            'lines they hold — the line was last changed by them',
+            'lines they hold: the line was last changed by them',
           ],
           [
             MEASURE_NAMES.battleScars.label,
-            `their lines in files that look legacy: over ${LEGACY_FILE_SIZE_BYTES.toLocaleString('en-GB')} bytes, or ending in ${[...LEGACY_EXTENSIONS].join(' ')}, or with ${LEGACY_PATH_WORDS.map((word) => `"${word}"`).join(', ')} in the path`,
+            `their lines in files that look legacy: over ${LEGACY_FILE_SIZE_BYTES.toLocaleString('en-GB')} bytes, or ending in ${[...LEGACY_EXTENSIONS].join(' ')}, or with ${LEGACY_PATH_WORDS.map((word) => `"${word}"`).join(', ')} anywhere in the path, even inside a word — golden.ts and folder/ count. Files over --threshold are set aside and hold no lines, so the size rule only reaches files between the two`,
           ],
           [
             MEASURE_NAMES.territoryConquered.label,
@@ -129,7 +138,7 @@ export const GUIDE: Chapter[] = [
           ],
           [
             MEASURE_NAMES.weaponMastery.label,
-            'how many file types — extensions — they hold lines in',
+            'how many file types (extensions) they hold lines in',
           ],
           [
             MEASURE_NAMES.ancientCodeSurvival.label,
@@ -147,13 +156,24 @@ export const GUIDE: Chapter[] = [
       },
       {
         kind: 'text',
-        text: 'On a warrior’s page and below the rankings, each measure stands against the whole it is a part of — the lines, files, file types or days of the whole realm — and the bar is that part. Behind it is their place among the warriors.',
+        text: 'On a warrior’s page, and below the rankings, each measure stands against the whole it is a part of, and the bar is that part. Most wholes are the realm’s own: every line, every file, every file type, every day. Two are narrower: Battle Scars against every line in a legacy-looking file, and Ancient Code against every line older than a year. Behind it is their place among the warriors.',
       },
       {
         kind: 'code',
-        lines: [
-          'Ancient Code     11,481 of 31,400 lines   36.6%  ███████▎     2nd of 16',
-          '                 └ of …: the whole ┘      └ the part ┘        └ their place; = when shared ┘',
+        lines: ['Ancient Code  11,481 of 31,400 lines  36.6%  ███▋  2nd of 16'],
+      },
+      {
+        kind: 'pairs',
+        pairs: [
+          [
+            'of 31,400 lines',
+            'the whole: here, every line in the realm older than a year',
+          ],
+          ['36.6% ███▋', 'the part of that whole they hold'],
+          [
+            '2nd of 16',
+            'their place among the warriors; =2nd when they share it, nothing when they hold none',
+          ],
         ],
       },
       {
@@ -173,9 +193,9 @@ export const GUIDE: Chapter[] = [
       {
         kind: 'code',
         lines: [
-          `conquest   = Territory × ${SCORE_WEIGHTS.territoryConquered} + Solo × ${SCORE_WEIGHTS.soloQuestVictories} + ln(Types) × ${SCORE_WEIGHTS.weaponMastery}`,
-          `endurance  = Ancient × ${SCORE_WEIGHTS.ancientCodeSurvival} + Scars × ${SCORE_WEIGHTS.battleScars}`,
-          `intensity  = Massive × ${SCORE_WEIGHTS.massiveBattles} + ln(Campaigns) × ${SCORE_WEIGHTS.totalCampaigns}`,
+          `conquest  = Territory × ${SCORE_WEIGHTS.territoryConquered} + Solo × ${SCORE_WEIGHTS.soloQuestVictories} + ln(Types) × ${SCORE_WEIGHTS.weaponMastery}`,
+          `endurance = Ancient × ${SCORE_WEIGHTS.ancientCodeSurvival} + Scars × ${SCORE_WEIGHTS.battleScars}`,
+          `intensity = Massive × ${SCORE_WEIGHTS.massiveBattles} + ln(Campaigns) × ${SCORE_WEIGHTS.totalCampaigns}`,
           '',
           `+ ${SCORE_WEIGHTS.balancedOver20} if the weakest of the three is over 20, + ${SCORE_WEIGHTS.balancedOver50} more over 50`,
           `+ ${SCORE_WEIGHTS.dominantOver100} if the strongest is over 100`,
@@ -208,11 +228,11 @@ export const GUIDE: Chapter[] = [
       },
       {
         kind: 'text',
-        text: 'A title — legend, warlord, swordsman, peasant and the rest — follows the share of lines a warrior holds, and is handed out relative to the others: the top fifth get the highborn titles, the bottom fifth the lowborn ones, everyone else those in between. With one warrior there is only a legend; with two, a legend and a peasant. A warrior wears the same title on every screen.',
+        text: `A title follows the share of lines a warrior holds, and is given relative to the others. The top three to five — fewer in a small realm — take the epic titles in order: ${EPIC_TITLES.join(', ')}. Everyone else is spread evenly from barbarian down to the last title of all, so the last place is always a peasant: ${TITLE_EXAMPLES}. With more warriors than titles, neighbours share one. A warrior wears the same title on every screen.`,
       },
       {
         kind: 'warn',
-        text: 'A peasant is somebody who holds the fewest lines in this repository today. That is all it means.',
+        text: 'A peasant is whoever holds the fewest lines here today. That is all it means.',
       },
     ],
   },
@@ -244,14 +264,14 @@ export const GUIDE: Chapter[] = [
             "with --history: how long until half of a month's work is gone",
           ],
           [
-            'Survival',
-            'with --history: how much of everything they ever had standing still stands',
+            'Survival rate',
+            "not a column: an order (o) once the history is walked, and a line on the warrior's page — how much of everything they ever had standing still stands",
           ],
         ],
       },
       {
         kind: 'text',
-        text: 'A half-life can say three things. A number is measured. "> 1y 5m" means the work outlasted everything the history watched. "—" means the history saw that work only once, or was not walked, and knows nothing either way.',
+        text: 'A half-life can say three things. A number is measured. "> 1y 5m" means the work outlasted everything the history watched. "—" means nothing is known: the history saw that work only once, or was not walked, or the stored history is about another revision than the one being analysed — then the screen says so above the table.',
       },
       {
         kind: 'warn',
@@ -274,8 +294,8 @@ export const GUIDE: Chapter[] = [
       {
         kind: 'code',
         lines: [
-          'Gorvek of Bonereach <gorvek@firma.no> <4711+vurn@users.noreply.github.com>',
-          '└─ the name and address shown ─────┘ └─ the address it replaces ──────┘',
+          'Gorvek <gorvek@firma.no> <4711+vurn@users.noreply.github.com>',
+          '└─ shown ──────────────┘ └─ the address it replaces ────────┘',
         ],
       },
       {
@@ -385,7 +405,8 @@ export const GUIDE: Chapter[] = [
         kind: 'code',
         lines: [
           'linelord --history',
-          'linelord --history --snapshot-interval=quarter --max-snapshots=24',
+          'linelord --history --snapshot-interval=quarter \\',
+          '         --max-snapshots=24',
         ],
       },
       {

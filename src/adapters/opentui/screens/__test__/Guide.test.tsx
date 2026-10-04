@@ -66,3 +66,13 @@ describe("The Warrior's Guide", () => {
     expect(screen.frame()).toContain('Every screen answers the same keys')
   })
 })
+
+describe('Guide, in a small terminal', () => {
+  it('keeps the chapter list short so the chapter has room, and follows the selection', async () => {
+    // Eleven chapters stacked above the page left five lines of text at 80x24.
+    const screen = await guide({ width: 80, height: 24 })
+    expect(screen.frame()).toContain('Ctrl-u Ctrl-d')
+    await screen.press('G')
+    expect(screen.frame()).toMatch(/› .*Flags, for scripts/)
+  })
+})

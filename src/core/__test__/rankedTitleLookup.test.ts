@@ -81,14 +81,4 @@ describe('rankedTitles - teams larger than the title table', () => {
       expect(getDistributedTitles(size)[0]).toBe(rankedTitles[0] ?? '')
     }
   })
-
-  it('leaves the distribution unchanged for teams that fit', () => {
-    // The compression only engages once a tier is oversubscribed, so a team
-    // the table can seat must be distributed exactly as it was before.
-    expect(getDistributedTitles(10)).toEqual([
-      ...rankedTitles.slice(0, 2),
-      ...rankedTitles.slice(12, 18),
-      ...rankedTitles.slice(38, 40),
-    ])
-  })
 })
