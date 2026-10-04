@@ -10,6 +10,24 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+### Added
+
+- **Warriors who are one person can be merged by hand, even when nothing
+  about them looks alike.** The guessing only finds identities that resemble
+  each other, so a person who committed as `MASK <work address>` and through
+  a GitHub noreply address with another name could never be put together
+  from inside LineLord. Pick **Merge warriors who are one person** on the
+  menu, or press **m** on the Repository Overview, mark the identities, and
+  choose which of them is shown. The merge is written as lines in `.mailmap`,
+  shown before anything is written, and the repository is read again
+  straight after, so the overview comes back with one row. The screen then
+  says how to change it later: edit the name and address the lines begin
+  with, or delete them to count the identities apart again. Where `.mailmap`
+  already sends other addresses to one of the identities merged, those are
+  redirected too — git does not follow one entry on to the next, and a
+  warrior merged twice would otherwise reappear under the name in between.
+  The numbers move only where somebody merges: two rows become one.
+
 ### Changed
 
 - **The `.mailmap` draft says what writing it actually does.** Both the README

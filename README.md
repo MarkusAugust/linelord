@@ -19,7 +19,7 @@ LineLord is a CLI tool that wields the ancient power of `git blame` to reveal wh
 ### What Gorvek Brings to the Battlefield
 
 - **Native Git Power** — every number comes from git itself, and works wherever git draws breath
-- **Honest Identity** — one warrior is one email address; `.mailmap` is how you say otherwise, and LineLord will draft it for you
+- **Honest Identity** — one warrior is one email address; `.mailmap` is how you say otherwise, and LineLord will draft it from its guesses or write the merge you choose
 - **Battle Reports** — who holds what, how old it is, and who conquered which ground
 - **Code Longevity** — how long the code still standing has stood, and with `--history`, how long code actually lasts before it falls
 - **Brutal Barbarian Rankings** — territory owned, files held alone, code that outlived a year
@@ -101,6 +101,8 @@ to, the analysis runs anyway and simply remembers nothing.
 - **ESC** or **q** — retreat one screen, or leave the realm
 - **:q** or **:x** — leave as a vim warrior would, from the main menu
 - On Code Longevity: **m**, **a**, **l** re-sort by median, mean and lines; **h** and **s** by half-life and survival once the history is walked
+- On Repository Overview: **m** merges warriors who are one person, starting from the one highlighted
+- On the merge: **Space** marks a warrior, **w** writes the merge
 - On the `.mailmap` draft: **w** writes what it proposes
 
 ## What Gets Analysed
@@ -138,7 +140,7 @@ weird.dat     diff       # count it as text, though git would guess otherwise
 
 ## The Battle Reports
 
-Five scrolls await on the menu. On the first three, **↑↓ and Enter** open one
+Six scrolls await on the menu. On the first three, **↑↓ and Enter** open one
 warrior in full: their share of the codebase and the files they hold the most
 of, how old that code is and where the oldest of it sits, and — once the
 history has been walked — what became of everything they ever wrote.
@@ -149,6 +151,8 @@ The realm at a glance: how many files were surveyed and how many set aside as
 binary, generated or bloated; how many lines still stand; and every warrior
 ranked by the share of those lines they hold, with their title and address
 beneath the name. The address is what tells two warriors of one name apart.
+**m** merges warriors you know to be one person — see
+[Merging warriors nothing links](#merging-warriors-nothing-links).
 
 Titles run from **legend** down to **peasant** and are handed out in rank
 order, the crown, the silver and the bronze marking the three who hold the
@@ -236,10 +240,11 @@ moved on since, the screen says which revision the history describes and
 leaves the columns empty rather than draw a curve about a realm that no
 longer exists.
 
-### Draft a .mailmap, and About
+### Merge Warriors, Draft a .mailmap, and About
 
-The fourth scroll is told of under [One warrior, many names](#one-warrior-many-names).
-The fifth is Gorvek explaining himself.
+The fourth and fifth scrolls are told of under
+[One warrior, many names](#one-warrior-many-names). The sixth is Gorvek
+explaining himself.
 
 ## What the Numbers Are, and Are Not
 
@@ -372,6 +377,49 @@ On the menu it is `w` that writes; from the command line the lines are
 appended and each one reported, `+` for added and `=` for already there.
 Nothing is ever overwritten or removed: entries you wrote by hand stay exactly
 as they are, and a wrong guess is a line to delete, not a decision to undo.
+### Merging Warriors Nothing Links
+
+The guessing only finds warriors who resemble each other. A warrior who
+committed as `Gorvek of Bonereach <gorvek@firma.no>` from the war camp and as
+`Vurn the Ashborn <4711+vurn@users.noreply.github.com>` through GitHub shares
+neither a name nor an address with himself, and no guess will ever put the two
+together. Only he knows — so LineLord takes his word for it.
+
+Pick **Merge warriors who are one person** on the menu, or press **m** on the
+Repository Overview with one of them highlighted. Mark every identity that is
+the same person with **Space**, press **Enter**, and choose which of them the
+merged warrior is shown as. The lines are shown before anything is written:
+
+```
+2 identities become one warrior, shown as Gorvek of Bonereach <gorvek@firma.no>.
+
+These lines are added to .mailmap:
+  Gorvek of Bonereach <gorvek@firma.no> <4711+vurn@users.noreply.github.com>
+
+Nothing is written until you press 'w' · Esc to go back
+```
+
+**w** appends them to `.mailmap`, and **Enter** reads the repository again, so
+the overview comes back with one row where there were two.
+
+If `.mailmap` already sends other addresses to one of the warriors being
+merged, those get a line too. Git reads the file once and does not follow one
+entry on to the next, so without them a warrior merged once and then merged
+again would come back under the name he had in between.
+
+**Changing it afterwards.** The merge is lines in `.mailmap` and nothing else,
+and the screen says so once it is written:
+
+- Each line reads: the name and address shown, then the address it replaces.
+- To be shown as somebody else, change the first name and address on those
+  lines. The name can be anything, whether or not you ever committed under it.
+- To count them apart again, delete the lines the merge added.
+- It is a file in your repository. Commit it, and everyone who clones the
+  repository counts them as one, in LineLord and in `git shortlog`.
+
+LineLord reads `.mailmap` again on every run, and because the file is hashed
+into the cache fingerprint, an edit is noticed without `--refresh`.
+
 ### So are they merged, or not?
 
 Both, in order, and the order is the point. LineLord never merges anybody: it

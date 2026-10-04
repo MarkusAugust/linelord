@@ -7,6 +7,7 @@ export type AppState =
   | 'overview'
   | 'barbarianrankings'
   | 'mailmap'
+  | 'merge'
   | 'longevity'
   | 'about'
   | 'exit'

@@ -143,4 +143,70 @@ describe('Overview', () => {
 
     expect(stripAnsi(lastFrame() ?? '')).toContain('Nobody holds a line')
   })
+
+  it('opens the merge with m, starting from the warrior highlighted', async () => {
+    const proposed: string[][] = []
+    const { lastFrame, stdin } = render(
+      <Overview
+        analysis={fakeAnalysis()}
+        warriorSource={fakeWarriorSource()}
+        largeFileThresholdKB={50}
+        onBack={noop}
+        merge={{
+          propose: async (_keep, absorbed) => {
+            proposed.push(absorbed)
+            return []
+          },
+          write: async () => ({ path: '', added: [], alreadyPresent: [] }),
+          onMerged: noop,
+        }}
+      />,
+    )
+    await settle()
+
+    stdin.write(KEY.down)
+    await settle()
+    stdin.write('m')
+    await settle()
+    expect(stripAnsi(lastFrame() ?? '')).toContain(
+      'Merge warriors who are one person',
+    )
+
+    // Sarn is marked already; mark Gorvek above him, keep Gorvek.
+    stdin.write(KEY.up)
+    await settle()
+    stdin.write(' ')
+    await settle()
+    stdin.write(KEY.enter)
+    await settle()
+    stdin.write(KEY.enter)
+    await settle()
+    expect(proposed).toEqual([[SARN.email]])
+
+    // Back out of every step to the table again.
+    for (const key of ['q', 'q', 'q']) {
+      stdin.write(key)
+      await settle()
+    }
+    expect(stripAnsi(lastFrame() ?? '')).toContain('Files analyzed')
+  })
+
+  it('says m merges in its footer', async () => {
+    const { lastFrame } = render(
+      <Overview
+        analysis={fakeAnalysis()}
+        warriorSource={fakeWarriorSource()}
+        largeFileThresholdKB={50}
+        onBack={noop}
+        merge={{
+          propose: async () => [],
+          write: async () => ({ path: '', added: [], alreadyPresent: [] }),
+          onMerged: noop,
+        }}
+      />,
+    )
+    await settle()
+
+    expect(stripAnsi(lastFrame() ?? '')).toContain('m to merge')
+  })
 })

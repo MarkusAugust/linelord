@@ -3,7 +3,8 @@ import { useMemo } from 'react'
 import { convertThresholdKBToBytes } from '../../app/thresholdConverter'
 import type { LineLordPorts } from '../../core/lineLord'
 import type { HistoryReading } from '../../core/longevity'
-import { writeMailmap } from '../../core/mailmap'
+import { proposeMerge, writeMailmap, writeMerge } from '../../core/mailmap'
+import { authorContributions } from '../../core/ownership'
 import type { SnapshotInterval } from '../../core/snapshots'
 import { type WarriorSource, warriorSourceFor } from '../../core/warrior'
 import About from './components/About'
@@ -15,6 +16,7 @@ import LoadingScreen from './components/LoadingScreen'
 import LongevityDashboard from './components/LongevityDashboard'
 import MailmapDraft from './components/MailmapDraft'
 import Menu, { type MenuOption } from './components/Menu'
+import MergeWarriors from './components/MergeWarriors'
 import { Overview } from './components/Overview'
 import RepoPathInput from './components/RepoPathInput'
 import { type AppState, useAppState } from './hooks/useAppState'
@@ -82,6 +84,7 @@ export default function App({
 
   const {
     lineLordService,
+    reanalyse,
     isInitialized,
     initializingMessage,
     initError,
@@ -140,6 +143,21 @@ export default function App({
         : null,
     [lineLordService, isInitialized],
   )
+
+  // Merging by hand writes .mailmap, which git applies before LineLord counts
+  // a line -- so every number on every screen is out of date the moment it
+  // is written. Read the repository again, and show the table it changed.
+  const merge = {
+    propose: (keep: { name: string; email: string }, absorbed: string[]) =>
+      proposeMerge(repoPath, keep, absorbed, ports.files),
+    write: (keep: { name: string; email: string }, absorbed: string[]) =>
+      writeMerge(repoPath, keep, absorbed, ports.files),
+    onMerged: () => {
+      clearTerminal()
+      setState('overview')
+      reanalyse()
+    },
+  }
 
   const handleMenuSelect = (option: MenuOption) => {
     if (option.value === 'exit') {
@@ -416,12 +434,23 @@ export default function App({
         />
       )}
 
+      {state === 'merge' && analysis && (
+        <MergeWarriors
+          contributions={authorContributions(analysis)}
+          propose={merge.propose}
+          write={merge.write}
+          onMerged={merge.onMerged}
+          onBack={returnToMenu}
+        />
+      )}
+
       {state === 'overview' && analysis && warriorSource && (
         <Overview
           onBack={returnToMenu}
           largeFileThresholdKB={largeFileThresholdKB}
           analysis={analysis}
           warriorSource={warriorSource}
+          merge={merge}
         />
       )}
 

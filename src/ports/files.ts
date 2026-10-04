@@ -2,7 +2,7 @@
  * The little of the file system LineLord touches directly.
  *
  * Two files in the repository, both read by git as well: `.mailmap`, which
- * the cache fingerprint hashes and `--write-mailmap` appends to, and
+ * the cache fingerprint hashes and the draft and the merge append to, and
  * `.git-blame-ignore-revs`, whose entries are resolved before blame runs.
  * The port is small because the surface is: everything else on disk is
  * git's or the cache's, and those have ports of their own.
