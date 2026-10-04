@@ -22,11 +22,12 @@ import { type AppState, useAppState } from './hooks/useAppState'
 import { useErrorHandler } from './hooks/useErrorHandler'
 import { useLineLordService } from './hooks/useLineLordService'
 import { menuOptions } from './menuOptions'
-import { clearTerminal } from './terminal'
 
 type AppProps = {
   /** How the outside world is reached: git, the file system, the store. */
   ports: LineLordPorts
+  /** Wipe the terminal between screens, without Ink losing track of it. */
+  clearScreen?: () => void
   repoPath?: string
   thresholdKB?: number
   /** Whether the analysis may be stored and reused between runs. */
@@ -64,6 +65,7 @@ function namedBy(sources: { file: boolean; flag: boolean }): string {
 
 export default function App({
   ports,
+  clearScreen: clearTerminal = () => {},
   repoPath: initialRepoPath,
   thresholdKB,
   useCache = true,

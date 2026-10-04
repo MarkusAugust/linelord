@@ -5,6 +5,7 @@ import { render } from 'ink'
 import meow from 'meow'
 import React from 'react'
 import App from '../adapters/ink/App'
+import { createScreen } from '../adapters/ink/terminal'
 import { resolveCachePath } from '../adapters/sqlite/cacheLocation'
 import {
   removeAllCaches,
@@ -316,8 +317,11 @@ if (cli.flags.writeMailmap) {
   process.exit(0)
 }
 
+const screen = createScreen(process.stdout)
+
 const element = React.createElement(App, {
   ports,
+  clearScreen: screen.clear,
   repoPath: repoPath,
   thresholdKB: thresholdKB,
   useCache: cli.flags.cache,
@@ -329,6 +333,7 @@ const element = React.createElement(App, {
 })
 
 const app = render(element)
+screen.attach(app)
 const { waitUntilExit } = app
 
 waitUntilExit().then(() => {
