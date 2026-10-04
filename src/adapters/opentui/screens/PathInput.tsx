@@ -28,8 +28,15 @@ export function PathInput({
   const [typed, setTyped] = useState('')
   const [error, setError] = useState<string | null>(null)
   const target = normalise(typed)
+  const take = (text: string) => {
+    setTyped((at) => at + text)
+    setError(null)
+  }
 
   useScreenKeys({
+    // A pasted path arrives as one piece, not as keys; a line break copied
+    // with it is not part of the path.
+    paste: (text) => take(text.replace(/[\r\n]+/g, '').trim()),
     hint: `type a path · Enter march on it · Ctrl-u clear${canCancel ? ' · Esc back' : ' · Esc leave'}`,
     raw: (key) => {
       if (key.name === 'escape') return onCancel()
@@ -54,8 +61,7 @@ export function PathInput({
         key.sequence >= ' ' &&
         !key.sequence.startsWith('\x1b')
       ) {
-        setTyped((at) => at + key.sequence)
-        setError(null)
+        take(key.sequence)
       }
     },
   })

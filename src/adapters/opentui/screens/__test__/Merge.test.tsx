@@ -164,3 +164,59 @@ describe('Merge', () => {
     expect(screen.frame()).toContain('Merge warriors who are one person')
   })
 })
+
+describe('Merge, while the file is being written', () => {
+  /** A file system whose append waits until the test lets it go. */
+  function slowFiles() {
+    const files = memoryFiles()
+    let release = () => {}
+    let appends = 0
+    const appendText = files.appendText
+    files.appendText = async (path, text) => {
+      appends += 1
+      await new Promise<void>((done) => {
+        release = done
+      })
+      await appendText(path, text)
+    }
+    return { files, release: () => release(), appends: () => appends }
+  }
+
+  async function toPreview(files: ReturnType<typeof memoryFiles>) {
+    const driven = await shell({
+      files,
+      repoPath: REPO,
+      initialScreens: [{ kind: 'menu' }, { kind: 'merge' }],
+    })
+    await driven.press(' ', 'j', ' ', 'enter', 'enter')
+    return driven
+  }
+
+  it('stays until the write is done, so the realm is read again after it', async () => {
+    // Leaving mid-write used to close the screen while the write went on:
+    // .mailmap changed and nothing read the realm again.
+    const slow = slowFiles()
+    const driven = await toPreview(slow.files)
+    screen = driven
+    await driven.press('w', 'esc')
+    expect(driven.frame()).toContain('MERGE WARRIORS')
+    expect(driven.frame()).toContain('Writing')
+
+    slow.release()
+    await driven.press('j')
+    expect(driven.frame()).toContain('To change this later')
+    await driven.press('enter')
+    expect(driven.reread()).toBe(1)
+  })
+
+  it('writes once however often w is pressed', async () => {
+    const slow = slowFiles()
+    const driven = await toPreview(slow.files)
+    screen = driven
+    await driven.press('w', 'w', 'w')
+    slow.release()
+    await driven.press('j')
+    expect(slow.appends()).toBe(1)
+    expect(slow.files.files[MAILMAP]?.trim().split('\n')).toHaveLength(1)
+  })
+})

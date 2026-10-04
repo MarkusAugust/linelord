@@ -69,3 +69,22 @@ describe('Failed', () => {
     expect(screen.frame()).toContain('CHOOSE A REALM')
   })
 })
+
+describe('Failed, and trying again', () => {
+  it('says what went wrong without blaming the path for it', async () => {
+    const { shell } = await import('../../__test__/harness')
+    const driven = await shell({
+      realm: {
+        status: 'failed',
+        error: 'Another LineLord is analysing this repository',
+      },
+    })
+    try {
+      const frame = driven.frame()
+      expect(frame).toContain('Another LineLord is analysing this repository')
+      expect(frame).not.toContain('must be a git repository')
+    } finally {
+      driven.done()
+    }
+  })
+})

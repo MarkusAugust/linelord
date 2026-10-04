@@ -15,6 +15,8 @@ export type ScreenKeys = {
   onKey?: (key: string) => Handled
   /** Every key as typed, keymap bypassed. For text entry. */
   raw?: (key: RawKey) => void
+  /** Text pasted into the terminal, for a screen that takes text. */
+  paste?: (text: string) => void
   /** The keys line in the footer. */
   hint: string
   /** This screen's own keys, for the help. */

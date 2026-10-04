@@ -169,3 +169,14 @@ describe('Rankings', () => {
     expect(screen.frame()).toContain('No warriors found')
   })
 })
+
+describe('Rankings, the score beside the battle record', () => {
+  it('writes the Gorvek score in full, as the table does', async () => {
+    // fit(score, 0) wrote every score under a million in thousands: 48 as "0k".
+    screen = await shell(
+      { initialScreens: [{ kind: 'menu' }, { kind: 'rankings' }] },
+      { width: 150, height: 40 },
+    )
+    expect(screen.frame()).toContain('Gorvek score 48')
+  })
+})

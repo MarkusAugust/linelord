@@ -67,6 +67,24 @@ const CHOICES: Array<{
   { value: 'exit', icon: '🚪', label: 'Exit', about: 'leave the realm' },
 ]
 
+/** The first three, and how many more there are, so a long list says it is long. */
+function firstThree<T>(items: T[], line: (item: T) => string): string[] {
+  return [
+    ...items.slice(0, 3).map(line),
+    ...(items.length > 3 ? [`  … and ${items.length - 3} more`] : []),
+  ]
+}
+
+/** Where the commits being looked past were named; both at once is ordinary. */
+function namedBy(sources: { file: boolean; flag: boolean }): string {
+  if (sources.file && sources.flag) {
+    return 'named in .git-blame-ignore-revs and with --ignore-rev'
+  }
+  return sources.file
+    ? 'named in .git-blame-ignore-revs'
+    : 'named with --ignore-rev'
+}
+
 /** Where the numbers came from, and what is missing from them. */
 function tidings(
   realm: Realm,
@@ -105,7 +123,7 @@ function tidings(
     out.push({
       tone: 'note',
       lines: [
-        `Looking past ${plural(context.ignoredRevisionCount, 'commit')}; their lines go to whoever wrote them`,
+        `Looking past ${plural(context.ignoredRevisionCount, 'commit')} ${namedBy(context.ignoreRevSources)}; their lines go to whoever wrote them`,
       ],
     })
   }
@@ -113,10 +131,15 @@ function tidings(
     out.push({
       tone: 'warn',
       lines: [
-        `⚠ ${plural(context.unresolvedIgnoreRevs.length, 'ignore entry', 'ignore entries')} name no commit here and were left out`,
-        ...context.unresolvedIgnoreRevs
-          .slice(0, 3)
-          .map((one) => `  ${one.entry}`),
+        context.unresolvedIgnoreRevs.length === 1
+          ? '⚠ 1 ignore entry names no commit here and was left out'
+          : `⚠ ${plural(context.unresolvedIgnoreRevs.length, 'ignore entry', 'ignore entries')} name no commit here and were left out`,
+        // Each entry says where it was named: the file to fix, or the flag.
+        ...firstThree(
+          context.unresolvedIgnoreRevs,
+          (one) =>
+            `  ${one.entry} — ${one.source === 'file' ? 'in .git-blame-ignore-revs' : 'given with --ignore-rev'}`,
+        ),
       ],
     })
   }
@@ -133,6 +156,7 @@ function tidings(
               (one) => `    ← ${one.email} — ${one.reason}`,
             ),
           ]),
+        ...(merges.length > 3 ? [`  … and ${merges.length - 3} more`] : []),
         'Nothing was merged. Pick 🤝 Merge to take the ones that are right.',
       ],
     })
@@ -141,7 +165,12 @@ function tidings(
     out.push({
       tone: 'warn',
       lines: [
-        `⚠ The history could not read ${plural(historyFailures.length, 'file')}; those snapshots count fewer lines`,
+        `⚠ The history could not read ${plural(historyFailures.length, 'file')}; those snapshots count fewer lines:`,
+        ...firstThree(
+          historyFailures,
+          (one) =>
+            `  ${one.path} at ${one.revision.slice(0, 7)} — ${one.error.split('\n')[0]}`,
+        ),
       ],
     })
   }
@@ -150,9 +179,10 @@ function tidings(
       tone: 'warn',
       lines: [
         `⚠ ${plural(failures.length, 'file')} could not be analysed and ${failures.length === 1 ? 'is' : 'are'} missing from every number:`,
-        ...failures
-          .slice(0, 3)
-          .map((one) => `  ${one.path} — ${one.error.split('\n')[0]}`),
+        ...firstThree(
+          failures,
+          (one) => `  ${one.path} — ${one.error.split('\n')[0]}`,
+        ),
       ],
     })
   }

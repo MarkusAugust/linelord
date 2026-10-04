@@ -147,9 +147,59 @@ describe('the tidings', () => {
         unresolvedIgnoreRevs: [{ entry: 'deadbeef', source: 'file' }],
       },
     })
-    expect(frame).toContain('Looking past 2 commits')
-    expect(frame).toContain('1 ignore entry name no commit here')
-    expect(frame).toContain('deadbeef')
+    expect(frame).toContain(
+      'Looking past 2 commits named in .git-blame-ignore-revs',
+    )
+    expect(frame).toContain(
+      '1 ignore entry names no commit here and was left out',
+    )
+    expect(frame).toContain('deadbeef — in .git-blame-ignore-revs')
+  })
+
+  it('says which source named each commit, for both sources at once', async () => {
+    // One flag for the whole repository said where the entries came from while
+    // the bad ones could come from either; each entry carries its own source.
+    const frame = await menu({
+      context: {
+        headSha: 'abc1234def5678',
+        uncommittedFileCount: 0,
+        ignoredRevisionCount: 3,
+        ignoreRevSources: { file: true, flag: true },
+        unresolvedIgnoreRevs: [
+          { entry: 'deadbeef', source: 'file' },
+          { entry: 'cafebabe', source: 'flag' },
+        ],
+      },
+    })
+    // The panel wraps the line; read it as one.
+    const flat = frame.replace(/[\s│]+/g, ' ')
+    expect(flat).toContain('named in .git-blame-ignore-revs and with --')
+    expect(flat).toContain('ignore-rev; their lines go to whoever wrote them')
+    expect(frame).toContain(
+      '2 ignore entries name no commit here and were left out',
+    )
+    expect(frame).toContain('deadbeef — in .git-blame-ignore-revs')
+    expect(frame).toContain('cafebabe — given with --ignore-rev')
+  })
+
+  it('names the files it could not read, three of them, and says how many more', async () => {
+    const frame = await menu({
+      historyFailures: [
+        { path: 'src/a.ts', revision: 'abc1234', error: 'gone' },
+        { path: 'src/b.ts', revision: 'abc1234', error: 'gone' },
+        { path: 'src/c.ts', revision: 'abc1234', error: 'gone' },
+        { path: 'src/d.ts', revision: 'abc1234', error: 'gone' },
+      ],
+      failures: ['one', 'two', 'three', 'four', 'five'].map((name) => ({
+        path: `src/${name}.ts`,
+        error: 'fatal',
+      })),
+    })
+    expect(frame).toContain('src/a.ts at abc1234 — gone')
+    expect(frame).toContain('… and 1 more')
+    expect(frame).toContain('src/three.ts — fatal')
+    expect(frame).not.toContain('src/four.ts')
+    expect(frame).toContain('… and 2 more')
   })
 
   it('shows who may be one person, and that nothing was merged', async () => {

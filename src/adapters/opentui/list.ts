@@ -31,6 +31,9 @@ export function useList<T>(
   const matches = search
     ? items.flatMap((item, index) => (answersTo(item, search) ? [index] : []))
     : []
+  // Asked once per row on every draw, so a set rather than a scan.
+  const matchSet = new Set(matches)
+  const isMatch = (index: number) => matchSet.has(index)
 
   const idOf = (index: number) => `${prefix}-${index}`
   useEffect(() => {
@@ -98,6 +101,7 @@ export function useList<T>(
     selected,
     setSelected,
     matches,
+    isMatch,
     search,
     scroll,
     idOf,

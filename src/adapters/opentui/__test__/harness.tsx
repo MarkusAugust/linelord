@@ -168,6 +168,8 @@ export type Driven = {
   /** Press keys one at a time: a name from the list above, `ctrl-d`, or a character. */
   press: (...keys: string[]) => Promise<void>
   type: (text: string) => Promise<void>
+  /** Paste, as a terminal does with bracketed paste. */
+  paste: (text: string) => Promise<void>
   resize: (width: number, height: number) => Promise<void>
   done: () => void
 }
@@ -207,6 +209,10 @@ export async function drive(
         setup.mockInput.pressKey(char)
         await settle()
       }
+    },
+    paste: async (text) => {
+      await setup.mockInput.pasteBracketedText(text)
+      await settle()
     },
     resize: async (width, height) => {
       setup.resize(width, height)

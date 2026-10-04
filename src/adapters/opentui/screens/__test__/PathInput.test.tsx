@@ -102,3 +102,18 @@ describe('PathInput', () => {
     expect(screen.frame()).toContain('THE MAIN HALL')
   })
 })
+
+describe('PathInput, pasting and leaving', () => {
+  it('takes a pasted path as if it were typed', async () => {
+    screen = await shell({ repoPath: null })
+    await screen.paste(repo)
+    expect(screen.frame()).toContain(`Will use: ${repo}`)
+  })
+
+  it('leaves the realm on Ctrl-C, though every other key is typed', async () => {
+    const driven = await shell({ repoPath: null })
+    screen = driven
+    await driven.press('ctrl-c')
+    expect(driven.quits()).toBe(1)
+  })
+})

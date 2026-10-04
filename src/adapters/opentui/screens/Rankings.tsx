@@ -7,7 +7,7 @@ import type { Realm } from '../data'
 import { useScreenKeys } from '../keys'
 import { useList } from '../list'
 import { BattleRecord, MEASURE_NAMES } from '../parts'
-import { C, fit, MEDALS, percent, plural, steady } from '../theme'
+import { C, count, fit, MEDALS, percent, plural, steady } from '../theme'
 
 const METRIC_WIDTH = 7
 const SHARE_BAR = 10
@@ -159,7 +159,7 @@ export function Rankings({
         >
           {rankings.map((warrior, index) => {
             const here = index === list.selected
-            const match = list.matches.includes(index)
+            const match = list.isMatch(index)
             const share =
               totals.lines > 0
                 ? warrior.metrics.survivingLines / totals.lines
@@ -240,7 +240,7 @@ export function Rankings({
               <text
                 fg={C.gray}
                 wrapMode="none"
-              >{`Gorvek score ${fit(chosen.gorvekScore, 0).trim()}`}</text>
+              >{`Gorvek score ${count(Math.round(chosen.gorvekScore))}`}</text>
               {chosen.specialAchievements.length > 0 && (
                 <>
                   <text

@@ -233,7 +233,7 @@ export function Longevity({
                   <span fg={C.gray}>{`${String(index + 1).padStart(3)} `}</span>
                   <span
                     fg={
-                      list.matches.includes(index)
+                      list.isMatch(index)
                         ? C.yellow
                         : here
                           ? C.green

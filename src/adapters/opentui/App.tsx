@@ -1,6 +1,6 @@
 import { basename } from 'node:path'
-import { TextAttributes } from '@opentui/core'
-import { useKeyboard, useTerminalDimensions } from '@opentui/react'
+import { decodePasteBytes, TextAttributes } from '@opentui/core'
+import { useKeyboard, usePaste, useTerminalDimensions } from '@opentui/react'
 import { useCallback, useRef, useState } from 'react'
 import { HONESTY_NOTES } from '../../core/honestyNotes'
 import type { LineLordPorts } from '../../core/lineLord'
@@ -89,7 +89,11 @@ export function App({
       repoPath={repoPath}
       files={ports.files}
       thresholdKB={options.thresholdBytes / 1024}
-      onRepoChosen={setRepoPath}
+      onRepoChosen={(path) => {
+        // Read it even when it is the path that just failed: that is a retry.
+        setRepoPath(path)
+        setGeneration((at) => at + 1)
+      }}
       onReanalyse={() => setGeneration((at) => at + 1)}
       onQuit={onQuit}
     />
@@ -166,9 +170,17 @@ export function Shell({
           ? 'failed'
           : 'screen'
 
+  // Pasted text arrives as one event, not as keys; it goes to a screen that
+  // takes text, and nowhere else.
+  usePaste((event) => {
+    if (!help) keys.current.paste?.(decodePasteBytes(event.bytes))
+  })
+
   useKeyboard((key) => {
     setStatus('')
     const screen = keys.current
+    // Ctrl-C leaves from anywhere, the screens that take text included.
+    if (key.ctrl && key.name === 'c') return onQuit()
     if (screen.raw && !help) {
       screen.raw({
         name: key.name,

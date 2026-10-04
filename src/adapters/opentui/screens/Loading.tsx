@@ -57,11 +57,13 @@ export function Loading({
 }
 
 export function Failed({ error }: { error: string }) {
-  useScreenKeys({ hint: 'Enter choose another realm · :q quit' })
+  useScreenKeys({
+    hint: 'Enter choose a realm — the same one again, or another · :q quit',
+  })
   return (
     <box style={{ flexDirection: 'column', flexGrow: 1, padding: 2 }}>
       <box
-        title=" 💀 By the Ashfall! This path is not worthy! "
+        title=" 💀 By the Ashfall! The realm could not be read "
         style={{
           border: true,
           borderColor: C.red,
@@ -71,7 +73,8 @@ export function Failed({ error }: { error: string }) {
       >
         <text fg={C.red}>{error}</text>
         <text fg={C.gray} style={{ marginTop: 1 }}>
-          The path must be a git repository to survey its warriors.
+          Nothing was counted. Choose the same realm to try again once the
+          trouble has passed, or another.
         </text>
       </box>
     </box>

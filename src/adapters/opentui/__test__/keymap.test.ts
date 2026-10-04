@@ -173,3 +173,11 @@ describe('the command line', () => {
     expect(mode).toEqual(NORMAL)
   })
 })
+
+describe('leaving with Ctrl-C', () => {
+  it('quits, as every terminal program does', () => {
+    expect(press(key('c', { ctrl: true, sequence: '\x03' })).actions).toEqual([
+      { type: 'quit' },
+    ])
+  })
+})

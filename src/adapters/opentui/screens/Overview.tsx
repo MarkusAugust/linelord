@@ -1,7 +1,7 @@
 import { TextAttributes } from '@opentui/core'
 import { useTerminalDimensions } from '@opentui/react'
 import { useMemo } from 'react'
-import { authorContributions, repositoryStats } from '../../../core/ownership'
+import { repositoryStats } from '../../../core/ownership'
 import { bar } from '../bars'
 import type { Realm } from '../data'
 import { useScreenKeys } from '../keys'
@@ -22,7 +22,7 @@ export function Overview({
 }) {
   const { width } = useTerminalDimensions()
   const stats = useMemo(() => repositoryStats(realm.analysis), [realm])
-  const warriors = useMemo(() => authorContributions(realm.analysis), [realm])
+  const warriors = realm.contributions
   const list = useList(warriors, (one) => `${one.displayName} ${one.email}`)
   const wide = width >= 110
   const barWidth = width >= 140 ? 24 : 14
@@ -137,7 +137,7 @@ export function Overview({
           >
             {warriors.map((one, index) => {
               const here = index === list.selected
-              const match = list.matches.includes(index)
+              const match = list.isMatch(index)
               return (
                 <box
                   key={one.id}

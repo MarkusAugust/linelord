@@ -230,7 +230,7 @@ export const GUIDE: Chapter[] = [
     blocks: [
       {
         kind: 'text',
-        text: 'Everything here can be reached from the screens. The flags are for starting somewhere in particular, and for scripts.',
+        text: 'Everything the analysis shows can be reached from the screens. The flags decide how the realm is read — the history, the cache, the threshold, the commits looked past — and do the two things that stop without drawing a screen, for scripts: --json and --write-mailmap.',
       },
       {
         kind: 'pairs',

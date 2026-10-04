@@ -37,7 +37,9 @@ export function fit(n: number, width: number): string {
   const whole = Math.round(n)
   const plain = whole.toLocaleString('en-GB')
   if (plain.length < width) return plain.padStart(width)
-  if (whole < 1_000_000) return `${Math.round(whole / 1000)}k`.padStart(width)
+  // 999,600 rounds to 1000 thousands, which is a million and says so.
+  if (Math.round(whole / 1000) < 1000)
+    return `${Math.round(whole / 1000)}k`.padStart(width)
   return `${(whole / 1_000_000).toFixed(1)}M`.padStart(width)
 }
 

@@ -14,6 +14,10 @@ import {
 } from '../../core/lineLord'
 import type { HistoryReading } from '../../core/longevity'
 import type { AnalysisData } from '../../core/model'
+import {
+  type AuthorContribution,
+  authorContributions,
+} from '../../core/ownership'
 import type { SnapshotInterval } from '../../core/snapshots'
 import { type WarriorSource, warriorSourceFor } from '../../core/warrior'
 
@@ -32,6 +36,8 @@ export type RealmOptions = {
 /** Everything the screens read, worked out once when the realm is read. */
 export type Realm = {
   analysis: AnalysisData
+  /** Every warrior with their share, worked out once for every screen that lists them. */
+  contributions: AuthorContribution[]
   context: ReturnType<LineLord['getAnalysisContext']>
   failures: ReturnType<LineLord['getFailures']>
   historyFailures: ReturnType<LineLord['getHistoryFailures']>
@@ -67,6 +73,7 @@ export function realmOf(parts: RealmParts): Realm {
       analysedRevision: parts.context.headSha,
       now: parts.measuredAt,
     }),
+    contributions: authorContributions(parts.analysis),
     rankings: barbarianRankings(parts.analysis, parts.measuredAt),
     totals: realmTotals(parts.analysis, parts.measuredAt),
   }

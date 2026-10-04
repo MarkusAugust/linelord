@@ -18,8 +18,12 @@ export async function runInterface(
   repoPath: string,
   options: RealmOptions,
 ): Promise<never> {
+  // Leaving is ours to do, not the renderer's. Its own Ctrl-C and signal
+  // handling destroys the renderer and stops there, with the process -- and
+  // any git blame it is waiting on -- still running.
   const renderer = await createCliRenderer({
-    exitOnCtrlC: true,
+    exitOnCtrlC: false,
+    exitSignals: [],
     screenMode: 'alternate-screen',
   })
 
@@ -31,6 +35,11 @@ export async function runInterface(
     process.stdout.write(`\n${banner}\n\n  🪓 ${pickQuote('farewell')}\n\n`)
     process.exit(0)
   }
+
+  // Ctrl-C reaches the keymap as a key; a signal from elsewhere comes here.
+  process.on('SIGINT', quit)
+  process.on('SIGTERM', quit)
+  process.on('SIGHUP', quit)
 
   createRoot(renderer).render(
     <App

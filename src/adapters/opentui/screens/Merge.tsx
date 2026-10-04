@@ -1,12 +1,11 @@
 import { TextAttributes } from '@opentui/core'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { IdentityMerge } from '../../../core/identity'
 import {
   type MailmapWrite,
   proposeMerge,
   writeMerge,
 } from '../../../core/mailmap'
-import { authorContributions } from '../../../core/ownership'
 import type { FileSystemPort } from '../../../ports/files'
 import type { Realm } from '../data'
 import { useScreenKeys } from '../keys'
@@ -47,7 +46,7 @@ export function Merge({
   onMerged: () => void
   onLeave: () => void
 }) {
-  const warriors = useMemo(() => authorContributions(realm.analysis), [realm])
+  const warriors = realm.contributions
   const rows: Row[] = useMemo(
     () => [
       ...realm.merges.map((merge): Row => ({ kind: 'suggestion', merge })),
@@ -80,6 +79,20 @@ export function Merge({
     () => new Set(initiallyMarked === undefined ? [] : [initiallyMarked]),
   )
   const [step, setStep] = useState<Step>({ name: 'mark' })
+  // Set the moment a read or write starts, not when the screen draws again:
+  // two keys that arrive before the next render must not start two writes,
+  // which would both read the file and both append the same lines.
+  const busy = useRef(false)
+  const once = <T,>(work: Promise<T>, then: (value: T) => void) => {
+    if (busy.current) return
+    busy.current = true
+    work
+      .then(then)
+      .catch(fail)
+      .finally(() => {
+        busy.current = false
+      })
+  }
   const [keepAt, setKeepAt] = useState(0)
 
   const marks = warriors
@@ -169,16 +182,14 @@ export function Merge({
           if (action.type === 'open') {
             const { kept, absorbed } = split(step.chosen, keepAt)
             setStep({ name: 'proposing', chosen: step.chosen, keep: keepAt })
-            proposeMerge(repoPath, kept, absorbed, files)
-              .then((lines) =>
-                setStep({
-                  name: 'preview',
-                  chosen: step.chosen,
-                  keep: keepAt,
-                  lines,
-                }),
-              )
-              .catch(fail)
+            once(proposeMerge(repoPath, kept, absorbed, files), (lines) =>
+              setStep({
+                name: 'preview',
+                chosen: step.chosen,
+                keep: keepAt,
+                lines,
+              }),
+            )
             return true
           }
           return false
@@ -202,7 +213,15 @@ export function Merge({
           }
           return false
         default:
-          return false
+          // Reading or writing .mailmap. Leaving now would let the write land
+          // with nobody left to read the realm again, so the screen waits.
+          if (action.type === 'back') {
+            return {
+              status:
+                'Writing .mailmap — a moment, then the realm is read again',
+            }
+          }
+          return true
       }
     },
     onKey: (key) => {
@@ -221,9 +240,9 @@ export function Merge({
       if (step.name === 'preview' && key === 'w') {
         const { kept, absorbed } = split(step.chosen, step.keep)
         setStep({ ...step, name: 'writing' })
-        writeMerge(repoPath, kept, absorbed, files)
-          .then((result) => setStep({ name: 'written', result }))
-          .catch(fail)
+        once(writeMerge(repoPath, kept, absorbed, files), (result) =>
+          setStep({ name: 'written', result }),
+        )
         return true
       }
       return false

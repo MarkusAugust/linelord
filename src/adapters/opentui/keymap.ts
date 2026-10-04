@@ -109,6 +109,8 @@ export function interpret(mode: Mode, key: Key): Result {
 
   if (key.ctrl) {
     switch (key.name) {
+      case 'c':
+        return { mode: NORMAL, action: { type: 'quit' } }
       case 'd':
         return { mode, action: { type: 'halfPage', by: 1 } }
       case 'u':
