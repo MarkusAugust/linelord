@@ -36,7 +36,8 @@ describe("The Warrior's Guide", () => {
 
   it('says what writing .mailmap does, everywhere and for everyone', async () => {
     const screen = await guide({ width: 160, height: 60 })
-    await screen.press('j', 'j')
+    // Found by name, not by counting chapters, so a new chapter does not move it.
+    await screen.press('/', ...'mailmap', 'enter')
     const frame = screen.frame()
     expect(frame).toContain(
       'git log, git shortlog and git blame show the merged name',
@@ -50,7 +51,8 @@ describe("The Warrior's Guide", () => {
 
   it('reads on with PgDn and Enter, and starts a new chapter at its top', async () => {
     const screen = await guide({ width: 140, height: 20 })
-    await screen.press('j', 'j')
+    // Found by name, not by counting chapters, so a new chapter does not move it.
+    await screen.press('/', ...'mailmap', 'enter')
     expect(screen.frame()).not.toContain('LineLord only ever adds lines')
     await screen.press('pgdn', 'pgdn', 'enter', 'ctrl-d')
     expect(screen.frame()).toContain('LineLord only ever adds lines')

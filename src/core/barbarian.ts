@@ -66,13 +66,13 @@ export interface BarbarianRanking {
  * selects nothing at all, leaving only the extension and path rules --
  * scars drop sharply, and that is the analysis working as configured.
  */
-const LEGACY_FILE_SIZE_BYTES = 5000
+export const LEGACY_FILE_SIZE_BYTES = 5000
 
-const LEGACY_EXTENSIONS = new Set(['.js', '.php', '.asp', '.jsp'])
-const LEGACY_PATH_WORDS = ['legacy', 'old', 'deprecated']
+export const LEGACY_EXTENSIONS = new Set(['.js', '.php', '.asp', '.jsp'])
+export const LEGACY_PATH_WORDS = ['legacy', 'old', 'deprecated']
 
 /** A day on which this many of a warrior's surviving lines were last touched. */
-const MASSIVE_BATTLE_LINES = 100
+export const MASSIVE_BATTLE_LINES = 100
 
 /** Files that look dangerous enough to leave a mark on whoever works in them. */
 export function looksLegacy(file: FileRecord): boolean {
@@ -308,6 +308,25 @@ export function placeAmong(
 }
 
 /**
+ * The weights the Gorvek score is worked out with, in one place so that what
+ * The Warrior's Guide says about the score is read from the score itself.
+ */
+export const SCORE_WEIGHTS = {
+  territoryConquered: 8,
+  soloQuestVictories: 12,
+  weaponMastery: 6,
+  ancientCodeSurvival: 1.5,
+  battleScars: 2,
+  massiveBattles: 5,
+  totalCampaigns: 3,
+  /** Added when the weakest of the three categories is over 20, and again over 50. */
+  balancedOver20: 15,
+  balancedOver50: 25,
+  /** Added when the strongest category is over 100. */
+  dominantOver100: 10,
+} as const
+
+/**
  * The legendary Gorvek Score.
  *
  * Three categories, each counting a different kind of claim on the codebase:
@@ -316,17 +335,19 @@ export function placeAmong(
  * because holding a whole file is a stronger claim than having touched many.
  */
 export function gorvekScore(metrics: BarbarianWarriorMetrics): number {
+  const w = SCORE_WEIGHTS
   const conquest =
-    metrics.territoryConquered * 8.0 +
-    metrics.soloQuestVictories * 12.0 +
-    Math.log(Math.max(1, metrics.weaponMastery)) * 6.0
+    metrics.territoryConquered * w.territoryConquered +
+    metrics.soloQuestVictories * w.soloQuestVictories +
+    Math.log(Math.max(1, metrics.weaponMastery)) * w.weaponMastery
 
   const endurance =
-    metrics.ancientCodeSurvival * 1.5 + metrics.battleScars * 2.0
+    metrics.ancientCodeSurvival * w.ancientCodeSurvival +
+    metrics.battleScars * w.battleScars
 
   const intensity =
-    metrics.massiveBattles * 5.0 +
-    Math.log(Math.max(1, metrics.totalCampaigns)) * 3.0
+    metrics.massiveBattles * w.massiveBattles +
+    Math.log(Math.max(1, metrics.totalCampaigns)) * w.totalCampaigns
 
   const categories = [conquest, endurance, intensity]
   const weakest = Math.min(...categories)
@@ -334,17 +355,17 @@ export function gorvekScore(metrics: BarbarianWarriorMetrics): number {
 
   // Reward warriors who are not hopeless in any one category...
   let synergyBonus = 0
-  if (weakest > 20) synergyBonus += 15
-  if (weakest > 50) synergyBonus += 25
+  if (weakest > 20) synergyBonus += w.balancedOver20
+  if (weakest > 50) synergyBonus += w.balancedOver50
   // ...and specialists who dominate a single one.
-  if (strongest > 100) synergyBonus += 10
+  if (strongest > 100) synergyBonus += w.dominantOver100
 
   const totalScore = conquest + endurance + intensity + synergyBonus
 
   return Math.round(totalScore * 100) / 100
 }
 
-const ACHIEVEMENTS: Array<{
+export const ACHIEVEMENTS: Array<{
   metric: keyof BarbarianWarriorMetrics
   title: string
 }> = [
