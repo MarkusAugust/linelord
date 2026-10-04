@@ -10,6 +10,17 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+## [1.0.0-rc.2] — 2026-10-04
+
+The second release candidate for 1.0.0: one fix to the About page.
+
+### Fixed
+
+- **On About, the text follows a mark rather than a gap.** The ✅, ❌ and •
+  lists used the column the longest name in *What it brings to the
+  battlefield* needs, so every line started twenty columns after its mark.
+  A mark now takes its own width and a space.
+
 ## [1.0.0-rc.1] — 2026-10-04
 
 The first release candidate for 1.0.0: the whole interface drawn again, full
@@ -755,7 +766,8 @@ stored analysis is rebuilt once, because the database layout changed.
 Earlier releases predate this changelog. See the
 [releases page](https://github.com/MarkusAugust/linelord/releases).
 
-[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v1.0.0-rc.1...HEAD
+[Unreleased]: https://github.com/MarkusAugust/linelord/compare/v1.0.0-rc.2...HEAD
+[1.0.0-rc.2]: https://github.com/MarkusAugust/linelord/compare/v1.0.0-rc.1...v1.0.0-rc.2
 [1.0.0-rc.1]: https://github.com/MarkusAugust/linelord/compare/v0.14.0...v1.0.0-rc.1
 [0.14.0]: https://github.com/MarkusAugust/linelord/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/MarkusAugust/linelord/compare/v0.12.4...v0.13.0
