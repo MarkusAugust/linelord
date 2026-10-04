@@ -5,7 +5,6 @@ export const menuOptions: MenuOption[] = [
   { label: 'Brutal Barbarian Rankings', value: 'barbarianrankings' },
   { label: '⏳ Code Longevity', value: 'longevity' },
   { label: 'Merge warriors who are one person', value: 'merge' },
-  { label: 'Draft a .mailmap from identity guesses', value: 'mailmap' },
   { label: 'Change Repository', value: 'change-repo' },
   { label: 'About', value: 'about' },
   { label: 'Exit', value: 'exit' },

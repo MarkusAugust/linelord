@@ -1,6 +1,7 @@
 import { Box, Text, useInput } from 'ink'
 import pc from 'picocolors'
 import { useMemo, useState } from 'react'
+import type { IdentityMerge } from '../../../core/identity'
 import type { MailmapWrite } from '../../../core/mailmap'
 import type { AnalysisData } from '../../../core/model'
 import { authorContributions, repositoryStats } from '../../../core/ownership'
@@ -16,6 +17,7 @@ type OverviewProps = {
   largeFileThresholdKB: number
   /** Merging warriors by hand, when the screen is given a way to write it. */
   merge?: {
+    suggestions?: IdentityMerge[]
     propose: (
       keep: { name: string; email: string },
       absorbed: string[],
@@ -73,6 +75,7 @@ export function Overview({
     return (
       <MergeWarriors
         contributions={contributions}
+        suggestions={merge.suggestions}
         initiallyMarked={chosen.id}
         propose={merge.propose}
         write={merge.write}

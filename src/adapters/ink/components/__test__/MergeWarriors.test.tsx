@@ -214,3 +214,137 @@ describe('MergeWarriors, counting', () => {
     expect(frame).toContain('700 lines')
   })
 })
+
+describe('MergeWarriors, with the guesses as suggestions', () => {
+  const GUESS = {
+    canonical: { name: GORVEK.displayName, email: GORVEK.email },
+    absorbed: [
+      {
+        name: SARN.displayName,
+        email: SARN.email,
+        reason: 'the names "gorvek" and "sarn" are alike',
+      },
+    ],
+  }
+
+  function withSuggestions(initiallyMarked?: number) {
+    const proposed: Call[] = []
+    const screen = render(
+      <MergeWarriors
+        contributions={[GORVEK, SARN, STABLE_BOY]}
+        suggestions={[GUESS]}
+        initiallyMarked={initiallyMarked}
+        propose={async (keep, absorbed) => {
+          proposed.push({ keep, absorbed })
+          return []
+        }}
+        write={async () => ({ path: '', added: [], alreadyPresent: [] })}
+        onMerged={noop}
+        onBack={noop}
+      />,
+    )
+    const press = async (...keys: string[]) => {
+      for (const key of keys) {
+        screen.stdin.write(key)
+        await settle()
+      }
+    }
+    return {
+      proposed,
+      press,
+      frame: () => stripAnsi(screen.lastFrame() ?? ''),
+    }
+  }
+
+  it('shows each guess, why it was made, and that it is a guess', async () => {
+    const screen = withSuggestions()
+    await settle()
+    const frame = screen.frame()
+
+    expect(frame).toContain('Suggested')
+    expect(frame).toContain(`${GORVEK.displayName} <${GORVEK.email}>`)
+    expect(frame).toContain(`← ${SARN.email} — ${GUESS.absorbed[0]?.reason}`)
+    expect(frame).toContain('guesses')
+  })
+
+  it('takes a suggestion with Enter, kept as the guess would keep it', async () => {
+    const screen = withSuggestions()
+    await settle()
+
+    await screen.press(KEY.enter)
+    expect(screen.frame()).toContain('shown as?')
+    await screen.press(KEY.enter)
+
+    expect(screen.proposed).toEqual([
+      {
+        keep: { name: GORVEK.displayName, email: GORVEK.email },
+        absorbed: [SARN.email],
+      },
+    ])
+  })
+
+  it('lets the other identity be the one shown instead', async () => {
+    const screen = withSuggestions()
+    await settle()
+
+    await screen.press(KEY.enter, KEY.down, KEY.enter)
+
+    expect(screen.proposed[0]?.keep.email).toBe(SARN.email)
+    expect(screen.proposed[0]?.absorbed).toEqual([GORVEK.email])
+  })
+
+  it('goes back from a suggestion to the list, not to the marks', async () => {
+    const screen = withSuggestions()
+    await settle()
+
+    await screen.press(KEY.enter, 'q')
+
+    expect(screen.frame()).toContain('Suggested')
+    expect(screen.frame()).not.toContain('[x]')
+  })
+
+  it('reaches the warriors below the suggestions with the arrows', async () => {
+    const screen = withSuggestions()
+    await settle()
+
+    await screen.press(
+      KEY.down,
+      ' ',
+      KEY.down,
+      KEY.down,
+      ' ',
+      KEY.enter,
+      KEY.enter,
+    )
+
+    expect(screen.proposed).toEqual([
+      {
+        keep: { name: GORVEK.displayName, email: GORVEK.email },
+        absorbed: [STABLE_BOY.email],
+      },
+    ])
+  })
+
+  it('starts on the warrior it was opened from, not on a suggestion', async () => {
+    const screen = withSuggestions(SARN.id)
+    await settle()
+
+    await screen.press(KEY.down, ' ', KEY.enter, KEY.enter)
+
+    expect(screen.proposed).toEqual([
+      {
+        keep: { name: SARN.displayName, email: SARN.email },
+        absorbed: [STABLE_BOY.email],
+      },
+    ])
+  })
+})
+
+describe('MergeWarriors, without suggestions', () => {
+  it('has no suggestions section', async () => {
+    const screen = harness()
+    await settle()
+
+    expect(screen.frame()).not.toContain('Suggested')
+  })
+})

@@ -292,9 +292,10 @@ function renderIdentity(report: Report): string {
     </p>
     <ul class="candidates">${candidates}</ul>
     <p class="lede">
-      <code>--write-mailmap</code>, or <kbd>w</kbd> on that screen, drafts these
-      into a <code>.mailmap</code>. They are guesses, and the guessing is wrong
-      often enough to matter, so read them before committing them:
+      The merge screen offers these one at a time, and taking one writes it
+      into <code>.mailmap</code>; <code>--write-mailmap</code> writes them all
+      at once. They are guesses, and the guessing is wrong often enough to
+      matter, so read them before committing them:
     </p>
     <pre class="draft">${draft}</pre>
     <p class="lede">

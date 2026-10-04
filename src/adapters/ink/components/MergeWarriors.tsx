@@ -1,6 +1,7 @@
 import { Box, Text, useInput } from 'ink'
 import pc from 'picocolors'
 import { useState } from 'react'
+import type { IdentityMerge } from '../../../core/identity'
 import type { MailmapWrite } from '../../../core/mailmap'
 import type { AuthorContribution } from '../../../core/ownership'
 
@@ -8,6 +9,8 @@ type Identity = { name: string; email: string }
 
 type MergeWarriorsProps = {
   contributions: AuthorContribution[]
+  /** Who the guessing takes to be one person, offered rather than applied. */
+  suggestions?: IdentityMerge[]
   /** The warrior the merge was started from, marked already. */
   initiallyMarked?: number
   /** The `.mailmap` lines this merge would add, read without writing. */
@@ -30,6 +33,14 @@ type Step =
 
 const NAME_WIDTH = 24
 
+/** The identities a suggestion names, the one it would keep first. */
+function identitiesOf(suggestion: IdentityMerge): Identity[] {
+  return [
+    suggestion.canonical,
+    ...suggestion.absorbed.map(({ name, email }) => ({ name, email })),
+  ]
+}
+
 function identityOf(one: AuthorContribution): Identity {
   return { name: one.displayName, email: one.email }
 }
@@ -48,9 +59,15 @@ function messageOf(error: unknown): string {
  * which identity is shown, and writes the decision into `.mailmap` -- the
  * file git applies before LineLord sees a line -- so the merge is one they
  * can read, change and delete afterwards, and the screen says how.
+ *
+ * The guesses are offered at the top, each with its reason, and taking one
+ * goes through the same steps as marking by hand: choose who is shown, read
+ * the lines, press w. A guess becomes a merge only when somebody has looked
+ * at it, which is the whole of the difference between the two.
  */
 export default function MergeWarriors({
   contributions,
+  suggestions = [],
   initiallyMarked,
   propose,
   write,
@@ -58,18 +75,23 @@ export default function MergeWarriors({
   onBack,
 }: MergeWarriorsProps) {
   const [step, setStep] = useState<Step>({ name: 'mark' })
-  const [cursor, setCursor] = useState(() =>
-    Math.max(
-      0,
-      contributions.findIndex((one) => one.id === initiallyMarked),
-    ),
-  )
+  // One cursor over both lists: the suggestions first, then every warrior.
+  const [cursor, setCursor] = useState(() => {
+    const at = contributions.findIndex((one) => one.id === initiallyMarked)
+    return at === -1 ? 0 : suggestions.length + at
+  })
   const [marked, setMarked] = useState<Set<number>>(
     () => new Set(initiallyMarked === undefined ? [] : [initiallyMarked]),
   )
   const [keepAt, setKeepAt] = useState(0)
+  // A suggestion that was taken, in place of the marks, until Esc lets go.
+  const [taken, setTaken] = useState<Identity[] | null>(null)
 
-  const chosen = contributions.filter((one) => marked.has(one.id))
+  const rows = suggestions.length + contributions.length
+  const marks = contributions
+    .filter((one) => marked.has(one.id))
+    .map(identityOf)
+  const chosen = taken ?? marks
   const kept = chosen[keepAt]
   const absorbed = chosen.filter((one) => one !== kept).map((one) => one.email)
 
@@ -81,10 +103,17 @@ export default function MergeWarriors({
           return
         }
         if (key.upArrow) setCursor((at) => Math.max(0, at - 1))
-        if (key.downArrow) {
-          setCursor((at) => Math.min(contributions.length - 1, at + 1))
+        if (key.downArrow) setCursor((at) => Math.min(rows - 1, at + 1))
+        const suggestion = suggestions[cursor]
+        if (suggestion) {
+          if (key.return) {
+            setTaken(identitiesOf(suggestion))
+            setKeepAt(0)
+            setStep({ name: 'keep' })
+          }
+          return
         }
-        const here = contributions[cursor]
+        const here = contributions[cursor - suggestions.length]
         if (input === ' ' && here) {
           setMarked((before) => {
             const after = new Set(before)
@@ -93,7 +122,7 @@ export default function MergeWarriors({
             return after
           })
         }
-        if (key.return && chosen.length >= 2) {
+        if (key.return && marks.length >= 2) {
           setKeepAt(0)
           setStep({ name: 'keep' })
         }
@@ -102,6 +131,7 @@ export default function MergeWarriors({
 
       case 'keep': {
         if (key.escape || input === 'q') {
+          setTaken(null)
           setStep({ name: 'mark' })
           return
         }
@@ -111,7 +141,7 @@ export default function MergeWarriors({
         }
         if (key.return && kept) {
           setStep({ name: 'proposing' })
-          propose(identityOf(kept), absorbed)
+          propose(kept, absorbed)
             .then((lines) => setStep({ name: 'preview', lines }))
             .catch((error: unknown) =>
               setStep({ name: 'failed', message: messageOf(error) }),
@@ -127,7 +157,7 @@ export default function MergeWarriors({
         }
         if (input === 'w' && kept) {
           setStep({ name: 'writing', lines: step.lines })
-          write(identityOf(kept), absorbed)
+          write(kept, absorbed)
             .then((result) => setStep({ name: 'written', result }))
             .catch((error: unknown) =>
               setStep({ name: 'failed', message: messageOf(error) }),
@@ -160,9 +190,37 @@ export default function MergeWarriors({
             Mark every identity that is the same person — even when nothing
             about them looks alike.
           </Text>
+          {suggestions.length > 0 && (
+            <Box flexDirection="column" marginTop={1}>
+              <Text>Suggested, because they look alike:</Text>
+              {suggestions.map((suggestion, index) => {
+                const here = index === cursor
+                return (
+                  <Box key={suggestion.canonical.email} flexDirection="column">
+                    <Text color={here ? 'green' : undefined}>
+                      {here ? '› ' : '  '}
+                      {suggestion.canonical.name} &lt;
+                      {suggestion.canonical.email}&gt;
+                    </Text>
+                    {suggestion.absorbed.map((one) => (
+                      <Text key={one.email} color="gray">
+                        {'      ← '}
+                        {one.email} — {one.reason}
+                      </Text>
+                    ))}
+                  </Box>
+                )
+              })}
+              <Text color="yellow">
+                ⚠ These are guesses, and wrong often enough to matter: they have
+                taken erik.hansen@ for erika.hansen@ before now.
+              </Text>
+            </Box>
+          )}
           <Box flexDirection="column" marginY={1}>
+            {suggestions.length > 0 && <Text>Every warrior:</Text>}
             {contributions.map((one, index) => {
-              const here = index === cursor
+              const here = suggestions.length + index === cursor
               return (
                 <Text key={one.id} color={here ? 'green' : undefined}>
                   {here ? '› ' : '  '}
@@ -175,9 +233,11 @@ export default function MergeWarriors({
             })}
           </Box>
           <Text dimColor>
-            {chosen.length >= 2
-              ? `Space marks a warrior · Enter to merge the ${chosen.length} marked · q or Esc to go back`
-              : 'Space marks a warrior · mark two or more, then Enter · q or Esc to go back'}
+            {cursor < suggestions.length
+              ? 'Enter to take this suggestion · ↓ for every warrior · q or Esc to go back'
+              : marks.length >= 2
+                ? `Space marks a warrior · Enter to merge the ${marks.length} marked · q or Esc to go back`
+                : 'Space marks a warrior · mark two or more, then Enter · q or Esc to go back'}
           </Text>
         </Box>
       )}
@@ -187,9 +247,12 @@ export default function MergeWarriors({
           <Text>Which of them should the merged warrior be shown as?</Text>
           <Box flexDirection="column" marginY={1}>
             {chosen.map((one, index) => (
-              <Text key={one.id} color={index === keepAt ? 'green' : undefined}>
+              <Text
+                key={one.email}
+                color={index === keepAt ? 'green' : undefined}
+              >
                 {index === keepAt ? '› ' : '  '}
-                {one.displayName} &lt;{one.email}&gt;
+                {one.name} &lt;{one.email}&gt;
               </Text>
             ))}
           </Box>
@@ -205,7 +268,7 @@ export default function MergeWarriors({
         <Box flexDirection="column" marginTop={1}>
           <Text>
             {chosen.length} identities become one warrior, shown as{' '}
-            {pc.bold(kept.displayName)} &lt;{kept.email}&gt;.
+            {pc.bold(kept.name)} &lt;{kept.email}&gt;.
           </Text>
           <Box flexDirection="column" marginY={1}>
             <Text>These lines are added to .mailmap:</Text>

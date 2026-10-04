@@ -178,7 +178,7 @@ export async function proposeMerge(
  *
  * Nothing links them that a guess could find -- that is why a person is
  * deciding it -- so this takes the decision as given and only writes it
- * down, appending as the draft does and for the same reason.
+ * down, appending as --write-mailmap does and for the same reason.
  */
 export async function writeMerge(
   repositoryRoot: string,

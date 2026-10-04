@@ -30,6 +30,16 @@ because the earlier answer was wrong.
 
 ### Changed
 
+- **The `.mailmap` draft is gone from the menu; its guesses are now the
+  suggestions on the merge screen.** Two menu entries wrote the same file for
+  the same reason, and which one to pick depended only on whether a heuristic
+  had noticed. The guesses now stand at the top of **Merge warriors who are
+  one person**, each with its reason, and **Enter** takes one through the
+  same steps as a merge by hand — choose who is shown, read the lines, press
+  `w` — rather than writing every guess at once. `--write-mailmap` is
+  unchanged and still writes them all, for scripts. The warning on the menu
+  screen now points at the merge.
+
 - **The `.mailmap` draft says what writing it actually does.** Both the README
   and the demo page described drafting the file and stopped there, which reads
   as though nothing happens. The answer is in two steps and the order is the

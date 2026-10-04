@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { convertThresholdKBToBytes } from '../../app/thresholdConverter'
 import type { LineLordPorts } from '../../core/lineLord'
 import type { HistoryReading } from '../../core/longevity'
-import { proposeMerge, writeMailmap, writeMerge } from '../../core/mailmap'
+import { proposeMerge, writeMerge } from '../../core/mailmap'
 import { authorContributions } from '../../core/ownership'
 import type { SnapshotInterval } from '../../core/snapshots'
 import { type WarriorSource, warriorSourceFor } from '../../core/warrior'
@@ -14,7 +14,6 @@ import ExitScreen from './components/ExitScreen'
 import Layout from './components/Layout'
 import LoadingScreen from './components/LoadingScreen'
 import LongevityDashboard from './components/LongevityDashboard'
-import MailmapDraft from './components/MailmapDraft'
 import Menu, { type MenuOption } from './components/Menu'
 import MergeWarriors from './components/MergeWarriors'
 import { Overview } from './components/Overview'
@@ -148,6 +147,7 @@ export default function App({
   // a line -- so every number on every screen is out of date the moment it
   // is written. Read the repository again, and show the table it changed.
   const merge = {
+    suggestions: identityMerges,
     propose: (keep: { name: string; email: string }, absorbed: string[]) =>
       proposeMerge(repoPath, keep, absorbed, ports.files),
     write: (keep: { name: string; email: string }, absorbed: string[]) =>
@@ -344,8 +344,8 @@ export default function App({
                   </Text>
                 )}
                 <Text color="gray">
-                  {'  '}Nothing was merged. Pick "Draft a .mailmap" below to
-                  record the ones that are right.
+                  {'  '}Nothing was merged. Pick "Merge warriors who are one
+                  person" below to take the ones that are right.
                 </Text>
               </Box>
             )}
@@ -426,17 +426,10 @@ export default function App({
         />
       )}
 
-      {state === 'mailmap' && (
-        <MailmapDraft
-          merges={identityMerges}
-          write={(merges) => writeMailmap(repoPath, merges, ports.files)}
-          onBack={returnToMenu}
-        />
-      )}
-
       {state === 'merge' && analysis && (
         <MergeWarriors
           contributions={authorContributions(analysis)}
+          suggestions={merge.suggestions}
           propose={merge.propose}
           write={merge.write}
           onMerged={merge.onMerged}

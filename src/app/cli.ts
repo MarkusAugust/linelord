@@ -281,8 +281,8 @@ if (cli.flags.json) {
 }
 
 // Writing a .mailmap without opening the interface, for a script or for
-// someone who already knows what they want. The same job is on the menu once
-// LineLord has started; both run the guessing as a question -- the analysis
+// someone who already knows what they want. The merge screen offers the
+// same guesses one at a time; both run the guessing as a question -- the analysis
 // itself stays strict, so this neither merges anybody nor disturbs the stored
 // analysis the next ordinary run will reuse.
 if (cli.flags.writeMailmap) {
