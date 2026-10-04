@@ -179,13 +179,13 @@ jobs:
     # reach this job at all -- but a failed release must still stop the tap
     # from being pointed at a release that was never published, and a
     # build-only run publishes nothing to sync to.
-    # And never for a pre-release: every `brew upgrade` installs what the tap
-    # names, so a release candidate there is a release candidate for everyone.
+    # A pre-release goes to the tap like any other: the release candidates are
+    # how LineLord reaches its users to be tried, and `brew upgrade` is how
+    # they get them. GitHub still does not call one the latest release.
     if: >-
       always()
       && ((github.event_name == 'workflow_dispatch' && inputs.build_only != true)
           || needs.release.result == 'success')
-      && !contains(inputs.tag || github.ref_name, '-')
     runs-on: ubuntu-24.04
     # Only reads this repository's release metadata. The write it performs is
     # to the tap, authorised by HOMEBREW_TAP_TOKEN rather than by this token.

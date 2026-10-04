@@ -13,8 +13,8 @@ because the earlier answer was wrong.
 ## [1.0.0-rc.1] — 2026-10-04
 
 The first release candidate for 1.0.0: the whole interface drawn again, full
-screen, and the first release LineLord has left 0.x for. A pre-release —
-Homebrew stays on 0.14.0 until 1.0.0 itself.
+screen, and the first release LineLord has left 0.x for. A pre-release on
+GitHub, and what `brew upgrade` installs.
 
 ### Changed
 
