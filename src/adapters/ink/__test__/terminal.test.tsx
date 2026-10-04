@@ -1,44 +1,19 @@
 import { describe, expect, it } from 'bun:test'
-import { EventEmitter } from 'node:events'
-import { render, Text } from 'ink'
+import { join } from 'node:path'
 import { createScreen } from '../terminal'
 
-/** A terminal of a given height that remembers what was written to it. */
-function fakeTerminal(rows: number) {
-  const written: string[] = []
-  const stdout = Object.assign(new EventEmitter(), {
-    columns: 80,
-    rows,
-    isTTY: true,
-    write: (chunk: string) => {
-      written.push(chunk)
-      return true
-    },
-  })
-  const stdin = Object.assign(new EventEmitter(), {
-    isTTY: true,
-    setRawMode: () => {},
-    setEncoding: () => {},
-    read: () => null,
-    ref: () => {},
-    unref: () => {},
-    resume: () => {},
-    pause: () => {},
-  })
-  return { stdout, stdin, written }
-}
-
-const settle = () => new Promise((done) => setTimeout(done, 60))
-
-function frame(lines: number, label: string) {
-  const texts = Array.from({ length: lines }, (_, at) => `${label} ${at}`)
-  return (
-    <>
-      {texts.map((text) => (
-        <Text key={text}>{text}</Text>
-      ))}
-    </>
+/** Run the scenario with Ink behaving as it does in a real terminal. */
+async function scenario(mode: 'through-ink' | 'console-only') {
+  const run = Bun.spawn(
+    [process.execPath, join(import.meta.dir, 'screenScenario.tsx'), mode],
+    // Ink draws nothing under CI, and CI is where this has to hold too.
+    { env: { ...process.env, CI: '0' }, stdout: 'pipe', stderr: 'pipe' },
   )
+  const [verdict] = await Promise.all([
+    new Response(run.stdout).text(),
+    run.exited,
+  ])
+  return verdict
 }
 
 describe('createScreen', () => {
@@ -48,31 +23,33 @@ describe('createScreen', () => {
     // is on screen. Going back to the menu then looked like no change at all
     // to Ink, so it wrote nothing -- and the screen stayed blank until a key
     // changed the menu.
-    const terminal = fakeTerminal(10)
-    const screen = createScreen(
-      terminal.stdout as unknown as NodeJS.WriteStream,
-    )
-    const options = {
-      stdout: terminal.stdout as unknown as NodeJS.WriteStream,
-      stdin: terminal.stdin as unknown as NodeJS.ReadStream,
-      patchConsole: false,
-      exitOnCtrlC: false,
-    }
+    expect(await scenario('through-ink')).toBe('drawn')
+  })
 
-    const app = render(frame(3, 'menu'), options)
-    screen.attach(app)
-    await settle()
+  it('stages the case it guards against', async () => {
+    // Clearing through the console alone, as before, leaves it blank. If
+    // this ever draws, the scenario no longer shows anything.
+    expect(await scenario('console-only')).toBe('blank')
+  })
+
+  it('makes Ink forget its frame before the terminal is wiped', () => {
+    const order: string[] = []
+    const stdout = {
+      write: (chunk: string) => {
+        order.push(`write ${JSON.stringify(chunk)}`)
+        return true
+      },
+    } as unknown as NodeJS.WriteStream
+    const screen = createScreen(stdout)
 
     screen.clear()
-    app.rerender(frame(20, 'overview'))
-    await settle()
-
+    screen.attach({ clear: () => order.push('ink') })
     screen.clear()
-    terminal.written.length = 0
-    app.rerender(frame(3, 'menu'))
-    await settle()
 
-    expect(terminal.written.join('')).toContain('menu 0')
-    app.unmount()
+    expect(order).toEqual([
+      'write "\\u001b[2J\\u001b[3J\\u001b[H"',
+      'ink',
+      'write "\\u001b[2J\\u001b[3J\\u001b[H"',
+    ])
   })
 })
