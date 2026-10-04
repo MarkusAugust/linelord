@@ -24,8 +24,8 @@ export const CLI_HELP = `
 ║   --max-snapshots N  Revisions to read (default: 60)         ║
 ║   --ignore-rev SHA Look past a commit, as .git-blame-ignore-  ║
 ║                    revs does (repeatable)                    ║
-║   --write-mailmap  Draft a .mailmap from the guesses         ║
-║                    (also on the menu once LineLord starts)   ║
+║   --write-mailmap  Write every guess to .mailmap, unasked    ║
+║                    (the merge screen offers them one by one) ║
 ║   --json           Write the analysis as JSON and stop,      ║
 ║                    for another program to read               ║
 ║   --help           Show this help                            ║

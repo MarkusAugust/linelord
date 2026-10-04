@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   createLineLord,
   type LineLord,
@@ -41,6 +41,9 @@ export function useLineLordService(
   // Joined for the dependency list below: a new array each render would
   // otherwise re-create the service on every one of them.
   const ignoreRevisions = (options.ignoreRevisions ?? []).join(' ')
+  // Bumped to read the same repository again, after something the analysis
+  // depends on -- the .mailmap -- was changed from inside the interface.
+  const [generation, setGeneration] = useState(0)
   const [lineLordService, setLineLordService] = useState<LineLord | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
   const [initializingMessage, setInitializingMessage] = useState('')
@@ -51,6 +54,7 @@ export function useLineLordService(
     message: '',
   })
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: generation is read by nobody inside; changing it is how a second analysis of the same repository is asked for
   useEffect(() => {
     if (!repoPath) return
 
@@ -155,6 +159,7 @@ export function useLineLordService(
     concurrency,
     historyInterval,
     historyMaxSnapshots,
+    generation,
   ])
 
   // Whether this is a switch rather than a first analysis, which is all the
@@ -165,8 +170,11 @@ export function useLineLordService(
     if (isInitialized) hasAnalysedBefore.current = true
   }, [isInitialized])
 
+  const reanalyse = useCallback(() => setGeneration((at) => at + 1), [])
+
   return {
     lineLordService,
+    reanalyse,
     isInitialized,
     isChangingRepo: hasAnalysedBefore.current && !isInitialized,
     initializingMessage,

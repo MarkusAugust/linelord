@@ -10,6 +10,45 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+### Added
+
+- **Warriors who are one person can be merged by hand, even when nothing
+  about them looks alike.** The guessing only finds identities that resemble
+  each other, so a person who committed as `MASK <work address>` and through
+  a GitHub noreply address with another name could never be put together
+  from inside LineLord. Pick **Merge warriors who are one person** on the
+  menu, or press **m** on the Repository Overview, mark the identities, and
+  choose which of them is shown. The merge is written as lines in `.mailmap`,
+  shown before anything is written, and the repository is read again
+  straight after, so the overview comes back with one row. The screen then
+  says how to change it later: edit the name and address the lines begin
+  with, or delete them to count the identities apart again. Where `.mailmap`
+  already sends other addresses to one of the identities merged, those are
+  redirected too — git does not follow one entry on to the next, and a
+  warrior merged twice would otherwise reappear under the name in between.
+  The numbers move only where somebody merges: two rows become one.
+
+### Changed
+
+- **The `.mailmap` draft is gone from the menu; its guesses are now the
+  suggestions on the merge screen.** Two menu entries wrote the same file for
+  the same reason, and which one to pick depended only on whether a heuristic
+  had noticed. The guesses now stand at the top of **Merge warriors who are
+  one person**, each with its reason, and **Enter** takes one through the
+  same steps as a merge by hand — choose who is shown, read the lines, press
+  `w` — rather than writing every guess at once. `--write-mailmap` is
+  unchanged and still writes them all, for scripts. The warning on the menu
+  screen now points at the merge.
+
+- **The `.mailmap` draft says what writing it actually does.** Both the README
+  and the demo page described drafting the file and stopped there, which reads
+  as though nothing happens. The answer is in two steps and the order is the
+  point: LineLord never merges anybody, before or after; but `.mailmap` is
+  git's own file and `git blame` applies it before LineLord sees a line, so
+  from the next run the two are one warrior because git says so. Both now say
+  that, and say that the file is hashed into the cache fingerprint, so writing
+  it reads the repository again rather than serving the old numbers.
+
 ### Fixed
 
 - **Leaving a screen taller than the terminal no longer leaves it blank.**
@@ -20,17 +59,6 @@ because the earlier answer was wrong.
   not written again. The screen is now cleared through Ink as well, so it
   forgets the frame and draws the next one. It showed only when the overview
   was taller than the terminal and the menu was not.
-
-### Changed
-
-- **The `.mailmap` draft says what writing it actually does.** Both the README
-  and the demo page described drafting the file and stopped there, which reads
-  as though nothing happens. The answer is in two steps and the order is the
-  point: LineLord never merges anybody, before or after; but `.mailmap` is
-  git's own file and `git blame` applies it before LineLord sees a line, so
-  from the next run the two are one warrior because git says so. Both now say
-  that, and say that the file is hashed into the cache fingerprint, so writing
-  it reads the repository again rather than serving the old numbers.
 
 ## [0.13.0] — 2026-10-01
 
