@@ -339,6 +339,12 @@ function renderHeader(report: Report): string {
     </header>`
 }
 
+/**
+ * Where the page lives. A link card is fetched by a crawler that has no page
+ * to resolve against, so the picture's address must be absolute.
+ */
+const SITE_URL = 'https://linelord.sobernetics.no/'
+
 const SOBERNETICS = readFileSync(
   new URL('sobernetics.svg', import.meta.url),
   'utf8',
@@ -384,6 +390,22 @@ export function renderSite(report: Report): string {
       name="description"
       content="What LineLord reports about a repository: who holds which line, how old it is, and how long code lasts."
     />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="LineLord" />
+    <meta property="og:title" content="LineLord — who holds your codebase" />
+    <meta
+      property="og:description"
+      content="The Barbarian's Guide to Git Repository Conquest: who holds which line of a repository, how old it is, and how long code lasts."
+    />
+    <meta property="og:url" content="${SITE_URL}" />
+    <meta property="og:image" content="${SITE_URL}og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="LineLord, who holds your codebase line by line, written beside a battered blade."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="stylesheet" href="style.css" />
     <script type="module" src="${DATASTAR}"></script>
   </head>

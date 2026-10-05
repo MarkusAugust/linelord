@@ -27,5 +27,6 @@ await mkdir(outDir, { recursive: true })
 await writeFile(join(outDir, 'index.html'), html)
 await copyFile(join(here, 'style.css'), join(outDir, 'style.css'))
 await copyFile(join(here, 'blade.jpg'), join(outDir, 'blade.jpg'))
+await copyFile(join(here, 'og.png'), join(outDir, 'og.png'))
 
 console.log(`Wrote ${join(outDir, 'index.html')} (${html.length} bytes)`)
