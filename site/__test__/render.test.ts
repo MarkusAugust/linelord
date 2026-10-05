@@ -295,8 +295,8 @@ describe('renderSite', () => {
           ...report.longevity.authors,
           {
             authorId: 9,
-            name: 'Brother Nask',
-            email: 'nask@thurn.realm',
+            name: 'Brother Ruun',
+            email: 'ruun@thurn.realm',
             survivingLines: 0,
             medianAgeDays: null,
             meanAgeDays: null,
@@ -318,8 +318,8 @@ describe('renderSite', () => {
       },
     } as Report)
 
-    expect(html).toContain('Brother Nask')
-    expect(html).toContain('nask@thurn.realm')
+    expect(html).toContain('Brother Ruun')
+    expect(html).toContain('ruun@thurn.realm')
     // An age of zero would read as the newest code in the repository.
     expect(html).toContain('—')
     expect(html).not.toContain('<1d')

@@ -32,7 +32,7 @@ function sampleAnalysis() {
         title: 'vanquisher',
       }),
       // Holds no line in HEAD. Only the history remembers him.
-      author(3, { name: 'Brother Nask', email: 'nask@thurn.realm' }),
+      author(3, { name: 'Brother Ruun', email: 'ruun@thurn.realm' }),
     ],
     files: [
       file(1, 'src/ledger.ts', { size: 6000, totalLines: 6 }),

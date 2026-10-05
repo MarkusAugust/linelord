@@ -3,7 +3,7 @@ import {
   DRUSK,
   type Driven,
   GORVEK,
-  NASK,
+  RUUN,
   SARN,
   shell,
 } from '../../__test__/harness'
@@ -27,7 +27,7 @@ describe('Overview', () => {
     expect(frame).toMatch(/Over 50 KB, skipped\s+0/)
     // Gorvek holds 9 of 17 lines.
     expect(frame).toMatch(new RegExp(`${GORVEK.name}\\s+52\\.9%`))
-    for (const one of [SARN, DRUSK, NASK]) expect(frame).toContain(one.name)
+    for (const one of [SARN, DRUSK, RUUN]) expect(frame).toContain(one.name)
     expect(frame).toContain(`legend · ${GORVEK.email}`)
   })
 

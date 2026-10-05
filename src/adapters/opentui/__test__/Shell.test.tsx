@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { DRUSK, type Driven, GORVEK, NASK, SARN, shell } from './harness'
+import { DRUSK, type Driven, GORVEK, RUUN, SARN, shell } from './harness'
 
 let screen:
   | (Driven & { quits: () => number; chosen: () => string[] })
@@ -102,13 +102,13 @@ describe('the command line and the status', () => {
     await screen.press(':', '3', 'enter')
     expect(screen.frame()).toMatch(new RegExp(`› .*${DRUSK.name}`))
 
-    // "a" answers to all four: Bonereach, Sarn, Captain, Nask. Enter keeps the first.
+    // "a" answers to all four: Bonereach, Sarn, Captain, Ruun. Enter keeps the first.
     await screen.press('/', 'a', 'enter')
     expect(screen.frame()).toMatch(new RegExp(`› .*${GORVEK.name}`))
     await screen.press('n')
     expect(screen.frame()).toMatch(new RegExp(`› .*${SARN.name}`))
     await screen.press('n', 'n')
-    expect(screen.frame()).toMatch(new RegExp(`› .*${NASK.name}`))
+    expect(screen.frame()).toMatch(new RegExp(`› .*${RUUN.name}`))
     await screen.press('N')
     expect(screen.frame()).toMatch(new RegExp(`› .*${DRUSK.name}`))
   })

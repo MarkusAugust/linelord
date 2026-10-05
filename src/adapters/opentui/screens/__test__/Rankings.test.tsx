@@ -5,7 +5,7 @@ import {
   type Driven,
   fixtureRealm,
   GORVEK,
-  NASK,
+  RUUN,
   SARN,
   shell,
 } from '../../__test__/harness'
@@ -37,7 +37,7 @@ function rowOf(frame: string, name: string): string {
 }
 
 describe('Rankings', () => {
-  // Gorvek score: Gorvek 47.5, Drusk 24, Sarn 22, Nask 20 -- so Drusk, with
+  // Gorvek score: Gorvek 47.5, Drusk 24, Sarn 22, Ruun 20 -- so Drusk, with
   // two lines, ranks above Sarn with five.
   it('ranks every warrior by Gorvek score, with every column when there is room', async () => {
     screen = await shell({ initialScreens: RANKINGS })
@@ -60,10 +60,10 @@ describe('Rankings', () => {
     expect(rowOf(frame, SARN.name)).toMatch(
       /3 Sarn the Faceless\s+22\s+5\s+29\.4% .*\s1\s+1\s+1\s+1\s+0\s+0\s+1/,
     )
-    expect(rowOf(frame, NASK.name)).toMatch(
-      /4 Brother Nask\s+20\s+1\s+5\.9% .*\s0\s+1\s+1\s+1\s+0\s+0\s+1/,
+    expect(rowOf(frame, RUUN.name)).toMatch(
+      /4 Brother Ruun\s+20\s+1\s+5\.9% .*\s0\s+1\s+1\s+1\s+0\s+0\s+1/,
     )
-    const order = [GORVEK, DRUSK, SARN, NASK].map((one) =>
+    const order = [GORVEK, DRUSK, SARN, RUUN].map((one) =>
       frame.indexOf(rowOf(frame, one.name)),
     )
     expect(order).toEqual([...order].sort((a, b) => a - b))
@@ -134,17 +134,17 @@ describe('Rankings', () => {
 
   it('searches names and addresses, and n and N go round the matches', async () => {
     screen = await shell({ initialScreens: RANKINGS })
-    await screen.press('/', 's', 'k')
-    // Captain Drusk and Brother Nask; Drusk comes first.
+    await screen.press('/', 'r', 'u')
+    // Captain Drusk and Brother Ruun; Drusk comes first.
     expect(screen.frame()).toContain('2 matches')
     expect(rowOf(screen.frame(), DRUSK.name)).toContain('›')
 
     await screen.press('enter', 'n')
-    expect(rowOf(screen.frame(), NASK.name)).toContain('›')
+    expect(rowOf(screen.frame(), RUUN.name)).toContain('›')
     await screen.press('n')
     expect(rowOf(screen.frame(), DRUSK.name)).toContain('›')
     await screen.press('N')
-    expect(rowOf(screen.frame(), NASK.name)).toContain('›')
+    expect(rowOf(screen.frame(), RUUN.name)).toContain('›')
   })
 
   it('opens the warrior with Enter, and comes back to the same place with Esc', async () => {

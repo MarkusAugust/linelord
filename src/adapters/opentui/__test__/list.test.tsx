@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { DRUSK, type Driven, GORVEK, NASK, SARN, shell } from './harness'
+import { DRUSK, type Driven, GORVEK, RUUN, SARN, shell } from './harness'
 
 let screen: Driven | undefined
 afterEach(() => {
@@ -24,7 +24,7 @@ describe('a list', () => {
   it('pages, and half-pages, without running off either end', async () => {
     const list = await overview()
     await list.press('pgdn', 'pgdn', 'pgdn')
-    expect(selected(list.frame())).toContain(NASK.name)
+    expect(selected(list.frame())).toContain(RUUN.name)
     await list.press('pgup', 'pgup', 'pgup')
     expect(selected(list.frame())).toContain(GORVEK.name)
     await list.press('ctrl-d')
@@ -36,11 +36,11 @@ describe('a list', () => {
   it('goes to the ends with End and Home, and with G and gg', async () => {
     const list = await overview()
     await list.press('end')
-    expect(selected(list.frame())).toContain(NASK.name)
+    expect(selected(list.frame())).toContain(RUUN.name)
     await list.press('home')
     expect(selected(list.frame())).toContain(GORVEK.name)
     await list.press('G')
-    expect(selected(list.frame())).toContain(NASK.name)
+    expect(selected(list.frame())).toContain(RUUN.name)
     await list.press('g', 'g')
     expect(selected(list.frame())).toContain(GORVEK.name)
   })
@@ -50,7 +50,7 @@ describe('a list', () => {
     await list.press('k')
     expect(selected(list.frame())).toContain(GORVEK.name)
     await list.press('j', 'j', 'j', 'j', 'j')
-    expect(selected(list.frame())).toContain(NASK.name)
+    expect(selected(list.frame())).toContain(RUUN.name)
   })
 
   it('searches as it is typed, and says when nothing answers', async () => {
@@ -74,15 +74,15 @@ describe('a list', () => {
 
   it('wraps round the end of the matches, as vim does', async () => {
     const list = await overview()
-    // "the" answers to Sarn the Faceless and Brother Nask.
+    // "the" answers to Sarn the Faceless and Brother Ruun.
     await list.press('/', 't', 'h', 'e', 'enter')
     expect(selected(list.frame())).toContain(SARN.name)
     await list.press('n')
-    expect(selected(list.frame())).toContain(NASK.name)
+    expect(selected(list.frame())).toContain(RUUN.name)
     await list.press('n')
     expect(selected(list.frame())).toContain(SARN.name)
     await list.press('N')
-    expect(selected(list.frame())).toContain(NASK.name)
+    expect(selected(list.frame())).toContain(RUUN.name)
   })
 
   it('refuses a place past the end', async () => {

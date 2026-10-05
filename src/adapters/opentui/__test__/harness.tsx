@@ -35,16 +35,16 @@ export const DRUSK = {
   name: 'Captain Drusk',
   email: 'drusk@greycloaks.realm',
 }
-export const NASK = { id: 4, name: 'Brother Nask', email: 'nask@thurn.realm' }
+export const RUUN = { id: 4, name: 'Brother Ruun', email: 'ruun@thurn.realm' }
 
 /**
  *   src/hall.ts        6 ancient Gorvek lines
  *   src/legacy/old.ts  3 ancient Gorvek lines + 1 recent Sarn line
  *   src/kell.ts        4 recent Sarn lines
  *   src/greycloak.js   2 recent Drusk lines
- *   README.md          1 recent Nask line
+ *   README.md          1 recent Ruun line
  *
- * 17 lines: Gorvek 9, Sarn 5, Drusk 2, Nask 1.
+ * 17 lines: Gorvek 9, Sarn 5, Drusk 2, Ruun 1.
  */
 export const REALM_ANALYSIS = analysis({
   authors: [
@@ -69,9 +69,9 @@ export const REALM_ANALYSIS = analysis({
       rank: 3,
       percentage: 11.76,
     }),
-    author(NASK.id, {
-      name: NASK.name,
-      email: NASK.email,
+    author(RUUN.id, {
+      name: RUUN.name,
+      email: RUUN.email,
       title: 'peasant',
       rank: 4,
       percentage: 5.88,
@@ -91,7 +91,7 @@ export const REALM_ANALYSIS = analysis({
     { fileId: 2, authorId: SARN.id, timestamps: [RECENT] },
     { fileId: 3, authorId: SARN.id, timestamps: Array(4).fill(RECENT) },
     { fileId: 4, authorId: DRUSK.id, timestamps: [RECENT, RECENT] },
-    { fileId: 5, authorId: NASK.id, timestamps: [RECENT] },
+    { fileId: 5, authorId: RUUN.id, timestamps: [RECENT] },
   ),
 })
 
