@@ -148,6 +148,27 @@ describe('renderSite', () => {
     expect(html).toContain('</html>')
   })
 
+  it('gives a shared link a card, with the picture at an absolute address', () => {
+    const html = renderSite(sampleReport())
+
+    expect(html).toContain(
+      '<meta name="twitter:card" content="summary_large_image" />',
+    )
+    expect(html).toContain(
+      '<meta property="og:title" content="LineLord — who holds your codebase" />',
+    )
+    expect(html).toContain(
+      '<meta property="og:url" content="https://linelord.sobernetics.no/" />',
+    )
+    expect(html).toContain(
+      '<meta property="og:image" content="https://linelord.sobernetics.no/og.png" />',
+    )
+    expect(html).toContain('<meta property="og:image:width" content="1200" />')
+    expect(html).toContain('<meta property="og:image:height" content="630" />')
+    expect(html).toContain('property="og:image:alt"')
+    expect(html).toContain('property="og:description"')
+  })
+
   it('loads Datastar, and nothing else it did not write', () => {
     const html = renderSite(sampleReport())
 

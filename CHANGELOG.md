@@ -10,6 +10,12 @@ because the earlier answer was wrong.
 
 ## [Unreleased]
 
+### Added
+
+- The demo page carries Open Graph and X card tags and a picture of its own
+  (`site/og.png`, drawn from `site/card.html`), so a link to
+  linelord.sobernetics.no is shown with a card rather than as a bare address.
+
 ## [1.0.0-rc.3] — 2026-10-04
 
 The third release candidate for 1.0.0: The Warrior's Guide explains the
