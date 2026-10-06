@@ -110,7 +110,7 @@ describe('the colour of the plate', () => {
       'u_light',
       'u_k',
       'u_textures',
-      'u_aspect',
+      'u_tile',
     ])
       expect(FRAGMENT).toMatch(new RegExp(`uniform (float|vec2) ${u};`))
     expect(FRAGMENT).toContain(`uniform vec4 u_ripples[${MAX_RIPPLES}];`)
@@ -121,6 +121,7 @@ describe('the colour of the plate', () => {
     // Only the sea: no beach, and nothing drawn in it.
     expect(FRAGMENT).not.toContain('u_shore')
     expect(FRAGMENT).not.toContain('u_sand')
+    expect(FRAGMENT).not.toContain('u_aspect')
     expect(VERTEX).toContain('attribute vec2 a_pos;')
     expect(glsl('#ff8000')).toBe('vec3(1.000, 0.502, 0.000)')
   })

@@ -155,7 +155,7 @@ uniform float u_dark;
 uniform float u_light;
 uniform float u_k;
 uniform float u_textures;
-uniform float u_aspect;
+uniform float u_tile;
 uniform sampler2D u_engraving;
 uniform sampler2D u_plate;
 
@@ -180,11 +180,10 @@ void main() {
   // little less, and the lines stand apart instead of running into black.
   float down = clamp((u_surface - p.y) / u_depth, 0.0, 1.0);
   float row = ${SEA_ROWS[0].toFixed(3)} + ${(SEA_ROWS[1] - SEA_ROWS[0]).toFixed(3)} * pow(down, 1.25);
-  // One engraving across the whole width: stretched a little where the window
-  // is wider than it, and cut from the middle where it is narrower. It never
-  // repeats, so it never shows a seam.
-  float tile = h * u_aspect;
-  float ux = u_res.x >= tile ? p.x / u_res.x : 0.5 + (p.x - u_res.x * 0.5) / tile;
+  // One engraving across the whole width, u_tile pixels wide: stretched a
+  // little where the window is wider than it, and cut from the middle where it
+  // is narrower. It never repeats, so it never shows a seam.
+  float ux = u_res.x >= u_tile ? p.x / u_res.x : 0.5 + (p.x - u_res.x * 0.5) / u_tile;
   vec2 uv = vec2(ux, row);
 
   // The swell: each row rises and falls a little, later than the row nearer

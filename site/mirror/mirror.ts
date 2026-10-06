@@ -39,6 +39,8 @@ interface Frame {
   k: number
   /** How far below the surface the engraving's open sea reaches, in pixels. */
   depth: number
+  /** How wide the whole engraving is drawn, in pixels. */
+  tile: number
 }
 
 interface Water {
@@ -103,7 +105,7 @@ function water(canvas: HTMLCanvasElement): Water | null {
     k: at('u_k'),
     textures: at('u_textures'),
     depth: at('u_depth'),
-    aspect: at('u_aspect'),
+    tile: at('u_tile'),
   }
   const sheet = (unit: number, name: string) => {
     const tex = gl.createTexture()
@@ -186,7 +188,7 @@ function water(canvas: HTMLCanvasElement): Water | null {
       gl.uniform1f(u.k, f.k)
       gl.uniform1f(u.textures, textured)
       gl.uniform1f(u.depth, f.depth)
-      gl.uniform1f(u.aspect, INK_W / INK_H)
+      gl.uniform1f(u.tile, f.tile)
       gl.clearColor(0, 0, 0, 0)
       gl.clear(gl.COLOR_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
@@ -201,12 +203,16 @@ const scale = () => Math.min(window.devicePixelRatio || 1, 1.5) * 0.7
 const INK_W = 2048
 const INK_H = 512
 
-/* The engraving's open sea at its own proportions: as deep as it is drawn
-   for the width it is stretched across, so a shallow strip of water shows the
-   top of the sea rather than all of it squeezed flat. */
-const seaDepth = (canvas: HTMLCanvasElement) =>
-  (SEA_ROWS[1] - SEA_ROWS[0]) *
-  Math.max(canvas.width / (INK_W / INK_H), canvas.height)
+/* The sea at the foot of the page: the engraving's open water at its own
+   proportions, as deep as the water is or as the width asks for, whichever
+   is more, so it never runs out of sea before the bottom and is never
+   squeezed flat. */
+const ASPECT = INK_W / INK_H
+const SEA_SPAN = SEA_ROWS[1] - SEA_ROWS[0]
+const sea = (canvas: HTMLCanvasElement, surface: number) => {
+  const depth = Math.max(surface, (SEA_SPAN * canvas.width) / ASPECT)
+  return { depth, tile: (depth / SEA_SPAN) * ASPECT }
+}
 
 /** Fetches an image the page carries beside this module. */
 function picture(name: string): Promise<HTMLImageElement> {
@@ -326,7 +332,7 @@ function setup(el: HTMLElement) {
       hold: still ? 0 : h,
       dark: 0,
       k: 1,
-      depth: seaDepth(canvas),
+      ...sea(canvas, top),
     })
     bar.style.transform = `scaleX(${h})`
     if (h >= 1 && since !== null) {
@@ -516,6 +522,7 @@ function setup(el: HTMLElement) {
         dark: d.dark,
         k: 1,
         depth: veil.height * 1.6,
+        tile: veil.height * ASPECT,
       })
       if (d.done) return finish()
       requestAnimationFrame(step)
@@ -582,6 +589,7 @@ function setup(el: HTMLElement) {
           dark: s.dark,
           k: 1 - s.fall * 0.999,
           depth: veil.height * 1.6,
+          tile: veil.height * ASPECT,
         })
         if (s.done) return leave()
         requestAnimationFrame(step)
