@@ -109,9 +109,8 @@ describe('the low water between runs', () => {
 
   it('says who took a hold back, and what the ledger makes of it', () => {
     const world = withTaken(firstWorld(), [1], 'Hild')
-    const seed = Array.from({ length: 50 }, (_, i) => i + 1).find(
-      (s) =>
-        settle(world, [], 'Hild', makeRng(s)).world.holds[1].holder !== 'you',
+    const seed = Array.from({ length: 50 }, (_, i) => i + 1).find((s) =>
+      settle(world, [], 'Hild', makeRng(s)).news[0]?.startsWith('Hollin has'),
     )
     const { world: after, news } = settle(world, [], 'Hild', makeRng(seed ?? 1))
     expect(after.holds[1]).toMatchObject({ holder: 'hollin', since: 1 })
@@ -209,5 +208,79 @@ describe('your wrack', () => {
       'Hild, on depth 6, holding nothing.',
       'Hild, on depth 4, holding an axe, a salt-hard jerkin and 20 marks.',
     ])
+  })
+})
+
+describe('the rivals, between runs', () => {
+  const seeds = Array.from({ length: 1000 }, (_, i) => i + 1)
+
+  it('leave each other be while every one of them holds something', () => {
+    for (const seed of seeds.slice(0, 50)) {
+      const { world, news } = settle(firstWorld(), [], 'Hild', makeRng(seed))
+      expect(world.holds).toEqual(firstWorld().holds)
+      expect(news).toEqual([])
+    }
+  })
+
+  it('send one who holds nothing after someone else, the freshest holds falling first', () => {
+    const world = withTaken(firstWorld(), [1], 'Hild')
+    world.lowWater = 60
+    const moved = seeds
+      .map((seed) => settle(world, [], 'Hild', makeRng(seed)))
+      .find(({ world: w }) =>
+        ([2, 3, 4] as const).some((t) => w.holds[t].holder === 'hollin'),
+      )
+    expect(moved).toBeDefined()
+    const t = ([2, 3, 4] as const).find(
+      (t) => moved?.world.holds[t].holder === 'hollin',
+    ) as 2 | 3 | 4
+    const from = firstWorld().holds[t].holder
+    expect(moved?.world.holds[t]).toMatchObject({
+      holder: 'hollin',
+      since: 61,
+      from: 'hollin',
+    })
+    expect(moved?.news.some((l) => l.startsWith('Hollin takes'))).toBe(true)
+    expect(moved?.news.join(' ')).toContain(
+      { grue: 'Grue', sethra: 'Sethra', corve: 'Corve' }[from as 'grue'],
+    )
+  })
+
+  it('may come for yours as well, but not in the low water after you took it', () => {
+    const world = withTaken(firstWorld(), [1], 'Hild')
+    for (const seed of seeds.slice(0, 80))
+      expect(
+        settle(world, [2], 'Hild', makeRng(seed)).world.holds[2].holder,
+      ).toBe('you')
+  })
+
+  it('go through your wrack on the ground they hold, and leave it holding nothing', () => {
+    const wrack = {
+      id: 0,
+      name: 'Hild',
+      depth: 7,
+      weapon: 'axe',
+      armour: 'mail',
+      marks: 30,
+      level: 2,
+    }
+    const world = { ...firstWorld(), wrack: [wrack] }
+    const robbed = seeds
+      .map((seed) => settle(world, [], 'Hild', makeRng(seed)))
+      .find(({ world: w }) => w.wrack?.[0]?.marks === 0)
+    expect(robbed?.world.wrack?.[0]).toEqual({
+      ...wrack,
+      weapon: null,
+      armour: null,
+      marks: 0,
+    })
+    expect(robbed?.news).toContain(
+      'Sethra has been through what Hild left on depth 7.',
+    )
+    const mine = withTaken(world, [3], 'Hild')
+    for (const seed of seeds.slice(0, 60))
+      expect(settle(mine, [3], 'Hild', makeRng(seed)).world.wrack?.[0]).toEqual(
+        wrack,
+      )
   })
 })

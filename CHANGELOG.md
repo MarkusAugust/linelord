@@ -48,6 +48,14 @@ because the earlier answer was wrong.
   weapon until it is blunt and cuts half, armour until it splits and keeps
   nothing out. Barr puts the edge back on, and mends, for marks. The pack says
   which is which.
+- The holders do not wait for you. At every low water, one who holds nothing
+  goes after someone who does, another holder or you, and a fresh hold falls
+  far more easily than an old one; a hold you took in the run just ended is
+  safe until the next. So Hollin may be found sitting in the Lowstreets, and
+  beating her there gives you the Lowstreets. Whoever holds a depth fights as
+  hard as that depth asks and no harder, whoever they are, and keeps their own
+  ways. And the holder of the ground your wrack lies on may go through it
+  before you come back, leaving it holding nothing.
 - The page ends in the sea, engraved in steel: the open water of a
   copperplate engraving cut into a dark plate, close under the last line of
   text, a slow warm sheen passing over it and a small swell moving through it,
