@@ -213,6 +213,11 @@
   --blade-blend: multiply;
 }
 
+/* The page ends in the sea: no bounce past it into bare paper. */
+html {
+  overscroll-behavior-y: none;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -226,7 +231,8 @@ body {
 main {
   max-width: 62rem;
   margin: 0 auto;
-  padding: 2.5rem 16px 4rem;
+  /* Little at the foot: the sea comes up close under the last line. */
+  padding: 2.5rem 16px 0.5rem;
 }
 
 h1 {
@@ -503,6 +509,7 @@ a {
 
 .ebb {
   margin-top: 24px;
+  margin-bottom: 0;
   color: var(--ink-dim);
   font-size: 0.8rem;
 }
@@ -514,7 +521,7 @@ a {
  */
 .mirror {
   position: relative;
-  height: clamp(220px, 34vh, 400px);
+  height: clamp(120px, 18vh, 220px);
   background: linear-gradient(to bottom, transparent, #2a2114 70%, #1e170d);
   cursor: pointer;
   touch-action: pan-y;

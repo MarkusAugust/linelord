@@ -23,16 +23,12 @@ because the earlier answer was wrong.
   changes nothing about the command-line tool. The page now loads Datastar's
   Rocket bundle, which is free as of Datastar 1.0.4 and includes the rest of
   Datastar, so it is still one script.
-- The page ends in the sea, engraved in steel: a copperplate engraving of a
-  shore cut into a dark plate, a slow warm sheen passing over it, the swell
-  rolling in toward the beach while the sand stands still, and the wash running
-  up the sand and back, at a height that
-  follows a real tide on the clock. Between the page and the water lies a strip of wet
-  sand with a line drawn across it: Jarn's, the Linelord of the Gallowmark
-  canon. The flood covers it and the ebb gives it back, drawn again along the
-  beach. A finger or a mouse dragged over the sand draws a line of your own,
-  kept until a flood has been over it; drawn across his, it marks you as his
-  challenger. The line above it all says what the shore is doing. Touched, the
+- The page ends in the sea, engraved in steel: the open water of a
+  copperplate engraving cut into a dark plate, close under the last line of
+  text, a slow warm sheen passing over it and a small swell moving through it,
+  standing higher or lower with a real tide on the clock. Nothing else is in
+  it: no beach, and nothing drawn. The line above it says whether the sea is
+  coming in or going out. Touched, the
   water rings, and the rings bend the cut lines; held for a second and a half, the rings turn
   into a whirlpool and the water rises over the page, and the game comes up out
   of the dark, filling the window. Closing it brings you up again at the water,

@@ -1,16 +1,13 @@
 /**
  * The sea at the foot of the page, and the way down through it.
  *
- * The page fades into dark water, which stands higher or lower with a tide
- * that runs on the clock. Touched, it rings, and where the rings break the surface the drowned
- * city shows underneath. Held, the rings turn into a whirlpool, and held long
+ * The page fades into the sea, which stands higher or lower with a tide that
+ * runs on the clock. Touched, it rings. Held, the rings turn into a whirlpool, and held long
  * enough the water rises over the whole page and the game comes up out of the
  * dark. Closed, the dark goes and the water falls back off the page.
  *
  * Everything here is numbers and text; `mirror.ts` puts it on the page.
  */
-
-import { pools } from '../descent/lore'
 
 /** High water to high water: twelve hours and twenty-five minutes. */
 export const TIDE_MS = (12 * 60 + 25) * 60 * 1000
@@ -22,71 +19,18 @@ export function tide(now: number): number {
 
 const rising = (now: number) => Math.cos((2 * Math.PI * now) / TIDE_MS) > 0
 
-/**
- * Where Jarn's line lies in the sand, as a share of the canvas's height from
- * the bottom: above the water at the ebb, under it at the flood.
- */
-export const LINE_AT = 0.69
-
-/** The tide level at which the water reaches a height `y` (a share from the bottom). */
-export function coverLevel(y: number): number {
-  return (y - 0.62) / 0.1
-}
-
-/**
- * How much of Jarn's line there is: none while the water is over it, all of
- * it while the flood is still coming up to it, and more and more as the sea
- * goes out and he walks the beach drawing it again.
- */
-export function jarnDrawn(now: number): number {
-  const level = tide(now)
-  const cover = coverLevel(LINE_AT)
-  if (level >= cover) return 0
-  if (rising(now)) return 1
-  return Math.min(1, (cover - level) / 0.12)
-}
-
-/** Whether a flood has come over height `y` between `at` and `now`. */
-export function washed(at: number, now: number, y: number): boolean {
-  const need = coverLevel(y)
-  if (need > 1) return false
-  if (now - at >= TIDE_MS) return true
-  for (let i = 0; i <= 240; i++)
-    if (tide(at + ((now - at) * i) / 240) >= need) return true
-  return false
-}
-
-/** Whether a stroke goes from one side of a line at height `y` to the other. */
-export function crosses(
-  points: readonly (readonly [number, number])[],
-  y: number,
-): boolean {
-  return points.some(([, py]) => py < y) && points.some(([, py]) => py > y)
-}
-
-const shore = (start: string, fallback: string) =>
-  pools.shore.find((line) => line.startsWith(start)) ?? fallback
-
-/**
- * What the foot of the page says: your line, if you have drawn across his;
- * otherwise what the shore is doing, by the same clock as the water.
- */
-export function saying(now: number, mine: { crossed: boolean } | null): string {
-  if (mine?.crossed) return shore('Your line', "Your line, across Jarn's.")
-  const level = tide(now)
-  if (level >= 0.85) return shore('The sea takes', 'The sea takes the line.')
-  if (level <= 0.15)
-    return shore('The Linelord', 'The Linelord draws a line in the sand.')
+/** What the foot of the page says: which way the sea is going, by the same clock as the water. */
+export function saying(now: number): string {
   return rising(now) ? 'The sea is coming in.' : 'The sea is going out.'
 }
 
 /**
  * Where the water's top stands on a canvas `height` pixels tall, counted from
  * the bottom: a little higher at the flood, a little lower at the ebb. Above
- * it the water fades into the page.
+ * it the water fades into the page, close under the last line of text.
  */
 export function waterline(height: number, level: number): number {
-  return height * (0.62 + 0.1 * level)
+  return height * (0.82 + 0.12 * level)
 }
 
 /** A ring on the water: where it started, when, and how hard. */
@@ -179,18 +123,8 @@ export const PALETTE = {
   dim: '#8a6d1f',
 } as const
 
-/** Where the shore is in the engraving: the share of its height from the top. */
-export const SHORE_ROW = 0.34
-
-/**
- * The row of the engraving (a share of its height from the top) to draw at
- * height `y` of a canvas `h` tall, counted from the bottom, when the water's
- * top stands at `surface`: the engraving's own shore lands on the waterline,
- * and the tide moves the whole engraving up and down with it.
- */
-export function engravingRow(y: number, h: number, surface: number): number {
-  return SHORE_ROW + (surface - y) / h
-}
+/** The rows of the engraving the sea is drawn from: its open water, below its beach. */
+export const SEA_ROWS = [0.4, 0.98] as const
 
 /** A colour as GLSL writes it. */
 export function glsl(hex: string): string {
@@ -213,6 +147,7 @@ uniform vec2 u_res;
 uniform float u_t;
 uniform float u_surface;
 uniform float u_feather;
+uniform float u_depth;
 uniform vec4 u_ripples[${MAX_RIPPLES}];
 uniform vec2 u_hold_at;
 uniform float u_hold;
@@ -220,11 +155,9 @@ uniform float u_dark;
 uniform float u_light;
 uniform float u_k;
 uniform float u_textures;
-uniform float u_shore;
-uniform float u_aspect;
+uniform float u_tile;
 uniform sampler2D u_engraving;
 uniform sampler2D u_plate;
-uniform sampler2D u_sand;
 
 // The engraving's ink at a point: 1 where the burin cut, 0 where it did not.
 // The cut at a point, by local contrast: each line against the ink around
@@ -237,51 +170,26 @@ float ink(vec2 uv) {
   return clamp((sharp - around) * 1.7 + around * 0.45, 0.0, 1.0);
 }
 
-float hash1(float x) {
-  return fract(sin(x * 127.1) * 43758.5453);
-}
-
-// A soft, slow noise along the beach, for the ragged edge of the wash.
-float ragged(float x) {
-  float i = floor(x);
-  float f = fract(x);
-  f = f * f * (3.0 - 2.0 * f);
-  return mix(hash1(i), hash1(i + 1.0), f);
-}
-
 void main() {
   vec2 p = gl_FragCoord.xy;
   float h = u_res.y;
 
-  // Which row of the engraving this is. On the page the engraving's shore
-  // stands on the waterline; in the passages the sea fills everything below
-  // the rising surface.
-  float row = u_shore > 0.5
-    ? ${SHORE_ROW.toFixed(3)} + (u_surface - p.y) / h
-    : 0.45 + clamp((u_surface - p.y) / (h * 1.6), 0.0, 0.5);
-  // The wash: the sea's edge runs up the sand and back, slowly, ragged along
-  // the beach, and the sand and the sea fade into each other across it.
-  float wash = (sin(u_t * 0.35) * 0.012 + (ragged(p.x / 90.0 + u_t * 0.05) - 0.5) * 0.03) * u_shore;
-  float sea = u_shore > 0.5
-    ? smoothstep(${(SHORE_ROW - 0.08).toFixed(3)}, ${(SHORE_ROW + 0.07).toFixed(3)}, row + wash)
-    : 1.0;
-  // One engraving across the whole width: stretched a little where the window
-  // is wider than it, and cut from the middle where it is narrower. It never
-  // repeats, so it never shows a seam.
-  float tile = h * u_aspect;
-  float ux = u_res.x >= tile ? p.x / u_res.x : 0.5 + (p.x - u_res.x * 0.5) / tile;
-  // The sea nearest the shore is the engraving's densest hatching. Spread it:
-  // give the rows by the shore more of the screen and those further out a
-  // little less, so its lines stand apart instead of running into black.
-  float seaward = clamp((row - ${SHORE_ROW.toFixed(3)}) / ${(1 - SHORE_ROW).toFixed(3)}, 0.0, 1.0);
-  float spread = ${SHORE_ROW.toFixed(3)} + ${(1 - SHORE_ROW).toFixed(3)} * pow(seaward, 1.25);
-  vec2 uv = vec2(ux, mix(row, spread, step(${SHORE_ROW.toFixed(3)}, row) * (u_shore > 0.5 ? 1.0 : 0.0)));
+  // Which row of the engraving this is: its open sea, from the surface down
+  // to u_depth below it. The rows nearest the surface are its densest
+  // hatching, so they are given more of the screen and those further down a
+  // little less, and the lines stand apart instead of running into black.
+  float down = clamp((u_surface - p.y) / u_depth, 0.0, 1.0);
+  float row = ${SEA_ROWS[0].toFixed(3)} + ${(SEA_ROWS[1] - SEA_ROWS[0]).toFixed(3)} * pow(down, 1.25);
+  // One engraving across the whole width, u_tile pixels wide: stretched a
+  // little where the window is wider than it, and cut from the middle where it
+  // is narrower. It never repeats, so it never shows a seam.
+  float ux = u_res.x >= u_tile ? p.x / u_res.x : 0.5 + (p.x - u_res.x * 0.5) / u_tile;
+  vec2 uv = vec2(ux, row);
 
-  // The swell comes in toward the shore: each row rises and falls a little,
-  // later than the row nearer the eye, so the crests walk up the beach and
-  // draw back. Small and slow, and nothing moves sideways.
-  float near = clamp((row - ${SHORE_ROW.toFixed(3)}) / 0.6, 0.0, 1.0);
-  vec2 drift = vec2(0.0, sin(u_t * 0.75 - row * 22.0) * 0.009 * (0.35 + near)) * sea;
+  // The swell: each row rises and falls a little, later than the row nearer
+  // the eye, so the crests walk slowly away. Small and slow, and nothing
+  // moves sideways.
+  vec2 drift = vec2(0.0, sin(u_t * 0.75 - row * 22.0) * 0.009 * (0.35 + down));
 
   // Rings and the whirlpool bend the cut lines where the water is touched.
   vec2 bend = vec2(0.0);
@@ -301,14 +209,11 @@ void main() {
   float hr = length(hv);
   float pull = u_hold * exp(-hr / (120.0 + 260.0 * u_hold));
   bend += vec2(-hv.y, hv.x) / max(hr, 1.0) * pull * 30.0;
-  uv += drift + bend / h * sea;
+  uv += drift + bend / h;
   uv.y = clamp(uv.y, 0.002, 0.998);
 
   // The cut, and its slope, from which the light is worked out.
   float g = ink(uv) * u_textures;
-  vec4 drawn = texture2D(u_sand, p / u_res);
-  float lineCut = drawn.a * (1.0 - sea) * u_shore;
-  g = max(g, lineCut);
 
   // No glints in the grooves: they are simply cut, dark. A broad, soft sheen
   // passes slowly over the plate, warm, the way light moves on old metal.
@@ -319,14 +224,12 @@ void main() {
   float across = p.x / u_res.x;
   float sheen = exp(-pow((across - fract(u_t * 0.015) * 1.6 + 0.3) * 2.6, 2.0));
   col += mix(${glsl(PALETTE.gold)}, ${glsl(PALETTE.dim)}, u_light) * sheen * (1.0 - g) * 0.22;
-  col += ${glsl(PALETTE.gold)} * max(lift, 0.0) * 0.2 * sea;
+  col += ${glsl(PALETTE.gold)} * max(lift, 0.0) * 0.2;
   col *= 1.0 - u_hold * exp(-hr / 70.0) * 0.9;
   col = mix(col, ${glsl(PALETTE.night)}, u_dark);
 
-  // The plate fades into the page above the shore's stipple.
-  float plateIn = u_shore > 0.5
-    ? smoothstep(0.03, 0.2, row)
-    : smoothstep(-u_feather * 0.15, u_feather, u_surface - p.y);
+  // The water fades into the page above its surface.
+  float plateIn = smoothstep(-u_feather * 0.15, u_feather, u_surface - p.y);
   float a = max(plateIn, u_dark) * u_k;
   gl_FragColor = vec4(col * a, a);
 }
