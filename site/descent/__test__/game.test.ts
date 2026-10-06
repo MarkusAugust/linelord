@@ -861,27 +861,28 @@ describe('the vaults', () => {
 describe('the tide and the grey', () => {
   it('says the right line when the tide turns', () => {
     const g = gameOn(ROOM, 1)
-    g.tide = 49
+    g.tide = 79
     expect(run(g, wait).lines).toContain(pools['tide-turning'][0] ?? '')
   })
 
   it('drowns you on low ground at the flood', () => {
     const g = gameOn(ROOM, 1, { elev: 0 })
-    g.tide = 85
+    g.tide = 116
     g.player.hp = 3
-    const out = fight(g, wait, (x) => x.over !== null, 10)
+    const out = fight(g, wait, (x) => x.over !== null, 15)
     expect(out.game.over?.cause).toBe('drowned at depth 1')
   })
 
-  it('drowns a Wrecker slower, and keeps a Wrecker lamp dry', () => {
+  it('drowns slowly, a Wrecker slower still, and keeps a Wrecker lamp dry', () => {
+    const six = Array.from({ length: 6 }, () => wait)
     const g = gameOn(ROOM, 1, { elev: 0, bg: 'wrecker' })
-    g.tide = 70
-    const out = run(g, wait, wait, wait, wait, wait, wait)
-    expect(g.player.hp - out.game.player.hp).toBe(2)
+    g.tide = 102
+    const out = run(g, ...six)
+    expect(g.player.hp - out.game.player.hp).toBe(1)
     const other = gameOn(ROOM, 1, { elev: 0 })
-    other.tide = 70
-    const drowning = run(other, wait, wait, wait, wait, wait, wait)
-    expect(other.player.hp - drowning.game.player.hp).toBe(3)
+    other.tide = 102
+    const drowning = run(other, ...six)
+    expect(other.player.hp - drowning.game.player.hp).toBe(2)
     expect(out.game.player.lamp).toBe(8)
   })
 
@@ -889,7 +890,7 @@ describe('the tide and the grey', () => {
     const lines: string[] = []
     for (let seed = 1; seed < 20; seed++) {
       const g = gameOn(ROOM, 1, { elev: 1, seed })
-      g.tide = 70
+      g.tide = 102
       g.player.hp = 200
       lines.push(
         ...run(g, wait, wait, wait, wait, wait, wait, wait, wait, wait).lines,
@@ -944,12 +945,12 @@ describe('the tide and the grey', () => {
     expect(run(g, { type: 'stop' }).lines[0]).toContain(
       'Nothing here is flowing',
     )
-    g.tide = 65
+    g.tide = 95
     expect(run(g, { type: 'stop' }).lines[0]).toContain('takes 3 will')
     g.player.will = 3
     const held = run(g, { type: 'stop' })
     expect(held.game.held).toBe(14)
-    expect(held.game.tide).toBe(65)
+    expect(held.game.tide).toBe(95)
     held.game.held = 1
     expect(run(held.game, wait).lines).toContain(
       'You let the stream go. It goes.',
@@ -958,7 +959,7 @@ describe('the tide and the grey', () => {
 
   it('reports the tide, and dims the lamp in the grey', () => {
     const g = gameOn(ROOM, 7)
-    g.tide = 75
+    g.tide = 105
     expect(tideReport(g)).toEqual({ phase: 'flood', water: 2 })
     g.tide = 40
     expect(lightRadius(g)).toBe(6)
@@ -1083,7 +1084,7 @@ describe('the ways a run ends', () => {
     const got = run(g, east, east, { type: 'get' })
     expect(got.lines.join(' ')).toContain('held the drain, days still counting')
     expect(at(got.game.level, 4, 1)).toBe('.')
-    got.game.tide = 70
+    got.game.tide = 100
     const flooded = run(got.game, west, west, west)
     expect(flooded.lines.join(' ')).toContain('The water is over the gap')
     flooded.game.tide = 10
