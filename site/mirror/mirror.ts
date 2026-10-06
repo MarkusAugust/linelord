@@ -184,7 +184,7 @@ function reflectSheet(w: number, h: number, line: number): HTMLCanvasElement {
   if (!ctx || !heading) return sheet
   const style = getComputedStyle(heading)
   const size = Math.min(
-    Number.parseFloat(style.fontSize) * scale() * 1.4,
+    Number.parseFloat(style.fontSize) * scale() * 0.9,
     h * 0.3,
   )
   ctx.font = `${style.fontWeight} ${size}px ${style.fontFamily}`
@@ -196,7 +196,7 @@ function reflectSheet(w: number, h: number, line: number): HTMLCanvasElement {
   // Soft and drawn out downward, as a reflection in moving water is.
   ctx.filter = `blur(${Math.max(1, size * 0.06)}px)`
   ctx.translate(w / 2, h - line * 0.55 + size * 0.15)
-  ctx.scale(1, -1.5)
+  ctx.scale(1, -1.25)
   ctx.fillText('LINELORD', 0, -size * 1.05)
   ctx.restore()
   return sheet
