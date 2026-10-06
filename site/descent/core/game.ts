@@ -5,21 +5,30 @@
  * game it is given is left alone: `act` works on a copy, and the copy is
  * what it hands back.
  */
-import { type Pool, pools } from '../lore'
+import { holders, type Pool, pools } from '../lore'
 import {
   BACKGROUNDS,
   GIFTS,
   ITEMS,
   LAST_DEPTH,
+  LEVELS,
   MONSTERS,
   needsNaming,
   THEFTS,
   TIERS,
-  TITLES,
   tierOf,
-  titleOf,
 } from './content'
 import { inSight, visible } from './fov'
+import {
+  HOLD_TITLES,
+  holdFloor,
+  linelord,
+  RIVAL_TIER,
+  type Tier,
+  tribute,
+  type World,
+  withTaken,
+} from './holds'
 import {
   at,
   freeCell,
@@ -67,6 +76,8 @@ export interface NewRun {
   /** Names learned in earlier runs. */
   known?: string[]
   bones?: Bones | null
+  /** Who holds what in Kell as this run goes down. */
+  world?: World
 }
 
 const say = (rng: Rng, pool: Pool): string => rng.pick(pools[pool])
@@ -91,7 +102,7 @@ export function newGame(run: NewRun): Game {
       might: bg.might,
       will: bg.will,
       grey: 0,
-      marks: 30,
+      marks: 30 + (run.world ? tribute(run.world) : 0),
       lamp: 8,
       water: 8,
       rope: bg.rope,
@@ -116,6 +127,10 @@ export function newGame(run: NewRun): Game {
     tide: 0,
   }
   if (run.bones) game.bones = run.bones
+  if (run.world) {
+    game.world = structuredClone(run.world)
+    game.taken = []
+  }
   return game
 }
 
@@ -134,6 +149,8 @@ export function itemName(game: Game, item: Item): string {
 export function monsterName(game: Game, m: Monster): string {
   const kind = MONSTERS[m.kind]
   if (!kind) return 'something'
+  if (kind.holder)
+    return `${holders[kind.holder].name} ${holders[kind.holder].epithet}`
   if (!game.known.includes(m.kind)) return kind.unknown
   return m.bones
     ? `${m.bones.name}, ${kind.known.replace(/^a /, '')}`
@@ -217,6 +234,65 @@ function travel(
     game.level.monsters.push(m)
     delete game.bones
   }
+  placeHolder(game, rng, tier)
+}
+
+/**
+ * On the last floor of a depth its holder waits, by the stair down, or in the
+ * hall by the ledger: unless the hold is yours, or this run has taken it.
+ */
+function placeHolder(game: Game, rng: Rng, tier: Tier): void {
+  const claim = game.world?.holds[tier]
+  if (!claim || claim.holder === 'you') return
+  if (game.depth !== holdFloor(tier) || (game.taken ?? []).includes(tier))
+    return
+  const level = game.level
+  const ledger = level.items.find((i) => i.item.kind === 'ledger')
+  const by = level.down ?? ledger ?? level.up
+  const free = (x: number, y: number) =>
+    at(level, x, y) === '.' &&
+    !monsterAt(level, x, y) &&
+    !level.items.some((i) => i.x === x && i.y === y) &&
+    !(game.player.x === x && game.player.y === y)
+  const cell =
+    Object.values(DIRS)
+      .map(([dx, dy]) => ({ x: by.x + dx, y: by.y + dy }))
+      .find((c) => free(c.x, c.y)) ?? freeCell(level, rng)
+  level.monsters.push(
+    spawn(claim.holder, cell.x, cell.y, game.depth, game.nextId++),
+  )
+}
+
+const tierHeld = (t: Tier) => TIERS[t].name.replace(/^The /, 'the ')
+
+/** A hold goes to this run: the ledger says so, and so may Jarn. */
+function takeHold(game: Game, rng: Rng, tier: Tier, lines: string[]): void {
+  const taken = game.taken ?? []
+  if (taken.includes(tier)) return
+  const name = game.player.name
+  const before = game.world && linelord(withTaken(game.world, taken, name)).who
+  game.taken = [...taken, tier]
+  lines.push(
+    `You hold ${tierHeld(tier)}. The ledger calls you ${HOLD_TITLES[tier]}.`,
+  )
+  lines.push(say(rng, 'title-won'))
+  if (
+    game.world &&
+    before !== 'you' &&
+    linelord(withTaken(game.world, game.taken, name)).who === 'you'
+  )
+    lines.push(`Jarn: "${pools['linelord-won'][0]}"`)
+}
+
+/** Beaten to a third, a holder gives way, and gives up the hold. */
+function giveWay(game: Game, rng: Rng, m: Monster, lines: string[]): void {
+  const rival = MONSTERS[m.kind]?.holder
+  if (!rival) return
+  m.yielded = true
+  m.peaceful = true
+  m.refused = true
+  lines.push(`${holders[rival].name}: "${say(rng, `${rival}-yields` as Pool)}"`)
+  takeHold(game, rng, RIVAL_TIER[rival], lines)
 }
 
 // ---------------------------------------------------------------------------
@@ -227,13 +303,13 @@ function gainXp(game: Game, amount: number, lines: string[], rng: Rng): void {
   const p = game.player
   p.xp += amount
   for (;;) {
-    const next = TITLES[p.level]
-    if (!next || p.xp < next.xp) break
+    const next = LEVELS[p.level]
+    if (next === undefined || p.xp < next) break
     p.level++
     const gain = Math.max(1, rng.roll(BACKGROUNDS[p.bg].grit))
     p.maxHp += gain
     p.hp += gain
-    lines.push(`You are ${titleOf(p.level)} now.`)
+    lines.push(`You are level ${p.level} now.`)
   }
 }
 
@@ -241,6 +317,7 @@ function kill(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   const kind = MONSTERS[m.kind]
   m.hp = 0
   lines.push(`${cap(monsterName(game, m))} goes down.`)
+  if (kind?.holder) takeHold(game, rng, RIVAL_TIER[kind.holder], lines)
   if (!game.player.slain.includes(m.kind)) game.player.slain.push(m.kind)
   gainXp(game, (kind?.xp ?? 1) * (1 + Math.floor(game.depth / 2)), lines, rng)
   const drop = (item: Item) => game.level.items.push({ x: m.x, y: m.y, item })
@@ -258,6 +335,7 @@ function playerAttack(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   const kind = MONSTERS[m.kind]
   m.awake = true
   if (m.kind === 'firstcloak') m.refused = true
+  if (kind?.waits && !m.yielded) m.peaceful = false
   if (m.kind === 'drawn' && p.held === m.id && weapon?.cuts) {
     p.held = null
     lines.push(
@@ -284,8 +362,13 @@ function playerAttack(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   const [count, sides] = weapon?.dmg ?? [1, 2]
   const dmg = rng.dice(count, sides) + Math.floor(p.might / 2) + (known ? 1 : 0)
   m.hp -= dmg
-  if (m.hp <= 0) kill(game, rng, m, lines)
-  else lines.push(`You hit ${monsterName(game, m)}.`)
+  if (m.hp <= 0) {
+    kill(game, rng, m, lines)
+    return
+  }
+  lines.push(`You hit ${monsterName(game, m)}.`)
+  if (kind?.holder && !m.yielded && m.hp * 3 <= m.maxHp)
+    giveWay(game, rng, m, lines)
 }
 
 function monsterAttack(
@@ -472,17 +555,26 @@ function move(game: Game, rng: Rng, dir: Dir, lines: string[]): boolean {
     return true
   }
   if (m) {
-    if (m.kind === 'firstcloak' && m.peaceful) {
+    const kind = MONSTERS[m.kind]
+    if (m.peaceful && (kind?.tithes || m.yielded)) {
       m.x = p.x
       m.y = p.y
       p.x = x
       p.y = y
-      lines.push('The cloaked shape stands aside, politely, and lets you by.')
+      lines.push(
+        kind?.holder
+          ? `${cap(monsterName(game, m))} stands aside and lets you by.`
+          : 'The cloaked shape stands aside, politely, and lets you by.',
+      )
       return true
     }
-    if (m.kind === 'firstcloak' && !m.refused) {
+    if (kind?.tithes && !m.refused) {
       game.prompt = { kind: 'tithe', monster: m.id }
-      lines.push('"Pardon. A tenth." Pay? (y/n)')
+      lines.push(
+        kind.holder
+          ? `${holders[kind.holder].name} holds out a hand. "A tenth." Pay? (y/n)`
+          : '"Pardon. A tenth." Pay? (y/n)',
+      )
       return false
     }
     playerAttack(game, rng, m, lines)
@@ -881,19 +973,31 @@ function answer(game: Game, rng: Rng, yes: boolean, lines: string[]): void {
   if (!prompt) return
   const p = game.player
   if (prompt.kind === 'tithe') {
+    const asker = game.level.monsters.find((m) => m.id === prompt.monster)
+    const holder = asker && MONSTERS[asker.kind]?.holder
+    // A holder's price is his own; the order's is paid to all of it.
+    const askers = game.level.monsters.filter((m) =>
+      holder ? m === asker : m.kind === 'firstcloak',
+    )
     if (yes) {
       const tenth = Math.max(1, Math.floor(p.marks / 10))
       p.marks = Math.max(0, p.marks - tenth)
-      for (const m of game.level.monsters)
-        if (m.kind === 'firstcloak' && !m.refused) m.peaceful = true
-      lines.push(`You pay ${tenth} marks. "Thank you." They stand aside.`)
+      for (const m of askers) if (!m.refused) m.peaceful = true
+      lines.push(
+        holder
+          ? `You pay ${tenth} marks. ${holders[holder].name} lets you by, and keeps what is his.`
+          : `You pay ${tenth} marks. "Thank you." They stand aside.`,
+      )
     } else {
-      for (const m of game.level.monsters)
-        if (m.kind === 'firstcloak') {
-          m.refused = true
-          m.awake = true
-        }
-      lines.push('"A pity." The hook comes out.')
+      for (const m of askers) {
+        m.refused = true
+        m.awake = true
+      }
+      lines.push(
+        holder
+          ? `${holders[holder].name} gets up. "Then all of it."`
+          : '"A pity." The hook comes out.',
+      )
     }
     return
   }
@@ -977,7 +1081,9 @@ function monstersAct(game: Game, rng: Rng, lines: string[]): void {
           if (!game.prompt) {
             game.prompt = { kind: 'tithe', monster: m.id }
             lines.push(
-              `${cap(monsterName(game, m))} bows. "Pardon. A tenth." Pay? (y/n)`,
+              kind.holder
+                ? `${holders[kind.holder].name} holds out a hand. "A tenth." Pay? (y/n)`
+                : `${cap(monsterName(game, m))} bows. "Pardon. A tenth." Pay? (y/n)`,
             )
           }
           break
@@ -991,6 +1097,20 @@ function monstersAct(game: Game, rng: Rng, lines: string[]): void {
       m.x = next.x
       m.y = next.y
     }
+  }
+}
+
+/** A holder says who they are, once, the first time they see you. */
+function holdersSpeak(game: Game, rng: Rng, lines: string[]): void {
+  const p = game.player
+  const radius = lightRadius(game)
+  for (const m of game.level.monsters) {
+    const rival = MONSTERS[m.kind]?.holder
+    if (!rival || m.spoke || m.hp <= 0) continue
+    const d2 = (m.x - p.x) ** 2 + (m.y - p.y) ** 2
+    if (d2 > (radius + 3) ** 2 || !inSight(game.level, m, p)) continue
+    m.spoke = true
+    lines.push(`${holders[rival].name}: "${say(rng, rival)}"`)
   }
 }
 
@@ -1075,6 +1195,7 @@ function endTurn(game: Game, rng: Rng, lines: string[]): void {
 
   monstersAct(game, rng, lines)
   if (game.over || game.depth === 0) return
+  holdersSpeak(game, rng, lines)
 
   const water = waterAt(game.level, game.tide, p.x, p.y)
   if (water >= 2 && game.turn % (p.bg === 'wrecker' ? 3 : 2) === 0) {

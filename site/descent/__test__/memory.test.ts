@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { newGame } from '../core/game'
+import { firstWorld, HOLD_TITLES } from '../core/holds'
 import {
   describe as describeLine,
   endRun,
@@ -9,6 +10,7 @@ import {
   loadKnown,
   loadLedger,
   loadRun,
+  loadWorld,
   type Store,
   saveRun,
   takeBones,
@@ -66,7 +68,7 @@ describe('the memory of the descent', () => {
     const store = memoryStore()
     saveRun(store, finished('dead', 'x'))
     endRun(store, finished('dead', 'killed by a Picker at depth 3'), DAY)
-    const ledger = endRun(store, finished('escaped', 'came up'), DAY)
+    const { ledger } = endRun(store, finished('escaped', 'came up'), DAY)
     expect(ledger).toHaveLength(2)
     expect(ledger[0]?.ending).toBe('escaped')
     expect(loadLedger(store)).toEqual(ledger)
@@ -99,7 +101,7 @@ describe('the memory of the descent', () => {
     expect(line).toEqual({
       name: 'Hild',
       bg: 'wrecker',
-      title: 'Shingle-rat',
+      title: '',
       depth: 7,
       turns: 412,
       ending: 'dead',
@@ -107,8 +109,20 @@ describe('the memory of the descent', () => {
       date: '2026-10-06',
     })
     expect(describeLine(line)).toBe(
-      'Hild, Shingle-rat, held depth 7 for 412 turns, and was killed by a Picker.',
+      'Hild, held depth 7 for 412 turns, and was killed by a Picker.',
     )
+    const holder = finished('dead', 'drowned at depth 5')
+    holder.taken = [1, 2]
+    const titled = ledgerLine(holder, DAY)
+    expect(titled.title).toBe(`${HOLD_TITLES[1]} and ${HOLD_TITLES[2]}`)
+    expect(describeLine(titled)).toBe(
+      `Hild, ${HOLD_TITLES[1]} and ${HOLD_TITLES[2]}, held depth 7 for 412 turns, and drowned.`,
+    )
+    expect(
+      describeLine({ ...line, title: 'Shingle-rat' }).startsWith(
+        'Hild, Shingle-rat, held',
+      ),
+    ).toBe(true)
     expect(describeLine({ ...line, ending: 'escaped' })).toContain(
       'came up through the roof with the ledger',
     )
@@ -128,16 +142,32 @@ describe('the memory of the descent', () => {
     store.set('descent.known', 'not json')
     store.set('descent.run', '[]')
     store.set('descent.bones', '7')
+    store.set('descent.world', '{"lowWater": "x"}')
     expect(loadLedger(store)).toEqual([])
     expect(loadKnown(store)).toEqual([])
     expect(loadRun(store)).toBeNull()
     expect(loadBones(store)).toBeNull()
+    expect(loadWorld(store)).toEqual(firstWorld())
+  })
+
+  it('keeps who holds what in Kell from one run to the next, and the low water moves', () => {
+    const store = memoryStore()
+    expect(loadWorld(store)).toEqual(firstWorld())
+    const g = finished('dead', 'drowned at depth 5')
+    g.taken = [2]
+    const { news } = endRun(store, g, DAY)
+    const world = loadWorld(store)
+    expect(world.lowWater).toBe(1)
+    expect(world.holds[2]).toMatchObject({ holder: 'you', name: 'Hild' })
+    expect(news).toEqual([])
+    endRun(store, finished('dead', 'x'), DAY)
+    expect(loadWorld(store).lowWater).toBe(2)
   })
 
   it('plays on without a memory when the store refuses', () => {
     const g = finished('unasked', 'x')
     expect(() => saveRun(refusing, g)).not.toThrow()
-    expect(endRun(refusing, g, DAY)).toHaveLength(1)
+    expect(endRun(refusing, g, DAY).ledger).toHaveLength(1)
     expect(loadRun(refusing)).toBeNull()
     expect(takeBones(refusing)).toBeNull()
     const half: Store = { ...memoryStore(), remove: refusing.remove }

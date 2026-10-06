@@ -12,10 +12,11 @@ import {
   tideReport,
   verbOf,
 } from '../core/game'
+import { firstWorld, HOLD_TITLES, withTaken } from '../core/holds'
 import { at, index } from '../core/level'
 import { makeRng } from '../core/rng'
 import type { Command, Game } from '../core/types'
-import { pools } from '../lore'
+import { holders, pools } from '../lore'
 import { gameOn, put } from './helpers'
 
 /** Run commands in order, gathering what was said. */
@@ -328,13 +329,13 @@ describe('fighting', () => {
     expect(out.game.level.items.some((i) => i.item.kind === 'marks')).toBe(true)
   })
 
-  it('rises a level and a title with enough blood', () => {
+  it('rises a level with enough blood', () => {
     const g = gameOn(ROOM, 9)
     g.player.xp = 9
     put(g, 'picker', 5, 1)
     const out = fight(g, east, (x) => x.player.level > 1)
     expect(out.game.player.level).toBeGreaterThan(1)
-    expect(out.lines.some((l) => l.startsWith('You are '))).toBe(true)
+    expect(out.lines.some((l) => l.startsWith('You are level '))).toBe(true)
   })
 
   it('pays in grey for a blow that is meant', () => {
@@ -419,6 +420,162 @@ describe('the order', () => {
   it('ignores an answer nobody asked for', () => {
     const g = gameOn(ROOM, 1)
     expect(run(g, { type: 'answer', yes: true }).game.prompt).toBeNull()
+  })
+})
+
+describe('the holders', () => {
+  /** A run standing on the stair down to `depth`, in a world. */
+  const above = (depth: number, world = firstWorld()) => {
+    const g = gameOn(['#####', '#<@>#', '#####'], depth - 1)
+    g.player.x = 3
+    g.world = world
+    return g
+  }
+  const holderOf = (g: Game, kind: string) =>
+    g.level.monsters.find((m) => m.kind === kind)
+  const near = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+    Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) <= 1
+
+  it('wait at the last floor of each depth, by the stair down, and the ledger in the hall', () => {
+    for (const [depth, kind] of [
+      [2, 'hollin'],
+      [5, 'grue'],
+      [8, 'sethra'],
+    ] as const) {
+      const g = run(above(depth), { type: 'stairs' }).game
+      const m = holderOf(g, kind)
+      expect(m).toBeDefined()
+      expect(g.level.down && m && near(m, g.level.down)).toBe(true)
+    }
+    const hall = run(above(10), { type: 'stairs' }).game
+    const corve = holderOf(hall, 'corve')
+    const ledger = hall.level.items.find((i) => i.item.kind === 'ledger')
+    expect(corve && ledger && near(corve, ledger)).toBe(true)
+    expect(
+      run(above(3), { type: 'stairs' }).game.level.monsters.some(
+        (m) => m.kind === 'grue',
+      ),
+    ).toBe(false)
+  })
+
+  it('are known by name from the first, as the canon names them', () => {
+    const g = gameOn(ROOM, 2)
+    const m = put(g, 'hollin', 6, 1)
+    expect(monsterName(g, m)).toBe(
+      `${holders.hollin.name} ${holders.hollin.epithet}`,
+    )
+  })
+
+  it('do not wait at a hold that is yours, or one taken this run', () => {
+    const yours = run(above(2, withTaken(firstWorld(), [1], 'Hild')), {
+      type: 'stairs',
+    }).game
+    expect(holderOf(yours, 'hollin')).toBeUndefined()
+    const taken = above(2)
+    taken.taken = [1]
+    expect(
+      holderOf(run(taken, { type: 'stairs' }).game, 'hollin'),
+    ).toBeUndefined()
+    const noWorld = above(2)
+    delete noWorld.world
+    expect(
+      holderOf(run(noWorld, { type: 'stairs' }).game, 'hollin'),
+    ).toBeUndefined()
+  })
+
+  it('say who they are the first time they see you, and only then', () => {
+    const g = gameOn(ROOM, 2)
+    put(g, 'hollin', 6, 1)
+    const out = run(g, wait, wait, wait)
+    const said = out.lines.filter((l) => l.startsWith('Hollin: '))
+    expect(said).toHaveLength(1)
+    expect(pools.hollin.some((q) => said[0]?.includes(q))).toBe(true)
+  })
+
+  it('give way when beaten to a third, and the hold is yours', () => {
+    const g = gameOn(ROOM, 2)
+    g.world = firstWorld()
+    g.player.hp = 500
+    g.player.maxHp = 500
+    g.player.might = 6
+    const m = put(g, 'hollin', 5, 1)
+    m.hp = Math.floor(m.maxHp / 3) + 2
+    const out = fight(g, east, (x) => (x.taken ?? []).length > 0)
+    expect(out.game.taken).toEqual([1])
+    const her = holderOf(out.game, 'hollin')
+    expect(her?.hp).toBeGreaterThan(0)
+    expect(her?.peaceful).toBe(true)
+    expect(
+      out.lines.some((l) => l.includes(pools['hollin-yields'][0] ?? '?')),
+    ).toBe(true)
+    expect(out.lines.some((l) => l.includes(HOLD_TITLES[1]))).toBe(true)
+    expect(
+      out.lines.some((l) => pools['title-won'].some((q) => l.includes(q))),
+    ).toBe(true)
+    const by = run(out.game, east)
+    expect(by.lines[0]).toContain('stands aside')
+    expect(by.game.taken).toEqual([1])
+  })
+
+  it('take the hold as well when one is killed outright', () => {
+    const g = gameOn(ROOM, 2)
+    g.player.hp = 500
+    g.player.maxHp = 500
+    g.player.might = 40
+    put(g, 'hollin', 5, 1)
+    expect(
+      fight(g, east, (x) => (x.taken ?? []).length > 0).game.taken,
+    ).toEqual([1])
+  })
+
+  it('make you the Linelord once you hold more than Jarn, and he says so', () => {
+    const g = gameOn(ROOM, 2)
+    g.world = withTaken(firstWorld(), [4], 'Hild')
+    g.player.hp = 500
+    g.player.maxHp = 500
+    g.player.might = 40
+    put(g, 'hollin', 5, 1)
+    const out = fight(g, east, (x) => (x.taken ?? []).length > 0)
+    expect(out.lines).toContain(`Jarn: "${pools['linelord-won'][0]}"`)
+  })
+
+  it('Grue names his price: paid, he lets you by and keeps the Lowstreets', () => {
+    const g = gameOn(ROOM, 5)
+    g.world = firstWorld()
+    g.player.marks = 100
+    put(g, 'grue', 5, 1)
+    const asked = run(g, east)
+    expect(asked.game.prompt?.kind).toBe('tithe')
+    const paid = run(asked.game, { type: 'answer', yes: true })
+    expect(paid.game.player.marks).toBe(90)
+    expect(holderOf(paid.game, 'grue')?.peaceful).toBe(true)
+    const by = run(paid.game, east)
+    expect(by.game.player.x).toBe(5)
+    expect(by.game.taken ?? []).toEqual([])
+  })
+
+  it('Sethra lets you pass, until you raise a hand to her', () => {
+    const g = gameOn(ROOM, 8)
+    g.player.hp = 500
+    g.player.maxHp = 500
+    put(g, 'sethra', 5, 1)
+    const waited = run(g, wait, wait, wait, wait)
+    expect(waited.lines.some((l) => l.includes('hits you'))).toBe(false)
+    const struck = run(waited.game, east)
+    expect(struck.lines.some((l) => /^You (hit|miss)/.test(l))).toBe(true)
+    expect(holderOf(struck.game, 'sethra')?.peaceful).toBe(false)
+  })
+
+  it('pay you at the start of a run for what you hold', () => {
+    const g = newGame({
+      name: 'Hild',
+      bg: 'ashborn',
+      seed: 1,
+      world: withTaken(firstWorld(), [1], 'Hild'),
+    })
+    expect(g.player.marks).toBe(50)
+    expect(g.world?.holds[1].holder).toBe('you')
+    expect(g.taken).toEqual([])
   })
 })
 

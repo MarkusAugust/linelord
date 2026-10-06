@@ -13,14 +13,7 @@
  * this module imports the very same file, by the address the page used, so
  * there is one Datastar on the page and not two.
  */
-import {
-  BACKGROUNDS,
-  ITEMS,
-  MONSTERS,
-  TIERS,
-  tierOf,
-  titleOf,
-} from '../core/content'
+import { BACKGROUNDS, ITEMS, MONSTERS, TIERS, tierOf } from '../core/content'
 import { visible } from '../core/fov'
 import {
   act,
@@ -35,6 +28,13 @@ import {
   reveal,
   verbOf,
 } from '../core/game'
+import {
+  HOLD_TITLES,
+  standing,
+  TIER_LIST,
+  tribute,
+  withTaken,
+} from '../core/holds'
 import { at, elevation, index, SHOPS } from '../core/level'
 import {
   describe,
@@ -42,6 +42,7 @@ import {
   loadKnown,
   loadLedger,
   loadRun,
+  loadWorld,
   type Store,
   saveRun,
   takeBones,
@@ -165,7 +166,13 @@ function cell(
     if (m)
       return [
         MONSTERS[m.kind]?.glyph ?? '?',
-        m.peaceful ? 'd-calm' : m.bones ? 'd-bones' : 'd-foe',
+        m.peaceful
+          ? 'd-calm'
+          : MONSTERS[m.kind]?.holder
+            ? 'd-holder'
+            : m.bones
+              ? 'd-bones'
+              : 'd-foe',
       ]
     if (tile === 'S') return ['S', 'd-sarn']
   }
@@ -267,7 +274,16 @@ rocket('descent-run', {
         g.depth === 0
           ? 'Wrackhead'
           : `${TIERS[tierOf(g.depth)].name}, depth ${g.depth}`
-      $$.title = `${p.name} the ${BACKGROUNDS[p.bg].name}, ${titleOf(p.level)}`
+      const held = g.world ? withTaken(g.world, g.taken ?? [], p.name) : null
+      const titles = held
+        ? TIER_LIST.filter((t) => held.holds[t].holder === 'you').map(
+            (t) => HOLD_TITLES[t],
+          )
+        : []
+      $$.title = [
+        `${p.name} the ${BACKGROUNDS[p.bg].name}, level ${p.level}`,
+        ...titles,
+      ].join(', ')
       const ph = phase(g.tide)
       $$.tide =
         g.held > 0
@@ -334,7 +350,9 @@ rocket('descent-run', {
 
     const finish = (g: Game, last: string[]) => {
       $$.last = last.slice(-2)
-      const ledger = endRun(store, g, new Date())
+      const { ledger, news } = endRun(store, g, new Date())
+      $$.news = news
+      $$.standing = standing(loadWorld(store))
       $$.ending = ENDINGS[g.over?.ending ?? 'dead']
       $$.cause = describe(
         ledger[0] ?? {
@@ -377,6 +395,8 @@ rocket('descent-run', {
     $$.opening = [...opening]
     $$.hasRun = loadRun(store) !== null
     $$.ledger = loadLedger(store).map(describe)
+    $$.standing = standing(loadWorld(store))
+    $$.news = []
     $$.log = []
     $$.said = ''
     $$.backgrounds = (Object.keys(BACKGROUNDS) as Background[]).map((id) => ({
@@ -417,6 +437,7 @@ rocket('descent-run', {
     })
     action('ledgerView', () => {
       $$.ledger = loadLedger(store).map(describe)
+      $$.standing = standing(loadWorld(store))
       $$.phase = 'ledger'
     })
     action('back', () => {
@@ -428,6 +449,8 @@ rocket('descent-run', {
       if (g) begin(g, ['You come back to where you were.'])
     })
     action('start', (_, bg) => {
+      const world = loadWorld(store)
+      const paid = tribute(world)
       const g = newGame({
         name:
           host.querySelector<HTMLInputElement>('.descent__input')?.value ?? '',
@@ -435,9 +458,11 @@ rocket('descent-run', {
         seed: (Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0,
         known: loadKnown(store),
         bones: takeBones(store),
+        world,
       })
       begin(g, [
         'The shingle at Wrackhead. The steps go down into the sea at the far end, where the water has gone out.',
+        ...(paid > 0 ? [`What you hold in Kell pays you ${paid} marks.`] : []),
       ])
     })
     action('move', (_, dir) => {
@@ -630,8 +655,9 @@ rocket('descent-run', {
         </div>
         <p class="descent__note">
           A roguelike in drowned Kell. Ten floors under Wrackhead, a tide that floods the low ground and a
-          grey that rises when it goes out. Death is the end of a run, and the ledger keeps every one.
-          Kept in this browser only.
+          grey that rises when it goes out. Each depth has a holder; beat one and the hold is yours, until
+          someone takes it back. Death is the end of a run, and the ledger keeps every one. Kept in this
+          browser only.
         </p>
       </section>
 
@@ -706,6 +732,7 @@ rocket('descent-run', {
             <dt><span class="d-you">@</span></dt><dd>you</dd>
             <dt><span class="d-stair">&lt; &gt;</span></dt><dd>stairs up and down</dd>
             <dt><span class="d-foe">p c u n d</span></dt><dd>something that wants you</dd>
+            <dt><span class="d-holder">H G S C</span></dt><dd>a holder: Hollin, Grue, Sethra, Corve</dd>
             <dt><span class="d-item">$ ! ) [ * ?</span></dt><dd>marks and things to take</dd>
             <dt><span class="d-low">.</span></dt><dd>low ground, which floods first</dd>
             <dt><span class="d-water">~</span> <span class="d-deep">~</span></dt><dd>water, and water over your head</dd>
@@ -777,6 +804,7 @@ rocket('descent-run', {
         </blockquote>
         <h3 class="descent__ending" data-text="$$ending"></h3>
         <p data-text="$$cause"></p>
+        <template data-for="line in $$news"><p class="descent__news" data-text="line"></p></template>
         <div class="descent__row">
           <button class="descent__btn" type="button" data-on:click="@newRun()">Go down again</button>
           <button class="descent__btn descent__btn--quiet" type="button" data-on:click="@ledgerView()">The ledger</button>
@@ -785,7 +813,11 @@ rocket('descent-run', {
 
       <section class="descent__ledger" data-show="$$phase === 'ledger' || $$phase === 'over'">
         <h3>The ledger</h3>
-        <p class="descent__note">Who held what depth, and for how long. It counts lines and days. It is not a measure of worth.</p>
+        <p class="descent__note">Who holds Kell, and for how long. It counts ground and low waters. It is not a measure of worth.</p>
+        <ul class="descent__lines descent__standing">
+          <template data-for="line in $$standing"><li data-text="line"></li></template>
+        </ul>
+        <h4>The runs</h4>
         <ol class="descent__lines">
           <template data-for="line in $$ledger"><li data-text="line"></li></template>
         </ol>

@@ -240,6 +240,11 @@
   color: #e08ad0;
   font-weight: 700;
 }
+/* A holder: one of the four who hold Kell's depths. */
+.d-holder {
+  color: #ff9a52;
+  font-weight: 700;
+}
 .d-calm {
   color: #8fa3a8;
 }
@@ -444,6 +449,16 @@
 .descent__lines li {
   padding: 4px 0;
   border-bottom: 1px solid var(--rule);
+}
+
+.descent__ledger h4 {
+  margin: 16px 0 4px;
+  font-size: 0.9rem;
+  color: var(--ink-dim);
+}
+
+.descent__news {
+  color: var(--steel);
 }
 
 .descent__sr {

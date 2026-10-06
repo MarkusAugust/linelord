@@ -24,6 +24,8 @@ export interface Entity {
   id: string
   type: string
   name: string
+  /** Characters: what follows the name, as in Hollin the First Down. */
+  epithet?: string
   summary: string
   status: 'canon' | 'draft' | 'retired'
   body: string
