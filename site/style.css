@@ -213,6 +213,11 @@
   --blade-blend: multiply;
 }
 
+/* The page ends in the sea: no bounce past it into bare paper. */
+html {
+  overscroll-behavior-y: none;
+}
+
 body {
   margin: 0;
   padding: 0;
