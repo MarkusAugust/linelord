@@ -172,3 +172,36 @@ export function approach(k: number, target: number, dt: number): number {
   const next = k + (target - k) * Math.min(1, dt * 5)
   return Math.abs(next - target) < 0.01 ? target : next
 }
+
+/** Where a line of text begins: the top-left of its content area. */
+export interface TextBox {
+  left: number
+  top: number
+}
+
+/**
+ * A glyph's ink, as `measureText` gives it: `left` and `right` from the pen
+ * (left is positive when the ink hangs left of it), `ascent` and `descent` of
+ * the ink from the baseline, and `fontAscent` of the font from the top of the
+ * content area to the baseline.
+ */
+export interface Ink {
+  left: number
+  right: number
+  ascent: number
+  descent: number
+  fontAscent: number
+}
+
+/**
+ * The middle of the ink of a glyph, in the same space as `box`. The water is
+ * centred here rather than on the button, whose box carries the heading's
+ * letter-spacing and whatever line-height the browser gives a button.
+ */
+export function inkCentre(box: TextBox, ink: Ink): { x: number; y: number } {
+  const baseline = box.top + ink.fontAscent
+  return {
+    x: box.left + (ink.right - ink.left) / 2,
+    y: baseline + (ink.descent - ink.ascent) / 2,
+  }
+}

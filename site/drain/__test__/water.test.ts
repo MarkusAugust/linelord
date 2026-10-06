@@ -6,6 +6,7 @@ import {
   descent,
   FOUND,
   FRAGMENT,
+  inkCentre,
   SPUN,
   VERTEX,
 } from '../water'
@@ -79,5 +80,27 @@ describe('the water in the O', () => {
     ])
       expect(FRAGMENT).toMatch(new RegExp(`uniform (float|vec2) ${u};`))
     expect(VERTEX).toContain('attribute vec2 a_pos;')
+  })
+})
+
+describe('where the O is', () => {
+  it('finds the middle of the ink, not the middle of the box', () => {
+    // A box at (100, 50) whose glyph sits with its baseline 40 below the top,
+    // ink from 2 right of the pen to 30 right of it, and 36 above the baseline.
+    const c = inkCentre(
+      { left: 100, top: 50 },
+      { left: -2, right: 30, ascent: 36, descent: 0, fontAscent: 40 },
+    )
+    expect(c.x).toBe(116)
+    expect(c.y).toBe(72)
+  })
+
+  it('counts ink that hangs left of the pen and below the line', () => {
+    const c = inkCentre(
+      { left: 0, top: 0 },
+      { left: 4, right: 20, ascent: 30, descent: 6, fontAscent: 32 },
+    )
+    expect(c.x).toBe(8)
+    expect(c.y).toBe(20)
   })
 })

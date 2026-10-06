@@ -22,6 +22,7 @@ import {
   descent,
   FOUND,
   FRAGMENT,
+  inkCentre,
   type Look,
   SPUN,
   VERTEX,
@@ -105,6 +106,51 @@ function water(canvas: HTMLCanvasElement): ((f: Frame) => void) | null {
 
 const scale = () => Math.min(window.devicePixelRatio || 1, 2)
 
+/* The O's canvas is small, so it can afford the screen's full density: a phone
+   at 3x would otherwise show the water soft. */
+const fine = () => Math.min(window.devicePixelRatio || 1, 3)
+
+const pen = document.createElement('canvas').getContext('2d')
+
+/**
+ * Puts the canvas over the middle of the O's ink: measured off the letter as
+ * the browser draws it, so that it lands in the same place whatever the font,
+ * the zoom, or the way a browser lays out a button.
+ */
+function place(button: HTMLElement, canvas: HTMLCanvasElement): void {
+  const text = Array.from(button.childNodes).find(
+    (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim(),
+  )
+  if (!text || !pen) return
+  const range = document.createRange()
+  range.selectNodeContents(text)
+  const line = range.getBoundingClientRect()
+  const own = button.getBoundingClientRect()
+  const style = getComputedStyle(button)
+  pen.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+  const glyph =
+    style.textTransform === 'uppercase'
+      ? (text.textContent ?? '').trim().toUpperCase()
+      : (text.textContent ?? '').trim()
+  const m = pen.measureText(glyph)
+  const c = inkCentre(
+    { left: line.left, top: line.top },
+    {
+      left: m.actualBoundingBoxLeft,
+      right: m.actualBoundingBoxRight,
+      ascent: m.actualBoundingBoxAscent,
+      descent: m.actualBoundingBoxDescent,
+      fontAscent: m.fontBoundingBoxAscent ?? m.actualBoundingBoxAscent,
+    },
+  )
+  const size = Number.parseFloat(style.fontSize) * 2.6
+  canvas.style.left = `${c.x - own.left - size / 2}px`
+  canvas.style.top = `${c.y - own.top - size / 2}px`
+  canvas.style.width = `${size}px`
+  canvas.style.height = `${size}px`
+  canvas.style.transform = 'none'
+}
+
 const mix = (a: Look, b: Look, t: number): Look => ({
   stir: a.stir + (b.stir - a.stir) * t,
   edge: a.edge + (b.edge - a.edge) * t,
@@ -159,11 +205,13 @@ function start(button: HTMLElement): void {
   button.classList.add('has-water')
 
   const fit = () => {
+    place(button, canvas)
     const box = canvas.getBoundingClientRect()
-    canvas.width = Math.max(1, Math.round(box.width * scale()))
-    canvas.height = Math.max(1, Math.round(box.height * scale()))
+    canvas.width = Math.max(1, Math.round(box.width * fine()))
+    canvas.height = Math.max(1, Math.round(box.height * fine()))
   }
   fit()
+  document.fonts?.ready.then(fit)
 
   let found = 0
   let wanted = 0
@@ -212,7 +260,7 @@ function start(button: HTMLElement): void {
   new ResizeObserver(() => {
     fit()
     if (still) paint(0, CALM)
-  }).observe(canvas)
+  }).observe(button)
   new IntersectionObserver(([entry]) => {
     onScreen = entry?.isIntersecting ?? true
     if (onScreen) wake()
