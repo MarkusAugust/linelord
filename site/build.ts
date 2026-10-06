@@ -62,5 +62,14 @@ if (!water.success || !sea) {
   process.exit(1)
 }
 await writeFile(join(outDir, 'mirror.js'), await sea.text())
+// The engraving and the steel plate the sea is cut into.
+await copyFile(
+  join(here, 'mirror', 'assets', 'engraving.webp'),
+  join(outDir, 'engraving.webp'),
+)
+await copyFile(
+  join(here, 'mirror', 'assets', 'plate.webp'),
+  join(outDir, 'plate.webp'),
+)
 
 console.log(`Wrote ${join(outDir, 'index.html')} (${html.length} bytes)`)
