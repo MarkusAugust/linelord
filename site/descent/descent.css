@@ -380,12 +380,25 @@
   margin: 6px 0 10px;
 }
 
+/* A weapon's or armour's numbers, and how they weigh against yours. */
+.descent__detail {
+  display: block;
+  color: var(--ink-dim);
+  font-size: 0.85em;
+}
+
 .descent__offer {
   width: 100%;
   text-align: left;
   padding: 6px 10px;
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+
+.descent__offer .descent__detail {
+  flex-basis: 100%;
+  order: 3;
 }
 
 .descent__offer[disabled] {

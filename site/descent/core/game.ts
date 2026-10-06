@@ -211,6 +211,74 @@ export function lightRadius(game: Game): number {
   return greyAt(game.level, game.tide, p.x, p.y) ? Math.max(1, base - 1) : base
 }
 
+/** The average of a roll of `count` dice of `sides`, after `f`: every outcome counted. */
+function average(count: number, sides: number, f: (n: number) => number) {
+  let sums = [0]
+  for (let i = 0; i < count; i++)
+    sums = sums.flatMap((s) =>
+      Array.from({ length: sides }, (_, k) => s + k + 1),
+    )
+  return sums.reduce((a, s) => a + f(s), 0) / sums.length
+}
+
+/** What a weapon cuts for on average, as it is: Kell iron a point less, blunt iron half. */
+function cutOf(item: Item | null): number {
+  const [count, sides] = ITEMS[item?.kind ?? '']?.dmg ?? [1, 2]
+  if (item?.old) return average(count, sides, (n) => Math.max(1, n - 1))
+  if (item?.wear === 0) return average(count, sides, (n) => Math.ceil(n / 2))
+  return average(count, sides, (n) => n)
+}
+
+/** What armour keeps out, as it is. */
+function keepsOut(item: Item | null): number {
+  const ac = ITEMS[item?.kind ?? '']?.ac ?? 0
+  if (ac === 0 || (!item?.old && item?.wear === 0)) return 0
+  return ac - (item?.old ? 1 : 0)
+}
+
+/** A weapon's or armour's numbers, as they stand; nothing for anything else. */
+export function statsOf(_game: Game, item: Item): string | null {
+  const kind = ITEMS[item.kind]
+  if (kind?.use === 'armour') return `armour ${keepsOut(item)}`
+  if (kind?.use !== 'weapon' || !kind.dmg) return null
+  const [count, sides] = kind.dmg
+  const bonus = kind.bonus ?? 0
+  return [
+    `${count}d${sides}, ${bonus < 0 ? '−' : '+'}${Math.abs(bonus)} to hit`,
+    ...(kind.cuts ? ['cuts rope'] : []),
+    ...(item.old ? ['−1 damage'] : []),
+    ...(!item.old && item.wear === 0 ? ['half damage'] : []),
+  ].join(', ')
+}
+
+const delta = (n: number, what: string) => {
+  const r = Math.round(Math.abs(n) * 10) / 10
+  return `${n > 0 ? '▲' : '▼'} ${r} ${what}`
+}
+
+/** A weapon or armour weighed against what is in hand or worn now. */
+export function versus(game: Game, item: Item): string | null {
+  const kind = ITEMS[item.kind]
+  const gear = inHand(game)
+  const parts: string[] = []
+  if (kind?.use === 'weapon') {
+    const dmg = cutOf(item) - cutOf(gear.weapon)
+    const hit = (kind.bonus ?? 0) - (ITEMS[gear.weapon?.kind ?? '']?.bonus ?? 0)
+    if (Math.abs(dmg) >= 0.05) parts.push(delta(dmg, 'damage'))
+    if (hit !== 0) parts.push(delta(hit, 'to hit'))
+  } else if (kind?.use === 'armour') {
+    const ac = keepsOut(item) - keepsOut(gear.armour)
+    if (ac !== 0) parts.push(delta(ac, 'armour'))
+  } else return null
+  return parts.length > 0 ? parts.join(', ') : 'the same as yours'
+}
+
+/** Both, as the counter and the pack say it. */
+const weighed = (game: Game, item: Item): string | undefined => {
+  const stats = statsOf(game, item)
+  return stats ? `${stats} · ${versus(game, item)}` : undefined
+}
+
 /**
  * What keeps blows out: the armour worn, a point less if it is Kell's iron,
  * and nothing at all once new iron has split.
@@ -864,6 +932,8 @@ export interface Offer {
   label: string
   price: number
   enabled: boolean
+  /** For iron: its numbers, and how it weighs against what you have. */
+  detail?: string
   /**
    * The key that takes it: the letter of the thing in the pack when the offer
    * is about something carried, so that `c` sells what `e c` would use, and a
@@ -915,6 +985,7 @@ function stock(game: Game): Stock[] {
             label: `Buy ${ITEMS[kind]?.name}`,
             price,
             enabled: afford(price) && p.pack.length < PACK,
+            detail: weighed(game, { kind }),
           }
         }),
         ...mending(game).map(({ slot, price }) => ({
