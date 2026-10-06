@@ -5,6 +5,7 @@ import {
   lightRadius,
   monsterName,
   newGame,
+  offerFor,
   offers,
   rollDie,
   sellPrice,
@@ -853,6 +854,42 @@ describe('Wrackhead', () => {
     expect(
       run(forge.game, { type: 'shop', key: 'sell:9' }).game.player.marks,
     ).toBe(30)
+  })
+
+  it('keys what the place offers by number, and what you carry by its letter in the pack', () => {
+    const forge = atShop('1', (g) => {
+      g.player.pack = Array.from({ length: 12 }, () => ({ kind: 'knife' }))
+      g.player.marks = 500
+    })
+    const list = offers(forge.game)
+    expect(
+      list.filter((o) => o.key.startsWith('buy:')).map((o) => o.hotkey),
+    ).toEqual(['1', '2', '3', '4', '5', '6'])
+    const sells = list.filter((o) => o.key.startsWith('sell:'))
+    expect(sells).toHaveLength(12)
+    expect(sells.map((o) => o.hotkey).join('')).toBe('abcdefghijkl')
+    expect(sells[12 - 1]?.key).toBe('sell:11')
+    expect(offerFor(forge.game, 'l')?.key).toBe('sell:11')
+    expect(offerFor(forge.game, '7')).toBeUndefined()
+
+    const ruun = atShop('3', (g) => {
+      g.player.pack = [
+        { kind: 'salt' },
+        { kind: 'vial-cloud' },
+        { kind: 'vial-cloud' },
+      ]
+      g.player.slain = ['picker', 'drawn']
+    })
+    expect(offers(ruun.game).map((o) => [o.key, o.hotkey])).toEqual([
+      ['name:vial-cloud', 'b'],
+      ['name:picker', '1'],
+      ['name:drawn', '2'],
+    ])
+
+    const pile = atShop('5')
+    expect(offers(pile.game).map((o) => o.hotkey)).toEqual(['a', 'b'])
+    expect(offers(atShop('4').game)[0]?.hotkey).toBe('1')
+    expect(offers(atShop('7').game)[0]?.hotkey).toBe('1')
   })
 
   it('does not let you drop things on the shingle', () => {

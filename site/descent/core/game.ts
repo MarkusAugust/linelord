@@ -661,6 +661,30 @@ export interface Offer {
   label: string
   price: number
   enabled: boolean
+  /**
+   * The key that takes it: the letter of the thing in the pack when the offer
+   * is about something carried, so that `c` sells what `e c` would use, and a
+   * number for what the place itself has. No place has more than nine.
+   */
+  hotkey: string
+}
+
+/** An offer before it has a key; `item` is the pack index it is about. */
+type Stock = Omit<Offer, 'hotkey'> & { item?: number }
+
+const letter = (i: number) => String.fromCharCode(97 + i)
+
+export function offers(game: Game): Offer[] {
+  let n = 0
+  return stock(game).map(({ item, ...o }) => ({
+    ...o,
+    hotkey: item === undefined ? String(++n) : letter(item),
+  }))
+}
+
+/** The offer a key takes, if the place has one under it. */
+export function offerFor(game: Game, key: string): Offer | undefined {
+  return offers(game).find((o) => o.hotkey === key)
 }
 
 const BARR_STOCK = ['knife', 'hook', 'spear', 'axe', 'leather', 'mail']
@@ -675,7 +699,7 @@ export function sellPrice(game: Game, item: Item): number {
     : third
 }
 
-export function offers(game: Game): Offer[] {
+function stock(game: Game): Stock[] {
   const p = game.player
   const afford = (price: number) => p.marks >= price
   switch (game.shop) {
@@ -699,6 +723,7 @@ export function offers(game: Game): Offer[] {
                   label: `Sell ${itemName(game, item)}`,
                   price: -price,
                   enabled: true,
+                  item: i,
                 },
               ]
             : []
@@ -725,6 +750,7 @@ export function offers(game: Game): Offer[] {
           label: `Name ${ITEMS[kind]?.unknown}`,
           price: 10,
           enabled: afford(10),
+          item: p.pack.findIndex((i) => i.kind === kind),
         })),
         ...creatures.map((kind) => ({
           key: `name:${kind}`,
@@ -751,6 +777,7 @@ export function offers(game: Game): Offer[] {
             label: `Lay ${itemName(game, item)} on the pile`,
             price: 0,
             enabled: item.kind !== 'ledger',
+            item: i,
           }))
     case 'rauk':
       return [{ key: 'ask', label: 'Ask her how', price: 0, enabled: true }]

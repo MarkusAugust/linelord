@@ -30,6 +30,7 @@ import {
   lightRadius,
   monsterName,
   newGame,
+  offerFor,
   offers,
   reveal,
   verbOf,
@@ -309,6 +310,7 @@ rocket('descent-run', {
               ? `+${-o.price} marks`
               : '',
         enabled: o.enabled,
+        hotkey: o.hotkey,
       }))
       const near = g.level.monsters
         .filter(
@@ -486,11 +488,12 @@ rocket('descent-run', {
         return
       }
       if (g.shop) {
-        const n = Number(key)
-        if (n >= 1 && n <= 9) {
+        // In a shop the keys are the counter's: a number for what the place
+        // has, the pack's letter for what you carry. The arrows still walk out.
+        const offer = offerFor(g, key)
+        if (offer) {
           evt.preventDefault()
-          const offer = offers(g)[n - 1]
-          if (offer) play({ type: 'shop', key: offer.key })
+          play({ type: 'shop', key: offer.key })
           return
         }
         if (key === 'Escape') {
@@ -675,7 +678,7 @@ rocket('descent-run', {
             <template data-for="o, i in $$offers">
               <li>
                 <button class="descent__offer" type="button" data-attr:disabled="!o.enabled" data-on:click="@buy(o.key)">
-                  <kbd data-text="i + 1"></kbd> <span data-text="o.label"></span> <span class="descent__price" data-text="o.price"></span>
+                  <kbd data-text="o.hotkey"></kbd> <span data-text="o.label"></span> <span class="descent__price" data-text="o.price"></span>
                 </button>
               </li>
             </template>
@@ -696,6 +699,7 @@ rocket('descent-run', {
             <dt>Name</dt><dd><kbd>x</kbd> then a direction, for 2 will (a Novice pays 1)</dd>
             <dt>Stop</dt><dd><kbd>s</kbd> holds the flood for 15 turns, for 3 will</dd>
             <dt>Rope</dt><dd><kbd>r</kbd> climbs to the floor above</dd>
+            <dt>Shop</dt><dd>the key on the counter: a number for what is sold, the pack's letter for what you carry; <kbd>Esc</kbd> leaves</dd>
             <dt>Cancel</dt><dd><kbd>Esc</kbd></dd>
           </dl>
           <dl class="descent__keylist descent__maplist">
