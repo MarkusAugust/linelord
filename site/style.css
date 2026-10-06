@@ -474,6 +474,24 @@ a {
   background: rgb(0 0 0 / 0.72);
 }
 
+/* The game comes up out of the dark the whirlpool leaves. */
+.descent-dialog[open] {
+  animation: surface 450ms ease-out;
+}
+
+@keyframes surface {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .descent-dialog[open] {
+    animation: none;
+  }
+}
+
 .ebb {
   margin-top: 24px;
   color: var(--ink-dim);
@@ -496,6 +514,24 @@ a {
   margin: 0;
   cursor: pointer;
   position: relative;
+  isolation: isolate;
+}
+
+/*
+ * drain.js decides what the O does, and says so with a class: has-water when
+ * the pool is drawn in it, no-water when it cannot be (no WebGL), and then
+ * the ring below is shown on hover instead. Until it has decided, the O shows
+ * nothing, so the ring never flashes before the water comes.
+ */
+.drain__water {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 2.6em;
+  height: 2.6em;
+  transform: translate(-50%, -50%);
+  z-index: -1;
+  pointer-events: none;
 }
 
 .drain::after {
@@ -509,8 +545,18 @@ a {
   pointer-events: none;
 }
 
-.drain:hover,
-.drain:focus-visible {
+/* The whirlpool over the whole page, for the second it takes to go down. */
+.drain__veil {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.drain.no-water:hover,
+.drain.no-water:focus-visible {
   color: #4f9cc0;
 }
 
@@ -519,8 +565,8 @@ a {
   outline-offset: 4px;
 }
 
-.drain:hover::after,
-.drain:focus-visible::after {
+.drain.no-water:hover::after,
+.drain.no-water:focus-visible::after {
   animation: drain 1.8s ease-in infinite;
 }
 
@@ -536,8 +582,8 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .drain:hover::after,
-  .drain:focus-visible::after {
+  .drain.no-water:hover::after,
+  .drain.no-water:focus-visible::after {
     animation: none;
   }
 }

@@ -398,9 +398,18 @@ describe('renderSite', () => {
     expect(html).toContain('<dialog class="descent-dialog" id="descent"')
     expect(html).toContain('<descent-run></descent-run>')
     expect(html).toMatch(
-      /<h1 aria-label="LineLord">LineL<button[^>]*class="drain"[^>]*>o<\/button>rd<\/h1>/,
+      /<h1 aria-label="LineLord">LineL<button[\s\S]*?class="drain"[\s\S]*?">o<\/button>rd<\/h1>/,
     )
     expect(html).toContain('aria-label="Go down into drowned Kell"')
+    expect(html).toContain(
+      'class="drain" aria-label="Go down into drowned Kell" data-init=',
+    )
+    expect(html).toContain('{ timeout: 2000 }')
+    expect(html).toContain("addEventListener('load'")
+    expect(html).toContain("import(new URL('drain.js', document.baseURI).href)")
+    expect(html).toContain(
+      '!/(has|no)-water/.test(evt.currentTarget.className)',
+    )
     expect(html).toContain('<p class="ebb">The sea is going out.</p>')
     expect(html).not.toContain('href="?descend"')
     expect(html).toContain(

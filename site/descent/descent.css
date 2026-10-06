@@ -554,3 +554,42 @@
   border-color: var(--steel);
   font-weight: 700;
 }
+
+/* Sarn speaks out of the dark the whirlpool leaves, a line at a time. */
+.descent__intro .descent__sarn p,
+.descent__intro .descent__sarn footer {
+  animation: speak 700ms ease-out both;
+}
+
+.descent__intro .descent__sarn p:nth-child(2) {
+  animation-delay: 450ms;
+}
+.descent__intro .descent__sarn p:nth-child(3) {
+  animation-delay: 900ms;
+}
+.descent__intro .descent__sarn p:nth-child(4) {
+  animation-delay: 1350ms;
+}
+.descent__intro .descent__sarn p:nth-child(5) {
+  animation-delay: 1800ms;
+}
+.descent__intro .descent__sarn p:nth-child(6) {
+  animation-delay: 2250ms;
+}
+.descent__intro .descent__sarn footer {
+  animation-delay: 2700ms;
+}
+
+@keyframes speak {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .descent__intro .descent__sarn p,
+  .descent__intro .descent__sarn footer {
+    animation: none;
+  }
+}

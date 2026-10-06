@@ -49,12 +49,21 @@ const DATASTAR =
 
 /**
  * Going down: the game's module is fetched the first time, and the dialog it
- * draws into is opened. The O of the name is the drain under the iron hall,
- * and pressing it does this; so does `>` anywhere on the page, and `?descend`
- * in the address. The address is made whole against
+ * draws into is opened, directly: this is what `>` anywhere on the page and
+ * `?descend` in the address do. The O of the name is the drain under the iron
+ * hall, and pressing it goes the long way, down through the water (drain.js). The address is made whole against
  * the page, because an `import()` in a Datastar expression would otherwise be
  * resolved against Datastar's own address on the CDN.
  */
+/**
+ * The water in the O, and the way down through it: drain.js draws the pool
+ * and owns the press. It is fetched after the page has loaded and the browser
+ * is idle, so starting WebGL never stands between the page and its first
+ * paint. Until it has come, a press on the O opens the game directly.
+ */
+const WATER =
+  "(document.readyState === 'complete' ? Promise.resolve() : new Promise((done) => addEventListener('load', done, { once: true }))).then(() => ('requestIdleCallback' in window ? requestIdleCallback((() => import(new URL('drain.js', document.baseURI).href)), { timeout: 2000 }) : setTimeout(() => import(new URL('drain.js', document.baseURI).href), 200)))"
+
 const DESCEND =
   "(import(new URL('descent.js', document.baseURI).href), document.getElementById('descent').open || document.getElementById('descent').showModal())"
 
@@ -338,7 +347,7 @@ function renderHeader(report: Report): string {
 
   return `
     <header>
-      <h1 aria-label="LineLord">LineL<button type="button" class="drain" aria-label="Go down into drowned Kell" data-on:click="${DESCEND}">o</button>rd</h1>
+      <h1 aria-label="LineLord">LineL<button type="button" class="drain" aria-label="Go down into drowned Kell" data-init="${WATER}" data-on:click="!/(has|no)-water/.test(evt.currentTarget.className) && ${DESCEND}">o</button>rd</h1>
       <p class="tagline">The Barbarian's Guide to Git Repository Conquest</p>
       <p class="quote">
         “What is best in code? To crush the bugs, see them driven from your
