@@ -39,7 +39,7 @@ import type { Report } from '../src/core/report'
  * never declared.
  *
  * The bundle is the one with Rocket in it, which has been free since 1.0.4,
- * because the game at the foot of the page is a Rocket component. It is the
+ * because the game under the page is a Rocket component. It is the
  * whole of Datastar as well, so the page still loads one script; the game's
  * own module imports this same address when someone goes down, and finds the
  * Datastar that is already running.
@@ -49,8 +49,9 @@ const DATASTAR =
 
 /**
  * Going down: the game's module is fetched the first time, and the dialog it
- * draws into is opened. `>` anywhere on the page does it, as the stair does,
- * and so does `?descend` in the address. The address is made whole against
+ * draws into is opened. The O of the name is the drain under the iron hall,
+ * and pressing it does this; so does `>` anywhere on the page, and `?descend`
+ * in the address. The address is made whole against
  * the page, because an `import()` in a Datastar expression would otherwise be
  * resolved against Datastar's own address on the CDN.
  */
@@ -337,7 +338,7 @@ function renderHeader(report: Report): string {
 
   return `
     <header>
-      <h1>LineLord</h1>
+      <h1 aria-label="LineLord">LineL<button type="button" class="drain" aria-label="Go down into drowned Kell" data-on:click="${DESCEND}">o</button>rd</h1>
       <p class="tagline">The Barbarian's Guide to Git Repository Conquest</p>
       <p class="quote">
         “What is best in code? To crush the bugs, see them driven from your
@@ -385,10 +386,7 @@ brew install linelord</pre>
         <a href="https://github.com/MarkusAugust/linelord">github.com/MarkusAugust/linelord</a>.
       </p>
       <a class="sobernetics" href="https://sobernetics.no">${SOBERNETICS}</a>
-      <p class="ebb">
-        <a href="?descend" aria-label="Go down into drowned Kell" data-on:click__prevent="${DESCEND}">&gt;</a>
-        The sea is going out.
-      </p>
+      <p class="ebb">The sea is going out.</p>
     </footer>`
 }
 

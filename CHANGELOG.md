@@ -15,7 +15,7 @@ because the earlier answer was wrong.
 - The demo page carries Open Graph and X card tags and a picture of its own
   (`site/og.png`, drawn from `site/card.html`), so a link to
   linelord.sobernetics.no is shown with a card rather than as a bare address.
-- The demo page has a way down. `>`, the stair at the foot of the page or
+- The demo page has a way down. The O in the name, `>` anywhere on the page or
   `?descend` in the address opens *The Descent into Kell*, a small roguelike in
   the Gallowmark canon: ten floors of drowned Kell under Wrackhead, a tide that
   floods the low ground while the grey rises at low water, and a ledger of every
