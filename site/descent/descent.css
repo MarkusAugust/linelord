@@ -1,0 +1,556 @@
+/*
+ * The Descent into Kell. Loaded by descent.js on the first way down, so the
+ * page carries none of it until someone finds the stair. It uses the page's
+ * own colours and its one monospace family; colour on the map always rides
+ * with a glyph that says the same thing.
+ */
+
+.descent {
+  --d-water: #3f7f9b;
+  --d-deep: #2a5d8f;
+  --d-grey: #7d7a73;
+  --d-sarn: #e3c13a;
+  --d-foe: var(--blood);
+  padding: 12px 16px 20px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .descent {
+    --d-water: #2d6c88;
+    --d-deep: #1d4f80;
+    --d-grey: #8a867d;
+    --d-sarn: #8a6d1f;
+  }
+}
+
+.descent__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.descent__title {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+
+.descent h3 {
+  font-size: 0.95rem;
+  margin: 12px 0 6px;
+  color: var(--steel);
+}
+
+.descent__btn,
+.descent__mini,
+.descent__choice,
+.descent__offer,
+.descent__pad button {
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  cursor: pointer;
+}
+
+.descent__btn {
+  padding: 6px 12px;
+  min-height: 36px;
+}
+
+.descent__btn--quiet {
+  background: transparent;
+}
+
+.descent__btn.is-on {
+  border-color: var(--steel);
+  color: var(--steel);
+}
+
+.descent__btn:focus-visible,
+.descent__mini:focus-visible,
+.descent__choice:focus-visible,
+.descent__offer:focus-visible,
+.descent__pad button:focus-visible,
+.descent__board:focus-visible {
+  outline: 2px solid var(--steel);
+  outline-offset: 2px;
+}
+
+.descent kbd {
+  font: inherit;
+  font-size: 0.85em;
+  color: var(--ink-dim);
+  border: 1px solid var(--rule);
+  padding: 0 4px;
+}
+
+.descent__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.descent__note,
+.descent__keys,
+.descent__worn {
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+  max-width: 72ch;
+}
+
+.descent__sarn {
+  margin: 8px 0 16px;
+  padding-left: 16px;
+  border-left: 2px solid var(--d-sarn);
+  font-style: italic;
+  max-width: 64ch;
+}
+
+.descent__sarn p {
+  margin: 0 0 6px;
+}
+
+.descent__sarn footer {
+  font-style: normal;
+  color: var(--ink-dim);
+  margin-top: 8px;
+}
+
+.descent__label {
+  display: block;
+  margin: 8px 0;
+}
+
+.descent__input {
+  display: block;
+  margin-top: 4px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  padding: 6px 8px;
+  width: min(100%, 24ch);
+}
+
+.descent__choices,
+.descent__offers,
+.descent__items,
+.descent__log,
+.descent__lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.descent__choices {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.descent__choice {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  display: grid;
+  gap: 2px;
+}
+
+.descent__choice span {
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+}
+
+.descent__play {
+  display: grid;
+  gap: 8px 20px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 900px) {
+  .descent__play {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: start;
+  }
+}
+
+.descent__main,
+.descent__side {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  align-content: start;
+}
+
+.descent__legend {
+  margin: 0;
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+}
+
+.descent__board {
+  overflow: hidden;
+  background: #0b0907;
+  border: 1px solid var(--rule);
+  padding: 8px;
+  cursor: crosshair;
+}
+
+.descent__map {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1.15;
+  color: #b8b0a0;
+  white-space: pre;
+}
+
+@media (max-width: 520px) {
+  .descent__map {
+    font-size: 13px;
+  }
+}
+
+/* The map keeps to the dark in both themes: it is lamplight, not paper. */
+.d-you {
+  color: #fff;
+  font-weight: 700;
+}
+.d-foe {
+  color: #d8664d;
+  font-weight: 700;
+}
+.d-bones {
+  color: #e08ad0;
+  font-weight: 700;
+}
+.d-calm {
+  color: #8fa3a8;
+}
+.d-sarn {
+  color: #f2cf3c;
+  font-weight: 700;
+}
+.d-gorvek {
+  color: #f0e6d0;
+  font-weight: 700;
+}
+.d-item {
+  color: #e2b04a;
+}
+.d-wall {
+  color: #6e655a;
+}
+.d-floor {
+  color: #4f493f;
+}
+.d-low {
+  color: #3e5864;
+}
+.d-water {
+  color: #4f9cc0;
+}
+.d-deep {
+  color: #6ab0ff;
+  font-weight: 700;
+}
+.d-sea {
+  color: #2f5a74;
+}
+.d-door {
+  color: #a7794a;
+}
+.d-stair {
+  color: #f0e6d0;
+  font-weight: 700;
+}
+.d-roof {
+  color: #f0e6d0;
+  font-weight: 700;
+}
+.d-hall {
+  color: #b9a66a;
+}
+.d-shop {
+  color: #e2b04a;
+  font-weight: 700;
+}
+.d-grey {
+  background: #34312c;
+}
+.d-dim {
+  opacity: 0.45;
+}
+
+.descent__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.descent__stats div {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.descent__stats .descent__wide {
+  grid-column: 1 / -1;
+}
+
+.descent__stats dt {
+  color: var(--ink-dim);
+  flex: 0 0 auto;
+}
+
+.descent__stats dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.descent__stats .is-hot {
+  color: var(--blood);
+  font-weight: 700;
+}
+
+.descent__log {
+  min-height: 8.6em;
+  border-left: 2px solid var(--rule);
+  padding-left: 10px;
+}
+
+.descent__log li {
+  color: var(--ink-dim);
+}
+
+.descent__log li:last-child {
+  color: var(--ink);
+}
+
+.descent__near {
+  margin: 0;
+  color: var(--ink-dim);
+  min-height: 1.45em;
+}
+
+.descent__ask,
+.descent__shop {
+  border: 1px solid var(--steel);
+  padding: 8px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.descent__shop {
+  display: block;
+}
+
+.descent__ask p {
+  margin: 0;
+  flex-basis: 100%;
+}
+
+.descent__offers {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 10px;
+}
+
+.descent__offer {
+  width: 100%;
+  text-align: left;
+  padding: 6px 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.descent__offer[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.descent__price {
+  margin-left: auto;
+  color: var(--ink-dim);
+}
+
+.descent__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.descent__pad {
+  display: grid;
+  grid-template-columns: repeat(3, 44px);
+  grid-auto-rows: 44px;
+  gap: 4px;
+}
+
+.descent__pad button {
+  font-size: 1.1rem;
+}
+
+.descent__acts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  flex: 1 1 180px;
+}
+
+.descent__items li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.descent__items li span {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.descent__mini {
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  min-height: 28px;
+}
+
+.descent__ending {
+  font-size: 1.2rem;
+  color: var(--steel);
+}
+
+.descent__lines li {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.descent__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* On a phone the two columns become one, in the order a thumb needs them:
+   the map, what is going on, the pad, then everything else. */
+@media (max-width: 899px) {
+  .descent__main,
+  .descent__side {
+    display: contents;
+  }
+
+  .descent__board {
+    order: 1;
+  }
+  .descent__legend {
+    order: 2;
+  }
+  .descent__stats {
+    order: 3;
+  }
+  .descent__ask {
+    order: 4;
+  }
+  .descent__shop {
+    order: 5;
+  }
+  .descent__log {
+    order: 6;
+    min-height: 5.8em;
+  }
+  .descent__near {
+    order: 7;
+  }
+  .descent__controls {
+    order: 8;
+  }
+  .descent__pack {
+    order: 9;
+  }
+  .descent__keys {
+    order: 10;
+  }
+}
+
+.descent__keys summary {
+  cursor: pointer;
+  color: var(--steel);
+  margin-bottom: 6px;
+}
+
+.descent__keylist {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 0 0 12px;
+}
+
+.descent__keylist dt {
+  color: var(--ink);
+}
+
+.descent__keylist dd {
+  margin: 0;
+}
+
+.descent__keylist kbd + kbd {
+  margin-left: 2px;
+}
+
+.descent__maplist dt span {
+  padding: 0 4px;
+  background-color: #0b0907;
+}
+
+.descent__maplist dt .d-grey {
+  background-color: #34312c;
+}
+
+.descent__worn {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px 10px;
+  margin: 0;
+}
+
+.descent__worn dt {
+  color: var(--ink-dim);
+}
+
+.descent__worn dd {
+  margin: 0;
+}
+
+.descent__picking {
+  margin: 4px 0;
+  color: var(--steel);
+}
+
+.descent__items.is-picking kbd {
+  color: var(--paper);
+  background: var(--steel);
+  border-color: var(--steel);
+  font-weight: 700;
+}

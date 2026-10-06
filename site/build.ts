@@ -29,4 +29,24 @@ await copyFile(join(here, 'style.css'), join(outDir, 'style.css'))
 await copyFile(join(here, 'blade.jpg'), join(outDir, 'blade.jpg'))
 await copyFile(join(here, 'og.png'), join(outDir, 'og.png'))
 
+// The game is a module of its own, fetched only when someone goes down. Its
+// Datastar is the page's: it imports the address the page loaded, at run time.
+const game = await Bun.build({
+  entrypoints: [join(here, 'descent', 'ui', 'descent.ts')],
+  target: 'browser',
+  format: 'esm',
+  minify: true,
+})
+if (!game.success) {
+  for (const log of game.logs) console.error(log)
+  process.exit(1)
+}
+const [bundle] = game.outputs
+if (!bundle) throw new Error('the descent built to nothing')
+await writeFile(join(outDir, 'descent.js'), await bundle.text())
+await copyFile(
+  join(here, 'descent', 'descent.css'),
+  join(outDir, 'descent.css'),
+)
+
 console.log(`Wrote ${join(outDir, 'index.html')} (${html.length} bytes)`)

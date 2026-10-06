@@ -96,6 +96,11 @@ are generated into `src/adapters/opentui/resources/gallowmarkQuotes.ts` by
 the GitHub CLI). Add or change a quote in Gallowmark's `quotes/`, rebuild its
 export, run the sync here, and commit the generated file.
 
+The game on the demo page takes its lines the same way, from the quotes with
+`used-in: [descent]`, into `site/descent/lore.ts`, by `bun run sync-descent`.
+Its rules are in `site/descent/core` as plain functions over a run, tested like
+the rest; `site/descent/ui` is the page's side of it and only draws.
+
 ## Before you push: the self-review
 
 The same handful of defects keep coming back. Walk the diff against this list.
