@@ -18,6 +18,7 @@
 import {
   approach,
   CALM,
+  counter,
   DESCENT_MS,
   descent,
   FOUND,
@@ -35,10 +36,20 @@ interface Frame {
   k: number
   look: Look
   dark: number
+  /** The hole's bottom and top, in the canvas's pixels from the bottom. */
+  counter: [number, number]
+  /** Whether the hole's shape has been given (`mask`), or a disc stands in. */
+  masked: boolean
+}
+
+interface Water {
+  draw: (f: Frame) => void
+  /** The shape of the hole, one byte per pixel, rows from the bottom. */
+  mask: (data: Uint8Array, w: number, h: number) => void
 }
 
 /** A canvas with the water's shader on it, or null where WebGL will not do it. */
-function water(canvas: HTMLCanvasElement): ((f: Frame) => void) | null {
+function water(canvas: HTMLCanvasElement): Water | null {
   const gl = canvas.getContext('webgl', {
     alpha: true,
     premultipliedAlpha: true,
@@ -84,8 +95,46 @@ function water(canvas: HTMLCanvasElement): ((f: Frame) => void) | null {
     level: at('u_level'),
     wave: at('u_wave'),
     light: at('u_light'),
+    masked: at('u_masked'),
+    res: at('u_res'),
+    counter: at('u_counter'),
+    mask: at('u_mask'),
   }
-  return (f) => {
+  const texture = gl.createTexture()
+  gl.activeTexture(gl.TEXTURE0)
+  gl.bindTexture(gl.TEXTURE_2D, texture)
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.ALPHA,
+    1,
+    1,
+    0,
+    gl.ALPHA,
+    gl.UNSIGNED_BYTE,
+    new Uint8Array([0]),
+  )
+  gl.uniform1i(u.mask, 0)
+  const mask = (data: Uint8Array, w: number, h: number) => {
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.ALPHA,
+      w,
+      h,
+      0,
+      gl.ALPHA,
+      gl.UNSIGNED_BYTE,
+      data,
+    )
+  }
+  const draw = (f: Frame) => {
     gl.viewport(0, 0, canvas.width, canvas.height)
     gl.uniform2f(u.center, f.center[0], f.center[1])
     gl.uniform1f(u.radius, f.radius)
@@ -98,10 +147,14 @@ function water(canvas: HTMLCanvasElement): ((f: Frame) => void) | null {
     gl.uniform1f(u.level, f.look.level)
     gl.uniform1f(u.wave, f.look.wave)
     gl.uniform1f(u.light, light())
+    gl.uniform1f(u.masked, f.masked ? 1 : 0)
+    gl.uniform2f(u.res, canvas.width, canvas.height)
+    gl.uniform2f(u.counter, f.counter[0], f.counter[1])
     gl.clearColor(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
   }
+  return { draw, mask }
 }
 
 const scale = () => Math.min(window.devicePixelRatio || 1, 2)
@@ -117,17 +170,25 @@ const pen = document.createElement('canvas').getContext('2d')
  * the browser draws it, so that it lands in the same place whatever the font,
  * the zoom, or the way a browser lays out a button.
  */
-function place(button: HTMLElement, canvas: HTMLCanvasElement): void {
+interface Shape {
+  font: (px: number) => string
+  size: number
+  glyph: string
+}
+
+function place(button: HTMLElement, canvas: HTMLCanvasElement): Shape | null {
   const text = Array.from(button.childNodes).find(
     (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim(),
   )
-  if (!text || !pen) return
+  if (!text || !pen) return null
   const range = document.createRange()
   range.selectNodeContents(text)
   const line = range.getBoundingClientRect()
   const own = button.getBoundingClientRect()
   const style = getComputedStyle(button)
-  pen.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+  const font = (px: number) =>
+    `${style.fontStyle} ${style.fontWeight} ${px}px ${style.fontFamily}`
+  pen.font = font(Number.parseFloat(style.fontSize))
   const glyph =
     style.textTransform === 'uppercase'
       ? (text.textContent ?? '').trim().toUpperCase()
@@ -149,6 +210,38 @@ function place(button: HTMLElement, canvas: HTMLCanvasElement): void {
   canvas.style.width = `${size}px`
   canvas.style.height = `${size}px`
   canvas.style.transform = 'none'
+  return { font, size: Number.parseFloat(style.fontSize), glyph }
+}
+
+/**
+ * The hole of the O as the water canvas sees it: the letter drawn unseen at
+ * the canvas's own scale, centred on its ink as the canvas is, and filled from
+ * the middle. Rows are turned over for WebGL, which counts from the bottom.
+ */
+function hollow(shape: Shape, w: number, h: number) {
+  const sheet = document.createElement('canvas')
+  sheet.width = w
+  sheet.height = h
+  const ctx = sheet.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return null
+  ctx.font = shape.font(shape.size * fine())
+  const m = ctx.measureText(shape.glyph)
+  const x = w / 2 - (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2
+  const y = h / 2 + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2
+  ctx.fillText(shape.glyph, x, y)
+  const rgba = ctx.getImageData(0, 0, w, h).data
+  const alpha = new Uint8ClampedArray(w * h)
+  for (let i = 0; i < w * h; i++) alpha[i] = rgba[i * 4 + 3] ?? 0
+  const hole = counter(alpha, w, h)
+  if (!hole) return null
+  const turned = new Uint8Array(w * h)
+  for (let row = 0; row < h; row++)
+    turned.set(hole.mask.subarray(row * w, row * w + w), (h - 1 - row) * w)
+  return {
+    mask: turned,
+    bottom: h - 1 - hole.bottom,
+    top: h - 1 - hole.top,
+  }
 }
 
 const mix = (a: Look, b: Look, t: number): Look => ({
@@ -195,8 +288,8 @@ function start(button: HTMLElement): void {
   const canvas = document.createElement('canvas')
   canvas.className = 'drain__water'
   canvas.setAttribute('aria-hidden', 'true')
-  const draw = water(canvas)
-  if (!draw) {
+  const surface = water(canvas)
+  if (!surface) {
     button.classList.add('no-water')
     button.addEventListener('click', openGame)
     return
@@ -204,11 +297,28 @@ function start(button: HTMLElement): void {
   button.prepend(canvas)
   button.classList.add('has-water')
 
+  /* The hole's place in the canvas, and whether its shape is known; until it
+     is, a small disc in the middle stands in for it. */
+  let hole: { counter: [number, number]; masked: boolean } = {
+    counter: [0, 0],
+    masked: false,
+  }
   const fit = () => {
-    place(button, canvas)
+    const shape = place(button, canvas)
     const box = canvas.getBoundingClientRect()
     canvas.width = Math.max(1, Math.round(box.width * fine()))
     canvas.height = Math.max(1, Math.round(box.height * fine()))
+    const shaped = shape ? hollow(shape, canvas.width, canvas.height) : null
+    if (shaped) {
+      surface.mask(shaped.mask, canvas.width, canvas.height)
+      hole = { counter: [shaped.bottom, shaped.top], masked: true }
+    } else {
+      const reach = (canvas.width / 2) * CALM.edge
+      hole = {
+        counter: [canvas.height / 2 - reach, canvas.height / 2 + reach],
+        masked: false,
+      }
+    }
   }
   fit()
   document.fonts?.ready.then(fit)
@@ -226,13 +336,15 @@ function start(button: HTMLElement): void {
     going === null && dialog instanceof HTMLDialogElement && dialog.open
 
   const paint = (now: number, look: Look) =>
-    draw({
+    surface.draw({
       center: [canvas.width / 2, canvas.height / 2],
       radius: canvas.width / 2,
       t: now / 1000,
       k: 1,
       look,
       dark: 0,
+      counter: hole.counter,
+      masked: hole.masked,
     })
 
   const frame = (now: number) => {
@@ -296,7 +408,7 @@ function start(button: HTMLElement): void {
     const veil = document.createElement('canvas')
     veil.className = 'drain__veil'
     veil.setAttribute('aria-hidden', 'true')
-    const pour = water(veil)
+    const pour = water(veil)?.draw
     if (!pour) {
       going = null
       return openGame()
@@ -344,6 +456,8 @@ function start(button: HTMLElement): void {
         k: opened ? Math.max(0, 1 - (now - opened) / 400) : 1,
         look: { ...SPUN, edge: 0.98 + d.dark },
         dark: d.dark,
+        counter: [0, 0],
+        masked: false,
       })
       if (d.done) finish(now)
       if (opened && now - opened >= 400) return leave()

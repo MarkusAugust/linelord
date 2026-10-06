@@ -28,6 +28,10 @@ uniform float u_dark;
 uniform float u_level;
 uniform float u_wave;
 uniform float u_light;
+uniform sampler2D u_mask;
+uniform float u_masked;
+uniform vec2 u_res;
+uniform vec2 u_counter;
 
 float hash(vec3 p) {
   p = fract(p * 0.3183099 + 0.1);
@@ -85,14 +89,20 @@ void main() {
   col = mix(col, vec3(0.78, 0.91, 0.97), white);
   col *= mix(1.0, 0.15 + 0.85 * smoothstep(0.12, 0.38, r), u_stir);
 
-  // The surface: at rest the water lies in the bottom of the O under a line
-  // that rocks; spun up, it fills the O and there is no surface left.
+  // The surface. At rest the water lies in the bottom of the hole of the O,
+  // filling its real shape (u_mask) up to a level that is a share of the
+  // hole's height (u_counter: its bottom and top, in pixels), under a line
+  // that rocks. Spun up, it fills a disc and there is no surface left.
   float inside = 1.0 - smoothstep(u_edge * 0.82, u_edge, r);
-  float wave = (sin(d.x * 30.0 + u_t * 2.4) * 0.010 + sin(d.x * 13.0 - u_t * 1.5) * 0.012) * u_wave;
-  float surface = -u_edge + 2.0 * u_edge * u_level + wave;
-  float below = 1.0 - smoothstep(surface - 0.006, surface + 0.006, d.y);
-  float rim = (1.0 - smoothstep(0.0, 0.012, abs(d.y - surface))) * inside * (1.0 - u_stir);
-  float pool = mix(inside * below, inside, u_stir);
+  float hole = u_masked > 0.5 ? texture2D(u_mask, gl_FragCoord.xy / u_res).a : inside;
+  float tall = max(1.0, u_counter.y - u_counter.x);
+  float across = (gl_FragCoord.x - u_center.x) / tall;
+  float wave = (sin(across * 22.0 + u_t * 2.4) * 0.018 + sin(across * 9.0 - u_t * 1.5) * 0.022) * u_wave * tall;
+  float surface = u_counter.x + tall * u_level + wave;
+  float px = max(1.0, tall * 0.012);
+  float below = 1.0 - smoothstep(surface - px, surface + px, gl_FragCoord.y);
+  float rim = (1.0 - smoothstep(0.0, px * 1.6, abs(gl_FragCoord.y - surface))) * hole * (1.0 - u_stir);
+  float pool = mix(hole * below, inside, u_stir);
   col = mix(col, vec3(0.86, 0.95, 1.0), rim * 0.85);
   col = mix(col, vec3(0.01, 0.02, 0.03), u_dark);
 
@@ -204,4 +214,49 @@ export function inkCentre(box: TextBox, ink: Ink): { x: number; y: number } {
     x: box.left + (ink.right - ink.left) / 2,
     y: baseline + (ink.descent - ink.ascent) / 2,
   }
+}
+
+/**
+ * The hole in a glyph, found by filling outward from the middle of an image
+ * of it until the ink stops the fill. `alpha` is the glyph's coverage, one
+ * byte per pixel, rows from the top. The mask keeps the ink's own soft edge
+ * (255 where the hole is clear, less where the ink begins to cover it), so the
+ * water meets the letter without a jagged line. `top` and `bottom` are the
+ * rows the hole spans. A glyph whose middle is ink, or whose hole runs out to
+ * the edge of the image, has no hole to fill.
+ */
+export function counter(
+  alpha: Uint8ClampedArray,
+  w: number,
+  h: number,
+): { mask: Uint8Array; top: number; bottom: number } | null {
+  const ink = (i: number) => (alpha[i] ?? 255) >= 128
+  const start = Math.floor(h / 2) * w + Math.floor(w / 2)
+  if (ink(start)) return null
+  const mask = new Uint8Array(w * h)
+  const seen = new Uint8Array(w * h)
+  const queue = [start]
+  seen[start] = 1
+  let top = h
+  let bottom = -1
+  while (queue.length > 0) {
+    const i = queue.pop() ?? 0
+    const x = i % w
+    const y = (i - x) / w
+    if (x === 0 || y === 0 || x === w - 1 || y === h - 1) return null
+    mask[i] = 255 - (alpha[i] ?? 0)
+    top = Math.min(top, y)
+    bottom = Math.max(bottom, y)
+    for (const n of [i - 1, i + 1, i - w, i + w]) {
+      if (seen[n]) continue
+      seen[n] = 1
+      if (ink(n)) {
+        // The ink's soft edge belongs to the hole as far as it is not ink.
+        mask[n] = Math.max(mask[n] ?? 0, 255 - (alpha[n] ?? 255))
+        continue
+      }
+      queue.push(n)
+    }
+  }
+  return { mask, top, bottom }
 }
