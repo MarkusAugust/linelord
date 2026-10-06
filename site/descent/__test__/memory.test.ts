@@ -150,6 +150,35 @@ describe('the memory of the descent', () => {
     expect(loadWorld(store)).toEqual(firstWorld())
   })
 
+  it('leaves the wrack of a run that died in Kell where it fell, and lets a later run take it back', () => {
+    const store = memoryStore()
+    const g = finished('dead', 'killed by a Picker at depth 4')
+    g.depth = 4
+    g.player.marks = 41
+    g.player.weapon = 'axe'
+    g.player.level = 3
+    endRun(store, g, DAY)
+    expect(loadWorld(store).wrack).toEqual([
+      {
+        id: 0,
+        name: 'Hild',
+        depth: 4,
+        weapon: 'axe',
+        armour: 'leather',
+        marks: 20,
+        level: 3,
+      },
+    ])
+    const next = finished('escaped', 'came up')
+    next.cleared = [0]
+    endRun(store, next, DAY)
+    expect(loadWorld(store).wrack).toEqual([])
+    const unasked = finished('unasked', 'became one of the Unasked at depth 4')
+    unasked.depth = 4
+    endRun(store, unasked, DAY)
+    expect(loadWorld(store).wrack).toEqual([])
+  })
+
   it('keeps who holds what in Kell from one run to the next, and the low water moves', () => {
     const store = memoryStore()
     expect(loadWorld(store)).toEqual(firstWorld())

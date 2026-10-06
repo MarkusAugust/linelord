@@ -34,6 +34,7 @@ import {
   TIER_LIST,
   tribute,
   withTaken,
+  wrackSaid,
 } from '../core/holds'
 import { at, elevation, index, SHOPS } from '../core/level'
 import {
@@ -170,7 +171,7 @@ function cell(
           ? 'd-calm'
           : MONSTERS[m.kind]?.holder
             ? 'd-holder'
-            : m.bones
+            : m.bones || m.wrack
               ? 'd-bones'
               : 'd-foe',
       ]
@@ -353,6 +354,7 @@ rocket('descent-run', {
       const { ledger, news } = endRun(store, g, new Date())
       $$.news = news
       $$.standing = standing(loadWorld(store))
+      $$.wrack = wrackSaid(loadWorld(store))
       $$.ending = ENDINGS[g.over?.ending ?? 'dead']
       $$.cause = describe(
         ledger[0] ?? {
@@ -396,6 +398,7 @@ rocket('descent-run', {
     $$.hasRun = loadRun(store) !== null
     $$.ledger = loadLedger(store).map(describe)
     $$.standing = standing(loadWorld(store))
+    $$.wrack = wrackSaid(loadWorld(store))
     $$.news = []
     $$.log = []
     $$.said = ''
@@ -438,6 +441,7 @@ rocket('descent-run', {
     action('ledgerView', () => {
       $$.ledger = loadLedger(store).map(describe)
       $$.standing = standing(loadWorld(store))
+      $$.wrack = wrackSaid(loadWorld(store))
       $$.phase = 'ledger'
     })
     action('back', () => {
@@ -733,6 +737,7 @@ rocket('descent-run', {
             <dt><span class="d-stair">&lt; &gt;</span></dt><dd>stairs up and down</dd>
             <dt><span class="d-foe">p c u n d</span></dt><dd>something that wants you</dd>
             <dt><span class="d-holder">H G S C</span></dt><dd>a holder: Hollin, Grue, Sethra, Corve</dd>
+            <dt><span class="d-bones">w</span></dt><dd>your wrack, holding what it carried</dd>
             <dt><span class="d-item">$ ! ) [ * ?</span></dt><dd>marks and things to take</dd>
             <dt><span class="d-low">.</span></dt><dd>low ground, which floods first</dd>
             <dt><span class="d-water">~</span> <span class="d-deep">~</span></dt><dd>water, and water over your head</dd>
@@ -816,6 +821,10 @@ rocket('descent-run', {
         <p class="descent__note">Who holds Kell, and for how long. It counts ground and low waters. It is not a measure of worth.</p>
         <ul class="descent__lines descent__standing">
           <template data-for="line in $$standing"><li data-text="line"></li></template>
+        </ul>
+        <h4 data-show="$$wrack.length > 0">Your wrack</h4>
+        <ul class="descent__lines" data-show="$$wrack.length > 0">
+          <template data-for="line in $$wrack"><li data-text="line"></li></template>
         </ul>
         <h4>The runs</h4>
         <ol class="descent__lines">

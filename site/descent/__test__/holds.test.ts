@@ -11,7 +11,11 @@ import {
   settle,
   standing,
   tribute,
+  WRACK_SIZE,
+  type Wrack,
+  washUp,
   withTaken,
+  wrackSaid,
 } from '../core/holds'
 import { makeRng } from '../core/rng'
 
@@ -100,6 +104,7 @@ describe('the low water between runs', () => {
     }
     expect(lost(0)).toBeGreaterThan(0.4)
     expect(lost(8)).toBeLessThan(0.15)
+    expect(lost(500)).toBeGreaterThan(0.02)
   })
 
   it('says who took a hold back, and what the ledger makes of it', () => {
@@ -161,5 +166,48 @@ describe('the ledger, read as a ranking', () => {
     )
     expect(lines).toContain('5. Hollin the First Down: nothing held.')
     expect(lines).toContain('6. Corve the Rust-Sitter: nothing held.')
+  })
+})
+
+describe('your wrack', () => {
+  const fell = (id: number, depth = 4): Wrack => ({
+    id,
+    name: 'Hild',
+    depth,
+    weapon: 'axe',
+    armour: 'leather',
+    marks: 20,
+    level: 3,
+  })
+
+  it('is washed up newest first, taken back when cleared, and the sea keeps only so many', () => {
+    let world = firstWorld()
+    expect(world.wrack ?? []).toEqual([])
+    world = washUp(world, fell(0), [])
+    world = washUp(world, fell(1, 6), [])
+    expect((world.wrack ?? []).map((w) => w.id)).toEqual([1, 0])
+    world = washUp(world, null, [0])
+    expect((world.wrack ?? []).map((w) => w.id)).toEqual([1])
+    for (let i = 2; i < 2 + WRACK_SIZE + 3; i++)
+      world = washUp(world, fell(i), [])
+    expect(world.wrack).toHaveLength(WRACK_SIZE)
+  })
+
+  it('reads a world from before there was any wrack', () => {
+    const { wrack: _, ...old } = washUp(firstWorld(), fell(0), [])
+    expect(isWorld(old)).toBe(true)
+    expect(isWorld({ ...firstWorld(), wrack: [{ id: 'x' }] })).toBe(false)
+  })
+
+  it('says where each one stands, and what it holds', () => {
+    const world = washUp(washUp(firstWorld(), fell(0), []), fell(1, 6), [])
+    world.wrack = [
+      { ...(world.wrack?.[0] as Wrack), weapon: null, armour: null, marks: 0 },
+      ...(world.wrack ?? []).slice(1),
+    ]
+    expect(wrackSaid(world)).toEqual([
+      'Hild, on depth 6, holding nothing.',
+      'Hild, on depth 4, holding an axe, a salt-hard jerkin and 20 marks.',
+    ])
   })
 })

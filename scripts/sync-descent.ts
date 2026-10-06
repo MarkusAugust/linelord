@@ -59,6 +59,7 @@ const CREATURES = [
   'notchers',
   'the-drawn',
   'the-standing',
+  'wrack',
 ] as const
 /** The holders of Kell's four depths, and the Linelord above them. */
 const HOLDERS = ['hollin', 'grue', 'sethra', 'corve', 'jarn'] as const

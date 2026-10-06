@@ -151,6 +151,7 @@ export function monsterName(game: Game, m: Monster): string {
   if (!kind) return 'something'
   if (kind.holder)
     return `${holders[kind.holder].name} ${holders[kind.holder].epithet}`
+  if (m.wrack) return `the wrack of ${m.wrack.name}`
   if (!game.known.includes(m.kind)) return kind.unknown
   return m.bones
     ? `${m.bones.name}, ${kind.known.replace(/^a /, '')}`
@@ -235,6 +236,20 @@ function travel(
     delete game.bones
   }
   placeHolder(game, rng, tier)
+  placeWrack(game, rng)
+}
+
+/** The wrack of earlier runs stands where each fell, until it is taken back. */
+function placeWrack(game: Game, rng: Rng): void {
+  for (const w of game.world?.wrack ?? []) {
+    if (w.depth !== game.depth || (game.cleared ?? []).includes(w.id)) continue
+    const cell = freeCell(game.level, rng)
+    const m = spawn('wrack', cell.x, cell.y, game.depth, game.nextId++)
+    m.hp += 2 * w.level
+    m.maxHp += 2 * w.level
+    m.wrack = w
+    game.level.monsters.push(m)
+  }
 }
 
 /**
@@ -322,6 +337,14 @@ function kill(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   gainXp(game, (kind?.xp ?? 1) * (1 + Math.floor(game.depth / 2)), lines, rng)
   const drop = (item: Item) => game.level.items.push({ x: m.x, y: m.y, item })
   if (m.bones?.weapon) drop({ kind: m.bones.weapon })
+  if (m.wrack) {
+    const w = m.wrack
+    if (w.weapon) drop({ kind: w.weapon })
+    if (w.armour) drop({ kind: w.armour })
+    if (w.marks > 0) drop({ kind: 'marks', amount: w.marks })
+    game.cleared = [...(game.cleared ?? []), w.id]
+    lines.push(`What ${w.name} carried is yours again.`)
+  }
   if (m.kind === 'picker')
     drop({ kind: 'marks', amount: rng.dice(1, 6) * (1 + game.depth) })
   if (m.kind === 'firstcloak' && rng.chance(0.35))
@@ -386,7 +409,8 @@ function monsterAttack(
     lines.push(`${name} misses.`)
     return
   }
-  const dmg = rng.dice(kind.dmg[0], kind.dmg[1])
+  const [count, sides] = ITEMS[m.wrack?.weapon ?? '']?.dmg ?? kind.dmg
+  const dmg = rng.dice(count, sides)
   p.hp -= dmg
   lines.push(`${name} hits you.`)
   if (kind.grabs && p.held === null) {
@@ -1100,17 +1124,24 @@ function monstersAct(game: Game, rng: Rng, lines: string[]): void {
   }
 }
 
-/** A holder says who they are, once, the first time they see you. */
+/**
+ * A holder says who they are, once, the first time they see you; and the
+ * first time you see your wrack, Sarn has a word about it.
+ */
 function holdersSpeak(game: Game, rng: Rng, lines: string[]): void {
   const p = game.player
   const radius = lightRadius(game)
   for (const m of game.level.monsters) {
     const rival = MONSTERS[m.kind]?.holder
-    if (!rival || m.spoke || m.hp <= 0) continue
+    if ((!rival && !m.wrack) || m.spoke || m.hp <= 0) continue
     const d2 = (m.x - p.x) ** 2 + (m.y - p.y) ** 2
     if (d2 > (radius + 3) ** 2 || !inSight(game.level, m, p)) continue
     m.spoke = true
-    lines.push(`${holders[rival].name}: "${say(rng, rival)}"`)
+    lines.push(
+      rival
+        ? `${holders[rival].name}: "${say(rng, rival)}"`
+        : say(rng, 'wrack'),
+    )
   }
 }
 
