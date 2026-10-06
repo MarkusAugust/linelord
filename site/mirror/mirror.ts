@@ -615,6 +615,10 @@ function setup(el: HTMLElement) {
       release()
     })
   el.addEventListener('contextmenu', (evt) => evt.preventDefault())
+  /* A press with a mouse or a finger does not focus the water, so closing the
+     game gives the focus back to where it was rather than leaving a ring round
+     the sea. From the keyboard the water had the focus, and gets it back. */
+  el.addEventListener('mousedown', (evt) => evt.preventDefault())
   el.addEventListener('keydown', (evt) => {
     if ((evt.key !== 'Enter' && evt.key !== ' ') || evt.repeat) return
     evt.preventDefault()
