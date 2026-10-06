@@ -10,6 +10,7 @@ import {
   BACKGROUNDS,
   GIFTS,
   ITEMS,
+  isIron,
   LAST_DEPTH,
   LEVELS,
   MONSTERS,
@@ -143,7 +144,33 @@ export function itemName(game: Game, item: Item): string {
   const kind = ITEMS[item.kind]
   if (!kind) return item.kind
   if (kind.unknown && !game.known.includes(item.kind)) return kind.unknown
-  return kind.name
+  if (!isIron(item.kind)) return kind.name
+  if (item.old) return `${kind.name} (Kell iron)`
+  const wear = item.wear ?? 8
+  if (wear === 0)
+    return `${kind.name} (${kind.use === 'weapon' ? 'blunt' : 'split'})`
+  return wear < 8 ? `${kind.name} (worn)` : kind.name
+}
+
+/** The weapon in hand and the armour worn, as things, with their age and wear. */
+export function inHand(game: Game): {
+  weapon: Item | null
+  armour: Item | null
+} {
+  const p = game.player
+  const iron = (
+    kind: string | null,
+    old?: boolean,
+    wear?: Die,
+  ): Item | null => {
+    if (!kind) return null
+    if (old) return { kind, old: true }
+    return wear !== undefined && wear < 8 ? { kind, wear } : { kind }
+  }
+  return {
+    weapon: iron(p.weapon, p.oldWeapon, p.edge),
+    armour: iron(p.armour, p.oldArmour, p.fit),
+  }
 }
 
 export function monsterName(game: Game, m: Monster): string {
@@ -184,8 +211,19 @@ export function lightRadius(game: Game): number {
   return greyAt(game.level, game.tide, p.x, p.y) ? Math.max(1, base - 1) : base
 }
 
-const armourClass = (game: Game) =>
-  10 + (ITEMS[game.player.armour ?? '']?.ac ?? 0)
+/**
+ * What keeps blows out: the armour worn, a point less if it is Kell's iron,
+ * and nothing at all once new iron has split.
+ */
+export function armourClass(game: Game): number {
+  const p = game.player
+  const ac = ITEMS[p.armour ?? '']?.ac ?? 0
+  if (ac === 0 || (!p.oldArmour && p.fit === 0)) return 10
+  return 10 + ac - (p.oldArmour ? 1 : 0)
+}
+
+/** New iron wears with use: now and then its die is rolled, and a low roll takes some of it. */
+const WEAR_CHANCE = 0.15
 
 // ---------------------------------------------------------------------------
 // Going up and down
@@ -348,7 +386,11 @@ function kill(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   if (m.kind === 'picker')
     drop({ kind: 'marks', amount: rng.dice(1, 6) * (1 + game.depth) })
   if (m.kind === 'firstcloak' && rng.chance(0.35))
-    drop({ kind: tierOf(game.depth) >= 3 ? 'cloakmail' : 'token' })
+    drop(
+      tierOf(game.depth) >= 3
+        ? { kind: 'cloakmail', old: true }
+        : { kind: 'token' },
+    )
 }
 
 function playerAttack(game: Game, rng: Rng, m: Monster, lines: string[]): void {
@@ -383,8 +425,21 @@ function playerAttack(game: Game, rng: Rng, m: Monster, lines: string[]): void {
     return
   }
   const [count, sides] = weapon?.dmg ?? [1, 2]
-  const dmg = rng.dice(count, sides) + Math.floor(p.might / 2) + (known ? 1 : 0)
+  let cut = rng.dice(count, sides)
+  if (p.oldWeapon) cut = Math.max(1, cut - 1)
+  else if (p.edge === 0) cut = Math.ceil(cut / 2)
+  const dmg = cut + Math.floor(p.might / 2) + (known ? 1 : 0)
   m.hp -= dmg
+  if (p.weapon && isIron(p.weapon) && !p.oldWeapon && rng.chance(WEAR_CHANCE)) {
+    const edge = rollDie(rng, p.edge ?? 8)
+    if (edge !== (p.edge ?? 8))
+      lines.push(
+        edge === 0
+          ? `${cap(ITEMS[p.weapon]?.name ?? 'Your weapon')} is blunt. Barr can put an edge back on it.`
+          : `${cap(ITEMS[p.weapon]?.name ?? 'Your weapon')} loses some of its edge.`,
+      )
+    p.edge = edge
+  }
   if (m.hp <= 0) {
     kill(game, rng, m, lines)
     return
@@ -413,6 +468,16 @@ function monsterAttack(
   const dmg = rng.dice(count, sides)
   p.hp -= dmg
   lines.push(`${name} hits you.`)
+  if (p.armour && isIron(p.armour) && !p.oldArmour && rng.chance(WEAR_CHANCE)) {
+    const fit = rollDie(rng, p.fit ?? 8)
+    if (fit !== (p.fit ?? 8))
+      lines.push(
+        fit === 0
+          ? `${cap(ITEMS[p.armour]?.name ?? 'Your armour')} splits. Barr can mend it.`
+          : `${cap(ITEMS[p.armour]?.name ?? 'Your armour')} gives a little.`,
+      )
+    p.fit = fit
+  }
   if (kind.grabs && p.held === null) {
     p.held = m.id
     lines.push('It has hold of you. The rope pulls toward the hall.')
@@ -712,18 +777,26 @@ function use(game: Game, rng: Rng, index: number, lines: string[]): boolean {
   if (!item || !kind) return false
   const remove = () => p.pack.splice(index, 1)
   switch (kind.use) {
-    case 'weapon':
+    case 'weapon': {
       remove()
-      if (p.weapon) p.pack.push({ kind: p.weapon })
+      const held = inHand(game).weapon
+      if (held) p.pack.push(held)
       p.weapon = item.kind
+      p.oldWeapon = item.old === true
+      p.edge = item.old ? 8 : (item.wear ?? 8)
       lines.push(`You take up ${itemName(game, item)}.`)
       return true
-    case 'armour':
+    }
+    case 'armour': {
       remove()
-      if (p.armour) p.pack.push({ kind: p.armour })
+      const worn = inHand(game).armour
+      if (worn) p.pack.push(worn)
       p.armour = item.kind
+      p.oldArmour = item.old === true
+      p.fit = item.old ? 8 : (item.wear ?? 8)
       lines.push(`You put on ${itemName(game, item)}.`)
       return true
+    }
     case 'oil':
       if (item.kind === 'sarn-lamp') {
         lines.push('It is already lit. It always will be.')
@@ -830,6 +903,15 @@ function stock(game: Game): Stock[] {
             enabled: afford(price) && p.pack.length < PACK,
           }
         }),
+        ...mending(game).map(({ slot, price }) => ({
+          key: `mend:${slot}`,
+          label:
+            slot === 'weapon'
+              ? `Put an edge back on ${ITEMS[p.weapon ?? '']?.name}`
+              : `Mend ${ITEMS[p.armour ?? '']?.name}`,
+          price,
+          enabled: afford(price),
+        })),
         ...p.pack.flatMap((item, i) => {
           const price = sellPrice(game, item)
           return price > 0
@@ -902,6 +984,18 @@ function stock(game: Game): Stock[] {
   }
 }
 
+/** What Barr can mend: new iron in hand or worn that has worn, at two marks a step and two for the fire. */
+function mending(game: Game): { slot: 'weapon' | 'armour'; price: number }[] {
+  const p = game.player
+  const out: { slot: 'weapon' | 'armour'; price: number }[] = []
+  const price = (die: Die) => 2 + 2 * (8 - die)
+  if (p.weapon && isIron(p.weapon) && !p.oldWeapon && (p.edge ?? 8) < 8)
+    out.push({ slot: 'weapon', price: price(p.edge ?? 8) })
+  if (p.armour && isIron(p.armour) && !p.oldArmour && (p.fit ?? 8) < 8)
+    out.push({ slot: 'armour', price: price(p.fit ?? 8) })
+  return out
+}
+
 function enterShop(game: Game, rng: Rng, digit: string, lines: string[]): void {
   const shop = SHOPS[digit]
   if (!shop) return
@@ -958,6 +1052,15 @@ function shopCommand(game: Game, rng: Rng, key: string, lines: string[]): void {
     }
     p.pack.push({ kind: arg })
     lines.push(`Barr: "${say(rng, 'haggle')}" You have ${ITEMS[arg]?.name}.`)
+  } else if (verb === 'mend') {
+    p.marks -= offer.price
+    if (arg === 'weapon') p.edge = 8
+    else p.fit = 8
+    lines.push(
+      arg === 'weapon'
+        ? 'Barr puts it to the stone until it will shave the hair off your arm.'
+        : 'Barr hammers it back into shape, and it holds.',
+    )
   } else if (verb === 'sell') {
     const item = p.pack[Number(arg)]
     if (!item) return

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test'
+import { ITEMS } from '../core/content'
 import {
   act,
+  armourClass,
   itemName,
   lightRadius,
   monsterName,
@@ -13,7 +15,7 @@ import {
   verbOf,
 } from '../core/game'
 import { firstWorld, HOLD_TITLES, withTaken } from '../core/holds'
-import { at, index } from '../core/level'
+import { at, generate, index } from '../core/level'
 import { makeRng } from '../core/rng'
 import type { Command, Game } from '../core/types'
 import { holders, pools } from '../lore'
@@ -649,6 +651,114 @@ describe('your wrack', () => {
     expect(
       out.game.level.items.find((i) => i.item.kind === 'marks')?.item.amount,
     ).toBe(30)
+  })
+})
+
+describe('old iron and new', () => {
+  it('lies on the floors of Kell as old iron, and nothing else does', () => {
+    let n = 1
+    for (let seed = 1; seed <= 30; seed++) {
+      const level = generate(1 + (seed % 9), makeRng(seed), () => n++)
+      for (const { item } of level.items) {
+        const use = ITEMS[item.kind]?.use
+        expect(item.old === true).toBe(use === 'weapon' || use === 'armour')
+      }
+    }
+  })
+
+  it('is called what it is: Kell iron, worn, or blunt', () => {
+    const g = gameOn(ROOM, 1)
+    expect(itemName(g, { kind: 'axe', old: true })).toBe('an axe (Kell iron)')
+    expect(itemName(g, { kind: 'axe', wear: 6 })).toBe('an axe (worn)')
+    expect(itemName(g, { kind: 'axe', wear: 0 })).toBe('an axe (blunt)')
+    expect(itemName(g, { kind: 'mail', wear: 0 })).toBe(
+      'mail with the dye scrubbed out (split)',
+    )
+    expect(itemName(g, { kind: 'axe' })).toBe('an axe')
+  })
+
+  it('keeps out a little less when it is old, and nothing once new iron has split', () => {
+    const g = gameOn(ROOM, 1)
+    expect(armourClass(g)).toBe(12)
+    g.player.oldArmour = true
+    expect(armourClass(g)).toBe(11)
+    g.player.oldArmour = false
+    g.player.fit = 0
+    expect(armourClass(g)).toBe(10)
+  })
+
+  it('carries its age and its wear from the pack to the hand and back', () => {
+    const g = gameOn(ROOM, 1)
+    g.player.edge = 4
+    g.player.pack = [{ kind: 'axe', old: true }]
+    const out = run(g, { type: 'use', index: 0 }).game
+    expect(out.player.weapon).toBe('axe')
+    expect(out.player.oldWeapon).toBe(true)
+    expect(out.player.edge).toBe(8)
+    expect(out.player.pack).toEqual([{ kind: 'knife', wear: 4 }])
+    const back = run(out, { type: 'use', index: 0 }).game
+    expect(back.player.edge).toBe(4)
+    expect(back.player.oldWeapon).toBe(false)
+    expect(back.player.pack).toEqual([{ kind: 'axe', old: true }])
+  })
+
+  it('dulls new iron with use until it is blunt, and leaves old iron as it was', () => {
+    const blunted = (old: boolean) => {
+      let g = gameOn(ROOM, 1)
+      g.player.hp = 9999
+      g.player.maxHp = 9999
+      g.player.might = 30
+      g.player.oldWeapon = old
+      const lines: string[] = []
+      for (let i = 0; i < 80 && (g.player.edge ?? 8) > 0; i++) {
+        g.level.monsters = []
+        put(g, 'picker', 5, 1)
+        const out = fight(g, east, (x) =>
+          x.level.monsters.every((m) => m.hp <= 0),
+        )
+        g = out.game
+        g.player.x = 4
+        lines.push(...out.lines)
+      }
+      return { edge: g.player.edge ?? 8, lines }
+    }
+    const fresh = blunted(false)
+    expect(fresh.edge).toBe(0)
+    expect(fresh.lines.some((l) => l.includes('is blunt'))).toBe(true)
+    expect(blunted(true).edge).toBe(8)
+  })
+
+  it('wears new armour thin under blows', () => {
+    let g = gameOn(ROOM, 1)
+    g.player.hp = 9999
+    g.player.maxHp = 9999
+    put(g, 'picker', 5, 1).awake = true
+    for (let i = 0; i < 400 && (g.player.fit ?? 8) > 0; i++)
+      g = act(g, wait).game
+    expect(g.player.fit).toBe(0)
+  })
+
+  it('has Barr put an edge back on, and mend what has split, for marks', () => {
+    const g = gameOn(ROOM, 0)
+    g.shop = 'barr'
+    g.player.marks = 100
+    g.player.edge = 0
+    g.player.fit = 4
+    const sharpen = offers(g).find((o) => o.key === 'mend:weapon')
+    const mend = offers(g).find((o) => o.key === 'mend:armour')
+    expect(sharpen?.price).toBe(18)
+    expect(mend?.price).toBe(10)
+    const out = run(
+      g,
+      { type: 'shop', key: 'mend:weapon' },
+      { type: 'shop', key: 'mend:armour' },
+    ).game
+    expect(out.player.edge).toBe(8)
+    expect(out.player.fit).toBe(8)
+    expect(out.player.marks).toBe(72)
+    g.player.edge = 8
+    g.player.fit = 8
+    expect(offers(g).some((o) => o.key.startsWith('mend:'))).toBe(false)
   })
 })
 

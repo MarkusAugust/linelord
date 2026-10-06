@@ -9,7 +9,7 @@
  * `_` the ledger's stand, `O` the drain, `&` the man standing in it, and `^`
  * the gap in the roof. `S` is Sarn, wherever Sarn has chosen to be.
  */
-import { ITEMS, MONSTERS, tierOf } from './content'
+import { ITEMS, isIron, MONSTERS, tierOf } from './content'
 import type { Rng } from './rng'
 import type { Item, Level, Monster, Pos } from './types'
 
@@ -222,7 +222,9 @@ function loot(rng: Rng, depth: number): Item {
   const kinds = Object.entries(ITEMS)
     .filter(([, k]) => k.tiers?.includes(tier))
     .map(([kind]) => kind)
-  return { kind: rng.pick(kinds) }
+  const kind = rng.pick(kinds)
+  // Whatever iron lies down here is Kell's.
+  return isIron(kind) ? { kind, old: true } : { kind }
 }
 
 function populate(

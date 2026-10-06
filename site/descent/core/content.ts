@@ -444,6 +444,15 @@ export const ITEMS: Record<string, ItemKind> = {
   ledger: { glyph: '=', name: 'the ledger', use: 'ledger', price: 0 },
 }
 
+/**
+ * Whether a kind of thing is iron that can be old or new: every weapon and
+ * armour but Sarn's, which is neither.
+ */
+export const isIron = (kind: string): boolean => {
+  const k = ITEMS[kind]
+  return !!k && !k.sarn && (k.use === 'weapon' || k.use === 'armour')
+}
+
 /** Whether a kind of thing has to be named before it is known. */
 export const needsNaming = (kind: string): boolean =>
   ITEMS[kind]?.unknown !== undefined

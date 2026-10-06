@@ -19,6 +19,7 @@ import {
   act,
   DIRS,
   GREY_LIMIT,
+  inHand,
   itemName,
   lightRadius,
   monsterName,
@@ -308,8 +309,9 @@ rocket('descent-run', {
           : pending === 'drop'
             ? 'Press the letter of what to drop. Esc to cancel.'
             : ''
-      $$.weapon = p.weapon ? (ITEMS[p.weapon]?.name ?? '') : 'bare hands'
-      $$.armour = p.armour ? (ITEMS[p.armour]?.name ?? '') : 'nothing'
+      const gear = inHand(g)
+      $$.weapon = gear.weapon ? itemName(g, gear.weapon) : 'bare hands'
+      $$.armour = gear.armour ? itemName(g, gear.armour) : 'nothing'
       $$.prompt = g.prompt
         ? g.prompt.kind === 'tithe'
           ? 'Pay a tenth?'
@@ -785,7 +787,7 @@ rocket('descent-run', {
             <dt>In hand</dt><dd data-text="$$weapon"></dd>
             <dt>Worn</dt><dd data-text="$$armour"></dd>
           </dl>
-          <p class="descent__note">Wield or wear something from the pack and what you had goes back into it.</p>
+          <p class="descent__note">Wield or wear something from the pack and what you had goes back into it. Kell's iron never wears, and is a little weaker; new iron wears, and Barr mends it.</p>
           <p class="descent__picking" data-show="$$picking !== ''" data-text="$$picking"></p>
           <ol class="descent__items" data-class:is-picking="$$picking !== ''">
             <template data-for="item, i in $$pack">
