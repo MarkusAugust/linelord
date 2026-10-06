@@ -22,6 +22,10 @@ export interface Item {
   kind: string
   /** Marks: how many. */
   amount?: number
+  /** Iron found in Kell: it never wears, and it is a little weaker. */
+  old?: boolean
+  /** New iron's wear, as a die; full (8) when not given. */
+  wear?: Die
 }
 
 export interface Monster {
@@ -86,6 +90,14 @@ export interface Player {
   pack: Item[]
   weapon: string | null
   armour: string | null
+  /** The weapon in hand is Kell's iron. */
+  oldWeapon?: boolean
+  /** The armour worn is Kell's iron. */
+  oldArmour?: boolean
+  /** The edge on the weapon in hand, as a die; 0 is blunt. Full when not given. */
+  edge?: Die
+  /** What is left of the armour worn, as a die; 0 keeps nothing out. */
+  fit?: Die
   /** The id of the Drawn that has hold of you. */
   held: number | null
   /** The salt-pile has been paid, and the sea will give you back once. */

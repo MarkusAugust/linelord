@@ -42,6 +42,12 @@ because the earlier answer was wrong.
   next run that finds it. Put it down and what it carried is yours again. The
   sea keeps the last five, and the ledger says where each one stands. A run that
   becomes one of the Unasked still waits in the Lowstreets instead, as before.
+- Old iron and new. Every weapon and armour found in Kell is Kell's iron: it
+  never wears, and it is a point weaker than new. What Barr sells, and the knife
+  and jerkin you start with, is new iron: stronger, but it wears with use, a
+  weapon until it is blunt and cuts half, armour until it splits and keeps
+  nothing out. Barr puts the edge back on, and mends, for marks. The pack says
+  which is which.
 - The page ends in the sea, engraved in steel: the open water of a
   copperplate engraving cut into a dark plate, close under the last line of
   text, a slow warm sheen passing over it and a small swell moving through it,
