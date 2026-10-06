@@ -6,6 +6,7 @@ import {
   descent,
   FOUND,
   FRAGMENT,
+  SPUN,
   VERTEX,
 } from '../water'
 
@@ -22,12 +23,21 @@ describe('the water in the O', () => {
     expect(approach(0.5, 0, 10)).toBe(0)
   })
 
-  it('lies still in the hole of the O, and only stirs when it is found', () => {
+  it('lies in the bottom of the O under a surface, and rises and rocks when it is found', () => {
     expect(CALM.stir).toBe(0)
+    expect(CALM.level).toBeGreaterThan(0.2)
+    expect(CALM.level).toBeLessThan(0.6)
+    expect(CALM.edge).toBeLessThan(0.2)
     expect(FOUND.stir).toBeGreaterThan(0)
     expect(FOUND.stir).toBeLessThan(0.5)
-    expect(FOUND.edge).toBeGreaterThan(CALM.edge)
-    expect(CALM.edge).toBeLessThan(0.3)
+    expect(FOUND.level).toBeGreaterThan(CALM.level)
+    expect(FOUND.wave).toBeGreaterThan(CALM.wave)
+  })
+
+  it('fills the O when it spins, with no surface left to rock', () => {
+    expect(SPUN.stir).toBe(1)
+    expect(SPUN.level).toBe(1)
+    expect(SPUN.wave).toBe(0)
   })
 
   it('goes down in order: the O spins up, the whirlpool fills the screen, then the dark', () => {
@@ -63,6 +73,9 @@ describe('the water in the O', () => {
       'u_edge',
       'u_squash',
       'u_dark',
+      'u_level',
+      'u_wave',
+      'u_light',
     ])
       expect(FRAGMENT).toMatch(new RegExp(`uniform (float|vec2) ${u};`))
     expect(VERTEX).toContain('attribute vec2 a_pos;')

@@ -80,6 +80,9 @@ function water(canvas: HTMLCanvasElement): ((f: Frame) => void) | null {
     edge: at('u_edge'),
     squash: at('u_squash'),
     dark: at('u_dark'),
+    level: at('u_level'),
+    wave: at('u_wave'),
+    light: at('u_light'),
   }
   return (f) => {
     gl.viewport(0, 0, canvas.width, canvas.height)
@@ -91,6 +94,9 @@ function water(canvas: HTMLCanvasElement): ((f: Frame) => void) | null {
     gl.uniform1f(u.edge, f.look.edge)
     gl.uniform1f(u.squash, f.look.squash)
     gl.uniform1f(u.dark, f.dark)
+    gl.uniform1f(u.level, f.look.level)
+    gl.uniform1f(u.wave, f.look.wave)
+    gl.uniform1f(u.light, light())
     gl.clearColor(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
@@ -103,7 +109,24 @@ const mix = (a: Look, b: Look, t: number): Look => ({
   stir: a.stir + (b.stir - a.stir) * t,
   edge: a.edge + (b.edge - a.edge) * t,
   squash: a.squash + (b.squash - a.squash) * t,
+  level: a.level + (b.level - a.level) * t,
+  wave: a.wave + (b.wave - a.wave) * t,
 })
+
+/* Whether the page is light, read off the colour it actually has rather than
+   guessed from its rules, and read again when the theme can have changed. The
+   water is lighter on a light page. */
+const measure = () => {
+  const [r = 0, g = 0, b = 0] = (
+    getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g) ?? []
+  ).map(Number)
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.5 ? 1 : 0
+}
+let lightNow = 0
+const light = () => lightNow
+const remeasure = () => {
+  lightNow = measure()
+}
 
 /** Opens the game: the same thing `>` does on the page. */
 function openGame(): void {
@@ -113,6 +136,15 @@ function openGame(): void {
 }
 
 function start(button: HTMLElement): void {
+  remeasure()
+  matchMedia('(prefers-color-scheme: dark)').addEventListener(
+    'change',
+    remeasure,
+  )
+  new MutationObserver(remeasure).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme', 'class'],
+  })
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches
   const canvas = document.createElement('canvas')
   canvas.className = 'drain__water'

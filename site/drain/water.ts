@@ -25,6 +25,9 @@ uniform float u_stir;
 uniform float u_edge;
 uniform float u_squash;
 uniform float u_dark;
+uniform float u_level;
+uniform float u_wave;
+uniform float u_light;
 
 float hash(vec3 p) {
   p = fract(p * 0.3183099 + 0.1);
@@ -76,14 +79,24 @@ void main() {
   float body = mix(calm, swirl, u_stir);
   float white = mix(glint * 0.55, foam * smoothstep(0.15, 0.6, r) * 0.9, u_stir);
 
-  vec3 deep = vec3(0.03, 0.12, 0.20);
-  vec3 mid = vec3(0.16, 0.48, 0.68);
+  vec3 deep = mix(vec3(0.03, 0.12, 0.20), vec3(0.10, 0.34, 0.50), u_light);
+  vec3 mid = mix(vec3(0.16, 0.48, 0.68), vec3(0.30, 0.62, 0.80), u_light);
   vec3 col = mix(deep, mid, smoothstep(0.25, 0.8, body));
   col = mix(col, vec3(0.78, 0.91, 0.97), white);
   col *= mix(1.0, 0.15 + 0.85 * smoothstep(0.12, 0.38, r), u_stir);
+
+  // The surface: at rest the water lies in the bottom of the O under a line
+  // that rocks; spun up, it fills the O and there is no surface left.
+  float inside = 1.0 - smoothstep(u_edge * 0.82, u_edge, r);
+  float wave = (sin(d.x * 30.0 + u_t * 2.4) * 0.010 + sin(d.x * 13.0 - u_t * 1.5) * 0.012) * u_wave;
+  float surface = -u_edge + 2.0 * u_edge * u_level + wave;
+  float below = 1.0 - smoothstep(surface - 0.006, surface + 0.006, d.y);
+  float rim = (1.0 - smoothstep(0.0, 0.012, abs(d.y - surface))) * inside * (1.0 - u_stir);
+  float pool = mix(inside * below, inside, u_stir);
+  col = mix(col, vec3(0.86, 0.95, 1.0), rim * 0.85);
   col = mix(col, vec3(0.01, 0.02, 0.03), u_dark);
 
-  float alpha = (1.0 - smoothstep(u_edge * 0.82, u_edge, r)) * u_k;
+  float alpha = max(pool, rim * 0.9) * u_k * mix(1.0, 0.85, u_light * (1.0 - u_dark));
   gl_FragColor = vec4(col * alpha, alpha);
 }
 `
@@ -93,16 +106,38 @@ export interface Look {
   stir: number
   edge: number
   squash: number
+  /** How full the O is, from empty to the brim, at rest. */
+  level: number
+  /** How much the surface rocks. */
+  wave: number
 }
 
 /** At rest, in the hole of the O, which is taller than it is wide. */
-export const CALM: Look = { stir: 0, edge: 0.2, squash: 1.35 }
+export const CALM: Look = {
+  stir: 0,
+  edge: 0.17,
+  squash: 1.35,
+  level: 0.42,
+  wave: 1,
+}
 
 /** Found by the pointer or the focus: it notices. */
-export const FOUND: Look = { stir: 0.16, edge: 0.24, squash: 1.3 }
+export const FOUND: Look = {
+  stir: 0.16,
+  edge: 0.18,
+  squash: 1.33,
+  level: 0.58,
+  wave: 2.4,
+}
 
 /** Spun up, just before it leaves the O. */
-export const SPUN: Look = { stir: 1, edge: 0.98, squash: 1 }
+export const SPUN: Look = {
+  stir: 1,
+  edge: 0.98,
+  squash: 1,
+  level: 1,
+  wave: 0,
+}
 
 /** How long the way down takes, from the press to the dark. */
 export const DESCENT_MS = 1300
