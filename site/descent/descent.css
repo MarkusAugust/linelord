@@ -296,18 +296,6 @@
   opacity: 0.45;
 }
 
-.descent__keys .d-low,
-.descent__keys .d-water,
-.descent__keys .d-deep,
-.descent__keys .d-grey {
-  padding: 0 3px;
-  background-color: #0b0907;
-}
-
-.descent__keys .d-grey {
-  background-color: #34312c;
-}
-
 .descent__stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -504,4 +492,65 @@
   .descent__keys {
     order: 10;
   }
+}
+
+.descent__keys summary {
+  cursor: pointer;
+  color: var(--steel);
+  margin-bottom: 6px;
+}
+
+.descent__keylist {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 0 0 12px;
+}
+
+.descent__keylist dt {
+  color: var(--ink);
+}
+
+.descent__keylist dd {
+  margin: 0;
+}
+
+.descent__keylist kbd + kbd {
+  margin-left: 2px;
+}
+
+.descent__maplist dt span {
+  padding: 0 4px;
+  background-color: #0b0907;
+}
+
+.descent__maplist dt .d-grey {
+  background-color: #34312c;
+}
+
+.descent__worn {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px 10px;
+  margin: 0;
+}
+
+.descent__worn dt {
+  color: var(--ink-dim);
+}
+
+.descent__worn dd {
+  margin: 0;
+}
+
+.descent__picking {
+  margin: 4px 0;
+  color: var(--steel);
+}
+
+.descent__items.is-picking kbd {
+  color: var(--paper);
+  background: var(--steel);
+  border-color: var(--steel);
+  font-weight: 700;
 }

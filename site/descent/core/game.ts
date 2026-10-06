@@ -571,6 +571,24 @@ function drink(game: Game, rng: Rng, kind: string, lines: string[]): void {
   }
 }
 
+/** What using a thing does, in a word the pack can put on its button. */
+export function verbOf(item: Item): string {
+  if (item.kind === 'sarn-lamp') return 'Look'
+  const verbs: Record<string, string> = {
+    weapon: 'Wield',
+    armour: 'Wear',
+    oil: 'Fill lamp',
+    water: 'Drink',
+    rope: 'Coil',
+    salt: 'Wash',
+    vial: 'Drink',
+    page: 'Read',
+    ledger: 'Read',
+    trinket: 'Look',
+  }
+  return verbs[ITEMS[item.kind]?.use ?? ''] ?? 'Use'
+}
+
 function use(game: Game, rng: Rng, index: number, lines: string[]): boolean {
   const p = game.player
   const item = p.pack[index]

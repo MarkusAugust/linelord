@@ -32,6 +32,7 @@ import {
   newGame,
   offers,
   reveal,
+  verbOf,
 } from '../core/game'
 import { at, elevation, index, SHOPS } from '../core/level'
 import {
@@ -279,7 +280,16 @@ rocket('descent-run', {
       $$.wet = ph === 'flood' || ph === 'turning'
       $$.meaning = p.meaning
       $$.pending = pending ?? ''
-      $$.pack = p.pack.map((item) => itemName(g, item))
+      $$.pack = p.pack.map((item) => ({
+        name: itemName(g, item),
+        verb: verbOf(item),
+      }))
+      $$.picking =
+        pending === 'use'
+          ? 'Press the letter of what to use. Esc to cancel.'
+          : pending === 'drop'
+            ? 'Press the letter of what to drop. Esc to cancel.'
+            : ''
       $$.weapon = p.weapon ? (ITEMS[p.weapon]?.name ?? '') : 'bare hands'
       $$.armour = p.armour ? (ITEMS[p.armour]?.name ?? '') : 'nothing'
       $$.prompt = g.prompt
@@ -392,6 +402,7 @@ rocket('descent-run', {
     ])
       $$[k] = ''
     $$.legend = ''
+    $$.picking = ''
     $$.last = []
     $$.pack = []
     $$.offers = []
@@ -520,14 +531,13 @@ rocket('descent-run', {
         say(['Name what? Choose a direction.'])
         return sync()
       }
-      if (key === 'q' || key === 'w' || key === 'e') {
+      if (key === 'e' || key === 'd') {
         evt.preventDefault()
-        pending = key === 'q' ? 'drop' : 'use'
-        say([
-          pending === 'use'
-            ? 'Use which? Press its letter.'
-            : 'Drop which? Press its letter.',
-        ])
+        if (g.player.pack.length === 0) {
+          say(['You carry nothing.'])
+          return
+        }
+        pending = key === 'e' ? 'use' : 'drop'
         return sync()
       }
       if (key === 'Escape' && pending) {
@@ -673,14 +683,31 @@ rocket('descent-run', {
           <button class="descent__btn descent__btn--quiet" type="button" data-on:click="@leave()">Leave <kbd>Esc</kbd></button>
         </div>
 
-        <p class="descent__keys">
-          Move: arrows, <kbd>hjklyubn</kbd> or the number pad, <kbd>5</kbd> or <kbd>.</kbd> waits.
-          <kbd>&gt;</kbd> stairs · <kbd>g</kbd> take · <kbd>w</kbd> then a letter uses · <kbd>q</kbd> then a letter drops ·
-          <kbd>m</kbd> mean the next blow (costs grey, gives will) · <kbd>x</kbd> then a direction names a creature (will) ·
-          <kbd>s</kbd> tell the flood to stop (3 will) · <kbd>r</kbd> climb a rope to the floor above.
-          On the map: <span class="d-low">.</span> low ground floods first, <span class="d-water">~</span> water,
-          <span class="d-deep">~</span> over your head, <span class="d-grey">.</span> the grey.
-        </p>
+        <details class="descent__keys" open>
+          <summary>Keys and map</summary>
+          <dl class="descent__keylist">
+            <dt>Move</dt><dd><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd>, diagonals <kbd>y</kbd><kbd>u</kbd><kbd>b</kbd><kbd>n</kbd> or the number pad</dd>
+            <dt>Wait</dt><dd><kbd>.</kbd> or <kbd>5</kbd></dd>
+            <dt>Stairs</dt><dd><kbd>&gt;</kbd> on a stair, up or down</dd>
+            <dt>Take</dt><dd><kbd>g</kbd> what lies here</dd>
+            <dt>Use</dt><dd><kbd>e</kbd> then the letter: wield, wear, drink, read</dd>
+            <dt>Drop</dt><dd><kbd>d</kbd> then the letter</dd>
+            <dt>Mean it</dt><dd><kbd>m</kbd> the next blow rolls twice, for a grey mark and a point of will</dd>
+            <dt>Name</dt><dd><kbd>x</kbd> then a direction, for 2 will (a Novice pays 1)</dd>
+            <dt>Stop</dt><dd><kbd>s</kbd> holds the flood for 15 turns, for 3 will</dd>
+            <dt>Rope</dt><dd><kbd>r</kbd> climbs to the floor above</dd>
+            <dt>Cancel</dt><dd><kbd>Esc</kbd></dd>
+          </dl>
+          <dl class="descent__keylist descent__maplist">
+            <dt><span class="d-you">@</span></dt><dd>you</dd>
+            <dt><span class="d-stair">&lt; &gt;</span></dt><dd>stairs up and down</dd>
+            <dt><span class="d-foe">p c u n d</span></dt><dd>something that wants you</dd>
+            <dt><span class="d-item">$ ! ) [ * ?</span></dt><dd>marks and things to take</dd>
+            <dt><span class="d-low">.</span></dt><dd>low ground, which floods first</dd>
+            <dt><span class="d-water">~</span> <span class="d-deep">~</span></dt><dd>water, and water over your head</dd>
+            <dt><span class="d-grey">.</span></dt><dd>the grey</dd>
+          </dl>
+        </details>
         </div>
 
         <div class="descent__side">
@@ -717,14 +744,19 @@ rocket('descent-run', {
         </div>
 
         <section class="descent__pack">
-          <h3>Carried</h3>
-          <p class="descent__worn">In hand: <span data-text="$$weapon"></span>. Worn: <span data-text="$$armour"></span>.</p>
-          <ol class="descent__items">
+          <h3>Carried <kbd>e</kbd> use · <kbd>d</kbd> drop</h3>
+          <dl class="descent__worn">
+            <dt>In hand</dt><dd data-text="$$weapon"></dd>
+            <dt>Worn</dt><dd data-text="$$armour"></dd>
+          </dl>
+          <p class="descent__note">Wield or wear something from the pack and what you had goes back into it.</p>
+          <p class="descent__picking" data-show="$$picking !== ''" data-text="$$picking"></p>
+          <ol class="descent__items" data-class:is-picking="$$picking !== ''">
             <template data-for="item, i in $$pack">
               <li>
                 <kbd data-text="String.fromCharCode(97 + i)"></kbd>
-                <span data-text="item"></span>
-                <button class="descent__mini" type="button" data-on:click="@use(i)">Use</button>
+                <span data-text="item.name"></span>
+                <button class="descent__mini" type="button" data-on:click="@use(i)" data-text="item.verb"></button>
                 <button class="descent__mini" type="button" data-on:click="@drop(i)">Drop</button>
               </li>
             </template>

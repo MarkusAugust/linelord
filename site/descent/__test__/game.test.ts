@@ -9,6 +9,7 @@ import {
   rollDie,
   sellPrice,
   tideReport,
+  verbOf,
 } from '../core/game'
 import { at, index } from '../core/level'
 import { makeRng } from '../core/rng'
@@ -864,5 +865,22 @@ describe('the map you remember', () => {
   it('starts dark below the shingle', () => {
     const g = gameOn(ROOM, 1)
     expect(g.level.seen[index(g.level, 4, 1)]).toBe(false)
+  })
+})
+
+describe('what using a thing means', () => {
+  it('says wield, wear, drink or read, so the pack says what a key will do', () => {
+    expect(verbOf({ kind: 'axe' })).toBe('Wield')
+    expect(verbOf({ kind: 'mail' })).toBe('Wear')
+    expect(verbOf({ kind: 'vial-grey' })).toBe('Drink')
+    expect(verbOf({ kind: 'skin' })).toBe('Drink')
+    expect(verbOf({ kind: 'oil' })).toBe('Fill lamp')
+    expect(verbOf({ kind: 'sarn-lamp' })).toBe('Look')
+    expect(verbOf({ kind: 'coil' })).toBe('Coil')
+    expect(verbOf({ kind: 'salt' })).toBe('Wash')
+    expect(verbOf({ kind: 'page' })).toBe('Read')
+    expect(verbOf({ kind: 'ledger' })).toBe('Read')
+    expect(verbOf({ kind: 'ring' })).toBe('Look')
+    expect(verbOf({ kind: 'nothing' })).toBe('Use')
   })
 })
