@@ -194,6 +194,7 @@ function cell(
   if (water >= 1 && tile !== '#')
     return ['~', `${water >= 2 ? 'd-deep' : 'd-water'}${dim}`]
   if (tile === '#') return ['#', `d-wall${dim}`]
+  if (tile === '%') return ['%', `d-packing${dim}`]
   if (tile === '~') return ['~', 'd-sea']
   if (tile === '+' || tile === "'") return [tile, `d-door${dim}`]
   if (tile === '<' || tile === '>') return [tile, `d-stair${dim}`]
@@ -256,7 +257,8 @@ rocket('descent-run', {
   setup: ({ $$, action, host }) => {
     const self: Self = { game: null, map: null, draw: () => {} }
     host.descent = self
-    let pending: 'name' | 'use' | 'drop' | null = null
+    let pending: 'name' | 'dig' | 'use' | 'drop' | null = null
+    const ASK = { name: 'Name what?', dig: 'Dig where?' } as const
 
     const say = (lines: string[]) => {
       if (lines.length === 0) return
@@ -481,17 +483,18 @@ rocket('descent-run', {
     })
     action('move', (_, dir) => {
       if (dir === 'wait') return play({ type: 'wait' })
-      if (pending === 'name') {
+      if (pending === 'name' || pending === 'dig') {
+        const type = pending
         pending = null
-        return play({ type: 'name', dir: dir as Dir })
+        return play({ type, dir: dir as Dir })
       }
       play({ type: 'move', dir: dir as Dir })
     })
     action('cmd', (_, type) => {
-      if (type === 'name') {
-        pending = pending === 'name' ? null : 'name'
+      if (type === 'name' || type === 'dig') {
+        pending = pending === type ? null : type
         sync()
-        say([pending ? 'Name what? Choose a direction.' : 'Never mind.'])
+        say([pending ? `${ASK[type]} Choose a direction.` : 'Never mind.'])
         return
       }
       play({ type } as Command)
@@ -546,9 +549,10 @@ rocket('descent-run', {
       if (dir) {
         evt.preventDefault()
         if (dir === 'wait') return play({ type: 'wait' })
-        if (pending === 'name') {
+        if (pending === 'name' || pending === 'dig') {
+          const type = pending
           pending = null
-          return play({ type: 'name', dir })
+          return play({ type, dir })
         }
         return play({ type: 'move', dir })
       }
@@ -567,10 +571,10 @@ rocket('descent-run', {
         evt.preventDefault()
         return play(cmd)
       }
-      if (key === 'N' || key === 'x') {
+      if (key === 'N' || key === 'x' || key === 'D') {
         evt.preventDefault()
-        pending = 'name'
-        say(['Name what? Choose a direction.'])
+        pending = key === 'D' ? 'dig' : 'name'
+        say([`${ASK[pending]} Choose a direction.`])
         return sync()
       }
       if (key === 'e' || key === 'd') {
@@ -740,6 +744,7 @@ rocket('descent-run', {
             <dt>Name</dt><dd><kbd>x</kbd> then a direction, for 2 will (a Novice pays 1)</dd>
             <dt>Stop</dt><dd><kbd>s</kbd> holds the flood for 15 turns, for 3 will</dd>
             <dt>Rope</dt><dd><kbd>r</kbd> climbs to the floor above</dd>
+            <dt>Dig</dt><dd><kbd>D</kbd> then a direction, with a pick: three strokes through the packing</dd>
             <dt>Shop</dt><dd>the key on the counter: a number for what is sold, the pack's letter for what you carry; <kbd>Esc</kbd> leaves</dd>
             <dt>Cancel</dt><dd><kbd>Esc</kbd></dd>
           </dl>
@@ -750,6 +755,7 @@ rocket('descent-run', {
             <dt><span class="d-holder">H G S C</span></dt><dd>a holder: Hollin, Grue, Sethra, Corve</dd>
             <dt><span class="d-bones">w</span></dt><dd>your wrack, holding what it carried</dd>
             <dt><span class="d-item">$ ! ) [ * ?</span></dt><dd>marks and things to take</dd>
+            <dt><span class="d-packing">%</span></dt><dd>the packing: ash in the walls, which a pick goes through</dd>
             <dt><span class="d-low">.</span></dt><dd>low ground, which floods first</dd>
             <dt><span class="d-water">~</span> <span class="d-deep">~</span></dt><dd>water, and water over your head</dd>
             <dt><span class="d-grey">.</span></dt><dd>the grey</dd>
@@ -786,6 +792,7 @@ rocket('descent-run', {
             <button class="descent__btn" type="button" data-class:is-on="$$meaning" data-on:click="@cmd('mean')">Mean it <kbd>m</kbd></button>
             <button class="descent__btn" type="button" data-class:is-on="$$pending === 'name'" data-on:click="@cmd('name')">Name <kbd>x</kbd></button>
             <button class="descent__btn" type="button" data-on:click="@cmd('stop')">Stop <kbd>s</kbd></button>
+            <button class="descent__btn" type="button" data-class:is-on="$$pending === 'dig'" data-on:click="@cmd('dig')">Dig <kbd>D</kbd></button>
             <button class="descent__btn" type="button" data-on:click="@cmd('rope')">Rope up <kbd>r</kbd></button>
           </div>
         </div>

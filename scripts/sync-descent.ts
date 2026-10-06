@@ -50,6 +50,12 @@ const POOLS = [
   'title-won',
   'title-lost',
   'linelord-won',
+  'dig',
+  'stores',
+  'bricked',
+  'strongroom',
+  'kings-way',
+  'in-wall',
 ] as const
 const CREATURES = [
   'pickers',

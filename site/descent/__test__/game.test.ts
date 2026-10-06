@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { ITEMS } from '../core/content'
+import { isIron } from '../core/content'
 import {
   act,
   armourClass,
@@ -17,7 +17,7 @@ import {
   versus,
 } from '../core/game'
 import { firstWorld, HOLD_TITLES, withTaken } from '../core/holds'
-import { at, generate, index, spawn } from '../core/level'
+import { at, generate, index, set, spawn } from '../core/level'
 import { makeRng } from '../core/rng'
 import type { Command, Game } from '../core/types'
 import { holders, pools } from '../lore'
@@ -698,8 +698,7 @@ describe('old iron and new', () => {
     for (let seed = 1; seed <= 30; seed++) {
       const level = generate(1 + (seed % 9), makeRng(seed), () => n++)
       for (const { item } of level.items) {
-        const use = ITEMS[item.kind]?.use
-        expect(item.old === true).toBe(use === 'weapon' || use === 'armour')
+        expect(item.old === true).toBe(isIron(item.kind))
       }
     }
   })
@@ -843,6 +842,107 @@ describe('what iron is worth', () => {
     expect(offers(g).find((o) => o.key === 'buy:leather')?.detail).toBe(
       'armour 2 · the same as yours',
     )
+  })
+})
+
+describe('digging', () => {
+  const dig: Command = { type: 'dig', dir: 'e' }
+  const WALLED = ['#######', '#<.@%.#', '#######']
+
+  it('takes a pick, and goes through the packing and nothing else', () => {
+    const g = gameOn(WALLED, 1)
+    expect(run(g, dig).lines).toEqual(['You have nothing to dig with.'])
+    g.player.pack.push({ kind: 'pick' })
+    expect(run(g, { type: 'dig', dir: 'n' }).lines).toEqual([
+      'That is stone. A pick will not go through it.',
+    ])
+    expect(run(g, { type: 'dig', dir: 'w' }).lines).toEqual([
+      'There is nothing there to dig.',
+    ])
+    const once = run(g, dig)
+    expect(once.lines).toContain(pools.dig[0])
+    expect(at(once.game.level, 4, 1)).toBe('%')
+    expect(once.game.turn).toBe(1)
+    const through = run(once.game, dig, dig)
+    expect(at(through.game.level, 4, 1)).toBe('.')
+    expect(through.lines).toContain('The packing gives.')
+    expect(run(through.game, dig).lines).toEqual([
+      'There is nothing there to dig.',
+    ])
+  })
+
+  it('gives up what was hidden in the wall', () => {
+    const g = gameOn(WALLED, 1)
+    g.player.pack.push({ kind: 'pick' })
+    g.level.hidden = [{ x: 4, y: 1, item: { kind: 'ring' } }]
+    const out = run(g, dig, dig, dig)
+    expect(out.game.level.items).toContainEqual({
+      x: 4,
+      y: 1,
+      item: { kind: 'ring' },
+    })
+    expect(out.game.level.hidden).toEqual([])
+    expect(out.lines).toContain(pools['in-wall'][0])
+  })
+
+  it('says what room it has broken into', () => {
+    for (const [depth, pool] of [
+      [1, 'stores'],
+      [4, 'bricked'],
+      [7, 'strongroom'],
+    ] as const) {
+      const g = gameOn(['########', '#<.@%..#', '########'], depth)
+      g.player.pack.push({ kind: 'pick' })
+      g.level.vault = { x: 5, y: 1, w: 2, h: 1 }
+      expect(run(g, dig, dig, dig).lines).toContain(pools[pool][0])
+    }
+  })
+
+  it('wears a new pick down until it will not dig, and an old one never, though it digs slower', () => {
+    let g = gameOn(WALLED, 1)
+    g.player.pack.push({ kind: 'pick' })
+    for (let i = 0; i < 300 && (g.player.pack[2]?.wear ?? 8) > 0; i++) {
+      set(g.level, 4, 1, '%')
+      g = act(g, dig).game
+    }
+    expect(g.player.pack[2]?.wear).toBe(0)
+    set(g.level, 4, 1, '%')
+    expect(run(g, dig).lines).toEqual([
+      'The pick is blunt. Barr can put an edge back on it.',
+    ])
+    const old = gameOn(WALLED, 1)
+    old.player.pack.push({ kind: 'pick', old: true })
+    const three = run(old, dig, dig, dig)
+    expect(at(three.game.level, 4, 1)).toBe('%')
+    expect(at(run(three.game, dig).game.level, 4, 1)).toBe('.')
+  })
+
+  it("opens the king's way, which lets you out with the ledger whatever the tide", () => {
+    const g = gameOn(['#####', '#^%@#', '#####'], 10)
+    g.level.kingsWay = { x: 1, y: 1 }
+    g.player.pack.push({ kind: 'pick' }, { kind: 'ledger' })
+    g.tide = 116
+    const open = run(
+      g,
+      { type: 'dig', dir: 'w' },
+      { type: 'dig', dir: 'w' },
+      { type: 'dig', dir: 'w' },
+    )
+    expect(open.lines).toContain(pools['kings-way'][0])
+    const out = run(open.game, west, west)
+    expect(out.game.over?.ending).toBe('escaped')
+  })
+
+  it("is sold at Barr's, with an edge he can put back on", () => {
+    const g = gameOn(ROOM, 0)
+    g.shop = 'barr'
+    g.player.marks = 100
+    expect(offers(g).some((o) => o.key === 'buy:pick')).toBe(true)
+    g.player.pack = [{ kind: 'pick', wear: 4 }]
+    const mend = offers(g).find((o) => o.key === 'mend:pick')
+    expect(mend?.price).toBe(10)
+    const out = run(g, { type: 'shop', key: 'mend:pick' })
+    expect(out.game.player.pack[0]).toEqual({ kind: 'pick' })
   })
 })
 
@@ -1289,13 +1389,13 @@ describe('Wrackhead', () => {
     const list = offers(forge.game)
     expect(
       list.filter((o) => o.key.startsWith('buy:')).map((o) => o.hotkey),
-    ).toEqual(['1', '2', '3', '4', '5', '6'])
+    ).toEqual(['1', '2', '3', '4', '5', '6', '7'])
     const sells = list.filter((o) => o.key.startsWith('sell:'))
     expect(sells).toHaveLength(12)
     expect(sells.map((o) => o.hotkey).join('')).toBe('abcdefghijkl')
     expect(sells[12 - 1]?.key).toBe('sell:11')
     expect(offerFor(forge.game, 'l')?.key).toBe('sell:11')
-    expect(offerFor(forge.game, '7')).toBeUndefined()
+    expect(offerFor(forge.game, '8')).toBeUndefined()
 
     const ruun = atShop('3', (g) => {
       g.player.pack = [

@@ -34,6 +34,7 @@ import {
   at,
   freeCell,
   generate,
+  index,
   monsterAt,
   SHOPS,
   set,
@@ -148,7 +149,7 @@ export function itemName(game: Game, item: Item): string {
   if (item.old) return `${kind.name} (Kell iron)`
   const wear = item.wear ?? 8
   if (wear === 0)
-    return `${kind.name} (${kind.use === 'weapon' ? 'blunt' : 'split'})`
+    return `${kind.name} (${kind.use === 'armour' ? 'split' : 'blunt'})`
   return wear < 8 ? `${kind.name} (worn)` : kind.name
 }
 
@@ -699,7 +700,10 @@ function roof(game: Game, rng: Rng, lines: string[]): void {
     return
   }
   const ph = phase(game.tide)
-  if (ph === 'turning' || ph === 'flood') {
+  // The king's way goes up above the water, whatever it is doing.
+  const way = game.level.kingsWay
+  const above = way !== undefined && way.x === p.x && way.y === p.y
+  if (!above && (ph === 'turning' || ph === 'flood')) {
     lines.push('The water is over the gap. Wait for low water.')
     return
   }
@@ -847,6 +851,7 @@ export function verbOf(item: Item): string {
     vial: 'Drink',
     page: 'Read',
     ledger: 'Read',
+    pick: 'Dig',
     trinket: 'Look',
   }
   return verbs[ITEMS[item.kind]?.use ?? ''] ?? 'Use'
@@ -917,6 +922,9 @@ function use(game: Game, rng: Rng, index: number, lines: string[]): boolean {
     case 'ledger':
       lines.push('It counts lines and days. It is not a measure of worth.')
       return false
+    case 'pick':
+      lines.push('Dig with D, and a direction. It goes through the packing.')
+      return false
     default:
       lines.push(`${cap(itemName(game, item))}. Someone will pay for it.`)
       return false
@@ -937,7 +945,7 @@ export interface Offer {
   /**
    * The key that takes it: the letter of the thing in the pack when the offer
    * is about something carried, so that `c` sells what `e c` would use, and a
-   * number for what the place itself has. No place has more than nine.
+   * number for what the place itself has, 0 for the tenth. No place has more.
    */
   hotkey: string
 }
@@ -951,7 +959,8 @@ export function offers(game: Game): Offer[] {
   let n = 0
   return stock(game).map(({ item, ...o }) => ({
     ...o,
-    hotkey: item === undefined ? String(++n) : letter(item),
+    // Nine numbers, and the tenth is 0, as on the keyboard.
+    hotkey: item === undefined ? String(++n % 10) : letter(item),
   }))
 }
 
@@ -960,7 +969,7 @@ export function offerFor(game: Game, key: string): Offer | undefined {
   return offers(game).find((o) => o.hotkey === key)
 }
 
-const BARR_STOCK = ['knife', 'hook', 'spear', 'axe', 'leather', 'mail']
+const BARR_STOCK = ['knife', 'hook', 'spear', 'axe', 'leather', 'mail', 'pick']
 const LOFT_STOCK = ['oil', 'skin', 'coil', 'salt']
 
 export function sellPrice(game: Game, item: Item): number {
@@ -993,7 +1002,9 @@ function stock(game: Game): Stock[] {
           label:
             slot === 'weapon'
               ? `Put an edge back on ${ITEMS[p.weapon ?? '']?.name}`
-              : `Mend ${ITEMS[p.armour ?? '']?.name}`,
+              : slot === 'pick'
+                ? `Put an edge back on ${ITEMS.pick?.name}`
+                : `Mend ${ITEMS[p.armour ?? '']?.name}`,
           price,
           enabled: afford(price),
         })),
@@ -1069,15 +1080,28 @@ function stock(game: Game): Stock[] {
   }
 }
 
-/** What Barr can mend: new iron in hand or worn that has worn, at two marks a step and two for the fire. */
-function mending(game: Game): { slot: 'weapon' | 'armour'; price: number }[] {
+/** The first new pick in the pack that has worn, if any. */
+const wornPick = (game: Game) =>
+  game.player.pack.findIndex(
+    (i) => i.kind === 'pick' && !i.old && (i.wear ?? 8) < 8,
+  )
+
+/**
+ * What Barr can mend: new iron in hand, worn or carried as a pick that has
+ * worn, at two marks a step and two for the fire.
+ */
+function mending(
+  game: Game,
+): { slot: 'weapon' | 'armour' | 'pick'; price: number }[] {
   const p = game.player
-  const out: { slot: 'weapon' | 'armour'; price: number }[] = []
+  const out: { slot: 'weapon' | 'armour' | 'pick'; price: number }[] = []
   const price = (die: Die) => 2 + 2 * (8 - die)
   if (p.weapon && isIron(p.weapon) && !p.oldWeapon && (p.edge ?? 8) < 8)
     out.push({ slot: 'weapon', price: price(p.edge ?? 8) })
   if (p.armour && isIron(p.armour) && !p.oldArmour && (p.fit ?? 8) < 8)
     out.push({ slot: 'armour', price: price(p.fit ?? 8) })
+  const pick = p.pack[wornPick(game)]
+  if (pick) out.push({ slot: 'pick', price: price(pick.wear ?? 8) })
   return out
 }
 
@@ -1140,9 +1164,12 @@ function shopCommand(game: Game, rng: Rng, key: string, lines: string[]): void {
   } else if (verb === 'mend') {
     p.marks -= offer.price
     if (arg === 'weapon') p.edge = 8
-    else p.fit = 8
+    else if (arg === 'pick') {
+      const pick = p.pack[wornPick(game)]
+      if (pick) delete pick.wear
+    } else p.fit = 8
     lines.push(
-      arg === 'weapon'
+      arg !== 'armour'
         ? 'Barr puts it to the stone until it will shave the hair off your arm.'
         : 'Barr hammers it back into shape, and it holds.',
     )
@@ -1475,6 +1502,91 @@ function endTurn(game: Game, rng: Rng, lines: string[]): void {
 }
 
 // ---------------------------------------------------------------------------
+// The packing
+// ---------------------------------------------------------------------------
+
+/** Strokes a cell of packing takes: three with new iron, four with Kell's. */
+const strokes = (old: boolean) => (old ? 4 : 3)
+
+/** What a shut room is called at each depth, by the line said on breaking in. */
+const SHUT: Record<1 | 2 | 3, Pool> = {
+  1: 'stores',
+  2: 'bricked',
+  3: 'strongroom',
+}
+
+function dig(game: Game, rng: Rng, dir: Dir, lines: string[]): boolean {
+  const p = game.player
+  const level = game.level
+  const picks = p.pack.filter((i) => i.kind === 'pick')
+  if (picks.length === 0) {
+    lines.push('You have nothing to dig with.')
+    return false
+  }
+  const [dx, dy] = DIRS[dir]
+  const x = p.x + dx
+  const y = p.y + dy
+  const tile = at(level, x, y)
+  if (tile === '#') {
+    lines.push('That is stone. A pick will not go through it.')
+    return false
+  }
+  if (tile !== '%') {
+    lines.push('There is nothing there to dig.')
+    return false
+  }
+  const pick = picks.find((i) => i.old) ?? picks.find((i) => (i.wear ?? 8) > 0)
+  if (!pick) {
+    lines.push('The pick is blunt. Barr can put an edge back on it.')
+    return false
+  }
+  const i = index(level, x, y)
+  const dug = level.dug ?? {}
+  level.dug = dug
+  if (dug[i] === undefined) lines.push(say(rng, 'dig'))
+  dug[i] = (dug[i] ?? 0) + 1
+  if (!pick.old && rng.chance(0.2)) {
+    const wear = rollDie(rng, pick.wear ?? 8)
+    if (wear !== (pick.wear ?? 8))
+      lines.push(
+        wear === 0
+          ? 'The pick is blunt. Barr can put an edge back on it.'
+          : 'The pick loses some of its edge.',
+      )
+    pick.wear = wear
+  }
+  if ((dug[i] ?? 0) < strokes(pick.old === true)) return true
+  delete dug[i]
+  set(level, x, y, '.')
+  lines.push('The packing gives.')
+  const found = (level.hidden ?? []).find((h) => h.x === x && h.y === y)
+  if (found) {
+    level.hidden = (level.hidden ?? []).filter((h) => h !== found)
+    level.items.push({ x, y, item: found.item })
+    lines.push(say(rng, 'in-wall'))
+  }
+  const next = (r: { x: number; y: number; w: number; h: number }) =>
+    Object.values(DIRS).some(
+      ([ax, ay]) =>
+        x + ax >= r.x &&
+        x + ax < r.x + r.w &&
+        y + ay >= r.y &&
+        y + ay < r.y + r.h,
+    )
+  const tier = tierOf(game.depth)
+  if (level.vault && !level.opened && tier < 4 && next(level.vault)) {
+    level.opened = true
+    lines.push(say(rng, SHUT[tier as 1 | 2 | 3]))
+  }
+  const way = level.kingsWay
+  if (way && !level.opened && next({ ...way, w: 1, h: 1 })) {
+    level.opened = true
+    lines.push(say(rng, 'kings-way'))
+  }
+  return true
+}
+
+// ---------------------------------------------------------------------------
 // The one way in
 // ---------------------------------------------------------------------------
 
@@ -1580,6 +1692,8 @@ function command(game: Game, rng: Rng, cmd: Command, lines: string[]): boolean {
       lines.push('You tell the water to stop, and mean it. It stops.')
       return true
     }
+    case 'dig':
+      return dig(game, rng, cmd.dir, lines)
     case 'rope': {
       if (game.depth === 0) return false
       if (p.held !== null) {

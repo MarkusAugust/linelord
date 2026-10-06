@@ -36,6 +36,12 @@ export type Pool =
   | 'title-won'
   | 'title-lost'
   | 'linelord-won'
+  | 'dig'
+  | 'stores'
+  | 'bricked'
+  | 'strongroom'
+  | 'kings-way'
+  | 'in-wall'
 export type CreatureId =
   | 'pickers'
   | 'firstcloaks'
@@ -174,6 +180,20 @@ export const pools: Record<Pool, readonly string[]> = {
     'Your name is a line further down now.',
   ],
   'linelord-won': ['You hold more than I do. Draw your own line.'],
+  dig: [
+    'The ash comes away in plates. Forty years of water packed it; it gives in forty strokes.',
+  ],
+  stores: [
+    "Bonded stores. The seals are the quay-master's. Nobody came to collect.",
+  ],
+  bricked: ['Somebody bricked this room up from the inside.'],
+  strongroom: [
+    'A strongroom. The ledgers here counted something other than lines.',
+  ],
+  'kings-way': ['A stair nobody was meant to know about. It goes up.'],
+  'in-wall': [
+    'Something in the wall. It was put there to be found, by someone who never came back.',
+  ],
 }
 
 export const opening: readonly string[] = [

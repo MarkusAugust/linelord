@@ -228,6 +228,81 @@ describe('the ground', () => {
   })
 })
 
+describe('the packing', () => {
+  /** Every cell a body can reach from the stair up, with or without digging. */
+  const reach = (level: ReturnType<typeof generate>, dig: boolean) => {
+    const seen = new Set<number>([index(level, level.up.x, level.up.y)])
+    const q = [level.up]
+    while (q.length > 0) {
+      const p = q.shift() as { x: number; y: number }
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ] as const) {
+        const x = p.x + dx
+        const y = p.y + dy
+        const t = at(level, x, y)
+        const i = index(level, x, y)
+        if (seen.has(i)) continue
+        if (!(walkable(t) || t === '+' || t === 'S' || (dig && t === '%')))
+          continue
+        seen.add(i)
+        q.push({ x, y })
+      }
+    }
+    return seen
+  }
+
+  it('packs some walls on every floor of Kell, and shuts a room behind it on most', () => {
+    let rooms = 0
+    for (let seed = 1; seed <= 40; seed++) {
+      const depth = 1 + (seed % 9)
+      const level = generate(depth, makeRng(seed), ids())
+      expect(level.tiles.join('').includes('%')).toBe(true)
+      if (!level.vault) continue
+      rooms++
+      const v = level.vault
+      const cell = index(level, v.x, v.y)
+      expect(at(level, v.x, v.y)).toBe('.')
+      expect(reach(level, false).has(cell)).toBe(false)
+      expect(reach(level, true).has(cell)).toBe(true)
+      expect(
+        level.items.some(
+          (i) => i.x >= v.x && i.x < v.x + v.w && i.y >= v.y && i.y < v.y + v.h,
+        ),
+      ).toBe(true)
+    }
+    expect(rooms).toBeGreaterThan(30)
+  })
+
+  it('hides things in the packing itself', () => {
+    let hidden = 0
+    for (let seed = 1; seed <= 30; seed++) {
+      const level = generate(1 + (seed % 9), makeRng(seed), ids())
+      for (const h of level.hidden ?? []) {
+        expect(at(level, h.x, h.y)).toBe('%')
+        hidden++
+      }
+    }
+    expect(hidden).toBeGreaterThan(20)
+  })
+
+  it("walls up the king's way behind the throne, going up", () => {
+    const level = generate(10, makeRng(3), ids())
+    const way = level.kingsWay
+    expect(way).toBeDefined()
+    expect(at(level, way?.x ?? 0, way?.y ?? 0)).toBe('^')
+    expect(
+      reach(level, false).has(index(level, way?.x ?? 0, way?.y ?? 0)),
+    ).toBe(false)
+    expect(reach(level, true).has(index(level, way?.x ?? 0, way?.y ?? 0))).toBe(
+      true,
+    )
+  })
+})
+
 describe('Wrackhead, drawn', () => {
   it('is square, with every door in the south wall where walking past does not open it', () => {
     const t = town()

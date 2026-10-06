@@ -7,7 +7,9 @@
  * one, `<` and `>` the stairs. In Wrackhead `~` is the sea and the digits are
  * the doors of the seven places on the shingle. In the hall, `K` is the king,
  * `_` the ledger's stand, `O` the drain, `&` the man standing in it, and `^`
- * the gap in the roof. `S` is Sarn, wherever Sarn has chosen to be.
+ * the gap in the roof. `S` is Sarn, wherever Sarn has chosen to be. `%` is
+ * the packing: ash the water packed into Kell's walls, which a pick goes
+ * through and nothing else does.
  */
 import { ITEMS, isIron, MONSTERS, tierOf } from './content'
 import type { Rng } from './rng'
@@ -17,7 +19,7 @@ export const W = 56
 export const H = 20
 
 const OPEN = new Set(['.', "'", '<', '>', '^', '_'])
-const OPAQUE = new Set(['#', '+', '~'])
+const OPAQUE = new Set(['#', '+', '~', '%'])
 
 export const at = (level: Level, x: number, y: number): string =>
   x < 0 || y < 0 || x >= level.w || y >= level.h
@@ -369,5 +371,134 @@ export function generate(depth: number, rng: Rng, ids: Ids): Level {
   }
 
   populate(level, rng, rooms, start, ids)
+  if (depth < 10) {
+    packThinWalls(level, rng)
+    packHidden(level, rng, rooms)
+    shutRoom(level, rng)
+  } else {
+    const great = rooms.find((r) => r.w === 32)
+    if (great) wallUpKingsWay(level, great)
+  }
   return level
+}
+
+const SIDES = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+] as const
+
+const floorAt = (level: Level, x: number, y: number) => at(level, x, y) === '.'
+
+/** A wall between two floors, one stone thick, is often only packing: a way through for a pick. */
+function packThinWalls(level: Level, rng: Rng): void {
+  const thin: Pos[] = []
+  for (let y = 1; y < level.h - 1; y++)
+    for (let x = 1; x < level.w - 1; x++)
+      if (
+        at(level, x, y) === '#' &&
+        ((floorAt(level, x - 1, y) && floorAt(level, x + 1, y)) ||
+          (floorAt(level, x, y - 1) && floorAt(level, x, y + 1)))
+      )
+        thin.push({ x, y })
+  for (let i = 0; i < 3 && thin.length > 0; i++) {
+    const [p] = thin.splice(rng.int(thin.length), 1)
+    if (p) set(level, p.x, p.y, '%')
+  }
+}
+
+/** Something packed into the wall of a room: marks, or whatever the depth has. */
+function packHidden(level: Level, rng: Rng, rooms: Room[]): void {
+  const walls: Pos[] = []
+  for (const r of rooms)
+    for (let x = r.x; x < r.x + r.w; x++)
+      for (const y of [r.y - 1, r.y + r.h])
+        if (y > 0 && y < level.h - 1 && at(level, x, y) === '#')
+          walls.push({ x, y })
+  level.hidden = []
+  const count = 1 + rng.int(3)
+  for (let i = 0; i < count && walls.length > 0; i++) {
+    const [p] = walls.splice(rng.int(walls.length), 1)
+    if (!p) continue
+    set(level, p.x, p.y, '%')
+    const item = rng.chance(0.5)
+      ? { kind: 'marks', amount: rng.dice(3, 6) * (2 + level.depth) }
+      : loot(rng, level.depth)
+    level.hidden.push({ ...p, item })
+  }
+}
+
+/**
+ * A room the packing shut: solid stone all round, one way in through packing
+ * from the nearest floor, and what was left in it still there.
+ */
+function shutRoom(level: Level, rng: Rng): void {
+  for (let tries = 0; tries < 300; tries++) {
+    const w = 2 + rng.int(3)
+    const h = 2 + rng.int(2)
+    const x = 2 + rng.int(level.w - w - 4)
+    const y = 2 + rng.int(level.h - h - 4)
+    let solid = true
+    for (let yy = y - 1; yy <= y + h && solid; yy++)
+      for (let xx = x - 1; xx <= x + w && solid; xx++)
+        if (at(level, xx, yy) !== '#') solid = false
+    if (!solid) continue
+    const way = wayIn(level, rng, { x, y, w, h, elev: 1 })
+    if (!way) continue
+    for (const p of way) set(level, p.x, p.y, '%')
+    carve(level, { x, y, w, h, elev: 1 })
+    level.vault = { x, y, w, h }
+    const count = 2 + rng.int(2)
+    for (let i = 0; i < count; i++)
+      level.items.push({
+        x: x + rng.int(w),
+        y: y + rng.int(h),
+        item: loot(rng, level.depth),
+      })
+    level.items.push({
+      x: x + rng.int(w),
+      y: y + rng.int(h),
+      item: { kind: 'marks', amount: rng.dice(3, 6) * (3 + level.depth) },
+    })
+    return
+  }
+}
+
+/** A straight way out of a room through stone to the nearest floor, if one is near. */
+function wayIn(level: Level, rng: Rng, r: Room): Pos[] | null {
+  const first = rng.int(SIDES.length)
+  const starts = [...SIDES.slice(first), ...SIDES.slice(0, first)]
+  for (const [dx, dy] of starts) {
+    const from = {
+      x: dx > 0 ? r.x + r.w - 1 : dx < 0 ? r.x : r.x + rng.int(r.w),
+      y: dy > 0 ? r.y + r.h - 1 : dy < 0 ? r.y : r.y + rng.int(r.h),
+    }
+    const path: Pos[] = []
+    for (let step = 1; step <= 7; step++) {
+      const x = from.x + dx * step
+      const y = from.y + dy * step
+      if (x <= 0 || y <= 0 || x >= level.w - 1 || y >= level.h - 1) break
+      if (floorAt(level, x, y)) return path.length > 0 ? path : null
+      if (at(level, x, y) !== '#') break
+      path.push({ x, y })
+    }
+  }
+  return null
+}
+
+/** Behind the throne, a stair bricked over to look like wall, going up toward the roof. */
+function wallUpKingsWay(level: Level, great: Room): void {
+  const c = centre(great)
+  for (const x of [c.x, c.x - 1, c.x - 2, c.x + 2]) {
+    const cells = [1, 2, 3].map((k) => ({ x, y: great.y - k }))
+    if (!cells.every((p) => p.y > 0 && at(level, p.x, p.y) === '#')) continue
+    const [first, second, top] = cells
+    if (!first || !second || !top) continue
+    set(level, first.x, first.y, '%')
+    set(level, second.x, second.y, '%')
+    set(level, top.x, top.y, '^')
+    level.kingsWay = top
+    return
+  }
 }
