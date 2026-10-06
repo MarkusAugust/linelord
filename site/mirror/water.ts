@@ -227,8 +227,22 @@ uniform sampler2D u_plate;
 uniform sampler2D u_sand;
 
 // The engraving's ink at a point: 1 where the burin cut, 0 where it did not.
+// Read a little soft (a mip bias), so lines that move by less than a pixel
+// do not flicker.
 float ink(vec2 uv) {
-  return texture2D(u_engraving, uv).r;
+  return smoothstep(0.15, 0.8, texture2D(u_engraving, uv, 0.5).r);
+}
+
+float hash1(float x) {
+  return fract(sin(x * 127.1) * 43758.5453);
+}
+
+// A soft, slow noise along the beach, for the ragged edge of the wash.
+float ragged(float x) {
+  float i = floor(x);
+  float f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(hash1(i), hash1(i + 1.0), f);
 }
 
 void main() {
@@ -241,12 +255,24 @@ void main() {
   float row = u_shore > 0.5
     ? ${SHORE_ROW.toFixed(3)} + (u_surface - p.y) / h
     : 0.45 + clamp((u_surface - p.y) / (h * 1.6), 0.0, 0.5);
-  float sea = u_shore > 0.5 ? smoothstep(${(SHORE_ROW - 0.03).toFixed(3)}, ${(SHORE_ROW + 0.04).toFixed(3)}, row) : 1.0;
-  vec2 uv = vec2(p.x / (h * u_aspect), row);
+  // The wash: the sea's edge runs up the sand and back, slowly, ragged along
+  // the beach, and the sand and the sea fade into each other across it.
+  float wash = (sin(u_t * 0.35) * 0.012 + (ragged(p.x / 90.0 + u_t * 0.05) - 0.5) * 0.03) * u_shore;
+  float sea = u_shore > 0.5
+    ? smoothstep(${(SHORE_ROW - 0.08).toFixed(3)}, ${(SHORE_ROW + 0.07).toFixed(3)}, row + wash)
+    : 1.0;
+  // One engraving across the whole width: stretched a little where the window
+  // is wider than it, and cut from the middle where it is narrower. It never
+  // repeats, so it never shows a seam.
+  float tile = h * u_aspect;
+  float ux = u_res.x >= tile ? p.x / u_res.x : 0.5 + (p.x - u_res.x * 0.5) / tile;
+  vec2 uv = vec2(ux, row);
 
-  // Only the sea moves, and only as the engraving drew it: its own waves
-  // drift slowly along the shore. Nothing is laid over them.
-  vec2 drift = vec2(u_t * 0.004, 0.0) * sea;
+  // The swell comes in toward the shore: each row rises and falls a little,
+  // later than the row nearer the eye, so the crests walk up the beach and
+  // draw back. Small and slow, and nothing moves sideways.
+  float near = clamp((row - ${SHORE_ROW.toFixed(3)}) / 0.6, 0.0, 1.0);
+  vec2 drift = vec2(0.0, sin(u_t * 0.6 - row * 22.0) * 0.006 * (0.35 + near)) * sea;
 
   // Rings and the whirlpool bend the cut lines where the water is touched.
   vec2 bend = vec2(0.0);
@@ -270,27 +296,21 @@ void main() {
   uv.y = clamp(uv.y, 0.002, 0.998);
 
   // The cut, and its slope, from which the light is worked out.
-  float px = 1.0 / (h * u_aspect);
   float g = ink(uv) * u_textures;
   vec4 drawn = texture2D(u_sand, p / u_res);
   float lineCut = drawn.a * (1.0 - sea) * u_shore;
   g = max(g, lineCut);
-  float gx = ink(uv + vec2(px, 0.0)) - ink(uv - vec2(px, 0.0));
-  float gy = ink(uv + vec2(0.0, px)) - ink(uv - vec2(0.0, px));
-  vec3 n = normalize(vec3(gx * 2.2, -gy * 2.2, 1.0));
 
-  // A light passing slowly over the plate.
-  vec3 light = normalize(vec3(cos(u_t * 0.12) * 0.7, 0.55 + sin(u_t * 0.09) * 0.2, 0.7));
-  float lit = max(dot(n, light), 0.0);
-  float shine = pow(max(dot(reflect(-light, n), vec3(0.0, 0.0, 1.0)), 0.0), 18.0);
-
-  vec3 steel = texture2D(u_plate, p / 640.0).rgb;
+  // No glints in the grooves: they are simply cut, dark. A broad, soft sheen
+  // passes slowly over the plate, warm, the way light moves on old metal.
+  vec3 steel = texture2D(u_plate, p / 640.0, 1.0).rgb;
   vec3 plate = mix(steel * 0.8, mix(${glsl(PALETTE.paper)}, steel * 1.7, 0.18), u_light);
-  vec3 cut = mix(plate * 0.22, ${glsl(PALETTE.ink)}, u_light);
-  vec3 col = mix(plate, cut, g * 0.92);
-  col *= 0.82 + 0.32 * lit;
-  col += mix(${glsl(PALETTE.gold)}, ${glsl(PALETTE.dim)}, u_light) * shine * (0.25 + g) * 1.3;
-  col += ${glsl(PALETTE.gold)} * max(lift, 0.0) * 0.25 * sea;
+  vec3 cut = mix(plate * 0.18, ${glsl(PALETTE.ink)}, u_light);
+  vec3 col = mix(plate * 1.05, cut, g * 0.9);
+  float across = p.x / u_res.x;
+  float sheen = exp(-pow((across - fract(u_t * 0.015) * 1.6 + 0.3) * 2.6, 2.0));
+  col += mix(${glsl(PALETTE.gold)}, ${glsl(PALETTE.dim)}, u_light) * sheen * (1.0 - g) * 0.22;
+  col += ${glsl(PALETTE.gold)} * max(lift, 0.0) * 0.2 * sea;
   col *= 1.0 - u_hold * exp(-hr / 70.0) * 0.9;
   col = mix(col, ${glsl(PALETTE.night)}, u_dark);
 

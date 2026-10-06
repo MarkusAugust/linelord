@@ -136,8 +136,9 @@ function water(canvas: HTMLCanvasElement): Water | null {
   const inkTex = sheet(0, 'u_engraving')
   const plateTex = sheet(1, 'u_plate')
   const sandTex = sheet(2, 'u_sand')
-  /* The engraving and the plate repeat along the beach, and are drawn smaller
-     than they are made: both get mipmaps, so the fine lines do not shimmer. */
+  /* The plate repeats; the engraving is drawn once, clamped at its edges. Both
+     are drawn smaller than they are made, and get mipmaps so the fine lines
+     do not shimmer. */
   const tiled = (
     unit: number,
     tex: WebGLTexture | null,
@@ -147,7 +148,11 @@ function water(canvas: HTMLCanvasElement): Water | null {
     gl.activeTexture(gl.TEXTURE0 + unit)
     gl.bindTexture(gl.TEXTURE_2D, tex)
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+    gl.texParameteri(
+      gl.TEXTURE_2D,
+      gl.TEXTURE_WRAP_S,
+      clampT ? gl.CLAMP_TO_EDGE : gl.REPEAT,
+    )
     gl.texParameteri(
       gl.TEXTURE_2D,
       gl.TEXTURE_WRAP_T,
@@ -224,8 +229,8 @@ function picture(name: string): Promise<HTMLImageElement> {
 /**
  * The engraving as the shader reads it: ink in the red channel (1 where the
  * burin cut), stretched to a power of two so it can repeat along the beach,
- * the thin rule at its foot cut off, and its two ends blended into each other
- * so the repeat does not show a seam.
+ * and the thin rule at its foot cut off. It is drawn once across the width,
+ * so it never repeats.
  */
 function inkSheet(image: HTMLImageElement): HTMLCanvasElement {
   const sheet = document.createElement('canvas')
@@ -237,7 +242,6 @@ function inkSheet(image: HTMLImageElement): HTMLCanvasElement {
   ctx.drawImage(image, 0, 0, image.naturalWidth, keep, 0, 0, INK_W, INK_H)
   const data = ctx.getImageData(0, 0, INK_W, INK_H)
   const px = data.data
-  const seam = 160
   const lum = (i: number) =>
     0.299 * (px[i] ?? 255) +
     0.587 * (px[i + 1] ?? 255) +
@@ -246,12 +250,7 @@ function inkSheet(image: HTMLImageElement): HTMLCanvasElement {
   for (let y = 0; y < INK_H; y++) {
     for (let x = 0; x < INK_W; x++) {
       const i = (y * INK_W + x) * 4
-      let v = 255 - lum(i)
-      if (x >= INK_W - seam) {
-        const t = (x - (INK_W - seam)) / seam
-        const j = (y * INK_W + (x - (INK_W - seam))) * 4
-        v = v * (1 - t) + (255 - lum(j)) * t
-      }
+      const v = 255 - lum(i)
       out[i] = v
       out[i + 1] = v
       out[i + 2] = v

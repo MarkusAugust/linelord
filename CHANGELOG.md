@@ -24,8 +24,9 @@ because the earlier answer was wrong.
   Rocket bundle, which is free as of Datastar 1.0.4 and includes the rest of
   Datastar, so it is still one script.
 - The page ends in the sea, engraved in steel: a copperplate engraving of a
-  shore cut into a dark plate, its grooves catching a slow light in the page's
-  gold, the sea's own waves drifting along the shore while the sand stands still, at a height that
+  shore cut into a dark plate, a slow warm sheen passing over it, the swell
+  rolling in toward the beach while the sand stands still, and the wash running
+  up the sand and back, at a height that
   follows a real tide on the clock. Between the page and the water lies a strip of wet
   sand with a line drawn across it: Jarn's, the Linelord of the Gallowmark
   canon. The flood covers it and the ebb gives it back, drawn again along the
