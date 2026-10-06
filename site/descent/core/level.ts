@@ -60,12 +60,11 @@ const TOWN = [
   '########################################',
   '#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#',
   '#~~~~~~~~~~~~~~~~~~>~~~~~~~~~~~~~~~~~~~#',
-  '#.................. ...................#',
-  '#......................................#',
-  '#..1....2....3....4....5....6....7.....#',
   '#......................................#',
   '#......................................#',
-  '########################################',
+  '#......................................#',
+  '#......................................#',
+  '###1####2####3####4####5####6####7######',
 ]
 
 function blank(depth: number, w: number, h: number, fill: string): Level {
@@ -87,7 +86,7 @@ function blank(depth: number, w: number, h: number, fill: string): Level {
 /** Wrackhead: the shingle, the sea, and the top of the Quaysteps. */
 export function town(): Level {
   const level = blank(0, TOWN[0]?.length ?? 40, TOWN.length, '#')
-  level.tiles = TOWN.map((row) => row.replace(' ', '.'))
+  level.tiles = [...TOWN]
   level.seen = level.seen.map(() => true)
   level.down = { x: 19, y: 2 }
   level.up = { x: 19, y: 3 }
@@ -111,7 +110,10 @@ const inside = (r: Room, x: number, y: number) =>
   x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h
 
 const overlaps = (a: Room, b: Room) =>
-  a.x - 1 < b.x + b.w && a.x + a.w + 1 > b.x && a.y - 1 < b.y + b.h && a.y + a.h + 1 > b.y
+  a.x - 1 < b.x + b.w &&
+  a.x + a.w + 1 > b.x &&
+  a.y - 1 < b.y + b.h &&
+  a.y + a.h + 1 > b.y
 
 function carve(level: Level, r: Room): void {
   for (let y = r.y; y < r.y + r.h; y++)
@@ -301,7 +303,8 @@ function furnishHall(level: Level, great: Room): void {
   level.items.push({ x: c.x + 1, y: great.y + 1, item: { kind: 'ledger' } })
   set(level, great.x + 1, great.y, '^')
   for (let y = great.y; y < great.y + great.h; y += 4)
-    for (let x = great.x + 2; x < great.x + great.w; x += 8) level.grey.push({ x, y })
+    for (let x = great.x + 2; x < great.x + great.w; x += 8)
+      level.grey.push({ x, y })
 }
 
 /**
@@ -317,7 +320,8 @@ export function generate(depth: number, rng: Rng, ids: Ids): Level {
   if (depth < 10) placeRooms(level, rng, rooms, 7 + rng.int(3))
   rooms.sort((a, b) => a.x - b.x)
 
-  const start = depth >= 10 ? (rooms.find((r) => r.w < 32) ?? rooms[0]) : rooms[0]
+  const start =
+    depth >= 10 ? (rooms.find((r) => r.w < 32) ?? rooms[0]) : rooms[0]
   const end = rooms[rooms.length - 1]
   if (!start || !end) throw new Error('a level with no rooms')
   start.elev = 3
@@ -351,11 +355,13 @@ export function generate(depth: number, rng: Rng, ids: Ids): Level {
           { x: d.x - 1, y: d.y },
           { x: d.x, y: d.y + 1 },
           { x: d.x, y: d.y - 1 },
-        ].find((p) => at(level, p.x, p.y) === '.' && rooms.some((r) => inside(r, p.x, p.y)))
+        ].find(
+          (p) =>
+            at(level, p.x, p.y) === '.' &&
+            rooms.some((r) => inside(r, p.x, p.y)),
+        )
         if (behind && !inside(start, behind.x, behind.y))
-          level.monsters.push(
-            spawn('barred', behind.x, behind.y, depth, ids()),
-          )
+          level.monsters.push(spawn('barred', behind.x, behind.y, depth, ids()))
       }
     }
   }

@@ -19,7 +19,7 @@ import {
   tierOf,
   titleOf,
 } from './content'
-import { inSight } from './fov'
+import { inSight, visible } from './fov'
 import {
   at,
   freeCell,
@@ -135,7 +135,9 @@ export function monsterName(game: Game, m: Monster): string {
   const kind = MONSTERS[m.kind]
   if (!kind) return 'something'
   if (!game.known.includes(m.kind)) return kind.unknown
-  return m.bones ? `${m.bones.name}, ${kind.known.replace(/^a /, '')}` : kind.known
+  return m.bones
+    ? `${m.bones.name}, ${kind.known.replace(/^a /, '')}`
+    : kind.known
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -198,7 +200,8 @@ function travel(
     return
   }
   game.level = generate(depth, rng, () => game.nextId++)
-  const at = arrive === 'top' ? game.level.up : (game.level.down ?? game.level.up)
+  const at =
+    arrive === 'top' ? game.level.up : (game.level.down ?? game.level.up)
   p.x = at.x
   p.y = at.y
   p.deepest = Math.max(p.deepest, depth)
@@ -242,7 +245,8 @@ function kill(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   gainXp(game, (kind?.xp ?? 1) * (1 + Math.floor(game.depth / 2)), lines, rng)
   const drop = (item: Item) => game.level.items.push({ x: m.x, y: m.y, item })
   if (m.bones?.weapon) drop({ kind: m.bones.weapon })
-  if (m.kind === 'picker') drop({ kind: 'marks', amount: rng.dice(1, 6) * (1 + game.depth) })
+  if (m.kind === 'picker')
+    drop({ kind: 'marks', amount: rng.dice(1, 6) * (1 + game.depth) })
   if (m.kind === 'firstcloak' && rng.chance(0.35))
     drop({ kind: tierOf(game.depth) >= 3 ? 'cloakmail' : 'token' })
 }
@@ -256,7 +260,9 @@ function playerAttack(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   if (m.kind === 'firstcloak') m.refused = true
   if (m.kind === 'drawn' && p.held === m.id && weapon?.cuts) {
     p.held = null
-    lines.push('You cut the rope. It goes slack, and what was on it drifts off toward the hall.')
+    lines.push(
+      'You cut the rope. It goes slack, and what was on it drifts off toward the hall.',
+    )
     kill(game, rng, m, lines)
     return
   }
@@ -267,7 +273,9 @@ function playerAttack(game: Game, rng: Rng, m: Monster, lines: string[]): void {
     p.meaning = false
     p.grey++
     p.will++
-    lines.push('You mean it. Something grey goes into the blow, and stays in you.')
+    lines.push(
+      'You mean it. Something grey goes into the blow, and stays in you.',
+    )
   }
   if (roll + bonus < (kind?.ac ?? 10)) {
     lines.push(`You miss ${monsterName(game, m)}.`)
@@ -280,7 +288,12 @@ function playerAttack(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   else lines.push(`You hit ${monsterName(game, m)}.`)
 }
 
-function monsterAttack(game: Game, rng: Rng, m: Monster, lines: string[]): void {
+function monsterAttack(
+  game: Game,
+  rng: Rng,
+  m: Monster,
+  lines: string[],
+): void {
   const kind = MONSTERS[m.kind]
   if (!kind || kind.counts) return
   const p = game.player
@@ -302,7 +315,13 @@ function monsterAttack(game: Game, rng: Rng, m: Monster, lines: string[]): void 
     p.marks -= taken
     lines.push(`It takes ${taken} marks.`)
   }
-  if (p.hp <= 0) dying(game, rng, `killed by ${monsterName(game, m)} at depth ${game.depth}`, lines)
+  if (p.hp <= 0)
+    dying(
+      game,
+      rng,
+      `killed by ${monsterName(game, m)} at depth ${game.depth}`,
+      lines,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -327,7 +346,10 @@ function dying(game: Game, rng: Rng, cause: string, lines: string[]): void {
 
 function checkGrey(game: Game, rng: Rng, lines: string[]): void {
   if (game.over || game.player.grey < GREY_LIMIT) return
-  game.over = { ending: 'unasked', cause: `became one of the Unasked at depth ${game.depth}` }
+  game.over = {
+    ending: 'unasked',
+    cause: `became one of the Unasked at depth ${game.depth}`,
+  }
   lines.push(say(rng, 'unasked'))
 }
 
@@ -335,7 +357,12 @@ function checkGrey(game: Game, rng: Rng, lines: string[]): void {
 // Moving
 // ---------------------------------------------------------------------------
 
-function step(m: Pos, to: Pos, game: Game, through: (tile: string) => boolean): Pos | null {
+function step(
+  m: Pos,
+  to: Pos,
+  game: Game,
+  through: (tile: string) => boolean,
+): Pos | null {
   let best: Pos | null = null
   let bestD = (m.x - to.x) ** 2 + (m.y - to.y) ** 2
   for (const [dx, dy] of Object.values(DIRS)) {
@@ -370,11 +397,18 @@ function pickUpMarks(game: Game, lines: string[]): void {
     (i) => !(i.x === p.x && i.y === p.y && i.item.kind === 'marks'),
   )
   const rest = game.level.items.filter((i) => i.x === p.x && i.y === p.y)
-  if (rest.length === 1 && rest[0]) lines.push(`There is ${itemName(game, rest[0].item)} here.`)
+  if (rest.length === 1 && rest[0])
+    lines.push(`There is ${itemName(game, rest[0].item)} here.`)
   else if (rest.length > 1) lines.push(`There are ${rest.length} things here.`)
 }
 
-function openDoor(game: Game, rng: Rng, x: number, y: number, lines: string[]): void {
+function openDoor(
+  game: Game,
+  rng: Rng,
+  x: number,
+  y: number,
+  lines: string[],
+): void {
   set(game.level, x, y, "'")
   lines.push('You put your shoulder to the door. Whatever held it lets go.')
   const roll = rng.int(10)
@@ -384,7 +418,12 @@ function openDoor(game: Game, rng: Rng, x: number, y: number, lines: string[]): 
       { x: x - 1, y },
       { x, y: y + 1 },
       { x, y: y - 1 },
-    ].find((c) => walkable(at(game.level, c.x, c.y)) && !monsterAt(game.level, c.x, c.y) && !(c.x === game.player.x && c.y === game.player.y))
+    ].find(
+      (c) =>
+        walkable(at(game.level, c.x, c.y)) &&
+        !monsterAt(game.level, c.x, c.y) &&
+        !(c.x === game.player.x && c.y === game.player.y),
+    )
     if (cell) {
       const m = spawn('unasked', cell.x, cell.y, game.depth, game.nextId++)
       m.awake = true
@@ -400,7 +439,9 @@ function openDoor(game: Game, rng: Rng, x: number, y: number, lines: string[]): 
 function roof(game: Game, rng: Rng, lines: string[]): void {
   const p = game.player
   if (!p.pack.some((i) => i.kind === 'ledger')) {
-    lines.push('Light, through a gap in the iron. You came down here for something.')
+    lines.push(
+      'Light, through a gap in the iron. You came down here for something.',
+    )
     return
   }
   const ph = phase(game.tide)
@@ -408,7 +449,10 @@ function roof(game: Game, rng: Rng, lines: string[]): void {
     lines.push('The water is over the gap. Wait for low water.')
     return
   }
-  game.over = { ending: 'escaped', cause: `came up through the roof with the ledger on turn ${game.turn}` }
+  game.over = {
+    ending: 'escaped',
+    cause: `came up through the roof with the ledger on turn ${game.turn}`,
+  }
   lines.push(say(rng, 'escape'))
 }
 
@@ -452,19 +496,27 @@ function move(game: Game, rng: Rng, dir: Dir, lines: string[]): boolean {
   if (tile === 'S') {
     const gift = rng.pick(GIFTS)
     game.prompt = { kind: 'gift', gift }
-    lines.push(`Yellow eyes. "${rng.pick(pools.gift.filter((g) => !g.startsWith('Refuse')))}" Take it? (y/n)`)
+    lines.push(
+      `Yellow eyes. "${rng.pick(pools.gift.filter((g) => !g.startsWith('Refuse')))}" Take it? (y/n)`,
+    )
     return false
   }
   if (tile === '&') {
-    lines.push(`Gorvek, in the drain, the stream held still in his hand: "${say(rng, 'drain')}"`)
+    lines.push(
+      `Gorvek, in the drain, the stream held still in his hand: "${say(rng, 'drain')}"`,
+    )
     return false
   }
   if (tile === 'K') {
-    lines.push('The king sits with three empty sockets in his crown. The iron is warm.')
+    lines.push(
+      'The king sits with three empty sockets in his crown. The iron is warm.',
+    )
     return false
   }
   if (tile === 'O') {
-    lines.push('The drain. The sea is going out through it, and something is holding it from going faster.')
+    lines.push(
+      'The drain. The sea is going out through it, and something is holding it from going faster.',
+    )
     return false
   }
   if (!walkable(tile)) return false
@@ -569,7 +621,9 @@ function use(game: Game, rng: Rng, index: number, lines: string[]): boolean {
     case 'page':
       remove()
       game.level.seen = game.level.seen.map(() => true)
-      lines.push('A page of strokes, one for every day, in a hand that gets worse. On the back, a plan of this floor.')
+      lines.push(
+        'A page of strokes, one for every day, in a hand that gets worse. On the back, a plan of this floor.',
+      )
       return true
     case 'ledger':
       lines.push('It counts lines and days. It is not a measure of worth.')
@@ -611,32 +665,75 @@ export function offers(game: Game): Offer[] {
       return [
         ...BARR_STOCK.map((kind) => {
           const price = ITEMS[kind]?.price ?? 0
-          return { key: `buy:${kind}`, label: `Buy ${ITEMS[kind]?.name}`, price, enabled: afford(price) && p.pack.length < PACK }
+          return {
+            key: `buy:${kind}`,
+            label: `Buy ${ITEMS[kind]?.name}`,
+            price,
+            enabled: afford(price) && p.pack.length < PACK,
+          }
         }),
         ...p.pack.flatMap((item, i) => {
           const price = sellPrice(game, item)
-          return price > 0 ? [{ key: `sell:${i}`, label: `Sell ${itemName(game, item)}`, price: -price, enabled: true }] : []
+          return price > 0
+            ? [
+                {
+                  key: `sell:${i}`,
+                  label: `Sell ${itemName(game, item)}`,
+                  price: -price,
+                  enabled: true,
+                },
+              ]
+            : []
         }),
       ]
     case 'loft':
       return LOFT_STOCK.map((kind) => {
         const price = ITEMS[kind]?.price ?? 0
-        return { key: `buy:${kind}`, label: `Buy ${ITEMS[kind]?.name}`, price, enabled: afford(price) && p.pack.length < PACK }
+        return {
+          key: `buy:${kind}`,
+          label: `Buy ${ITEMS[kind]?.name}`,
+          price,
+          enabled: afford(price) && p.pack.length < PACK,
+        }
       })
     case 'ruun': {
-      const things = [...new Set(p.pack.map((i) => i.kind))].filter((k) => needsNaming(k) && !game.known.includes(k))
+      const things = [...new Set(p.pack.map((i) => i.kind))].filter(
+        (k) => needsNaming(k) && !game.known.includes(k),
+      )
       const creatures = p.slain.filter((k) => !game.known.includes(k))
       return [
-        ...things.map((kind) => ({ key: `name:${kind}`, label: `Name ${ITEMS[kind]?.unknown}`, price: 10, enabled: afford(10) })),
-        ...creatures.map((kind) => ({ key: `name:${kind}`, label: `Name ${MONSTERS[kind]?.unknown}`, price: 15, enabled: afford(15) })),
+        ...things.map((kind) => ({
+          key: `name:${kind}`,
+          label: `Name ${ITEMS[kind]?.unknown}`,
+          price: 10,
+          enabled: afford(10),
+        })),
+        ...creatures.map((kind) => ({
+          key: `name:${kind}`,
+          label: `Name ${MONSTERS[kind]?.unknown}`,
+          price: 15,
+          enabled: afford(15),
+        })),
       ]
     }
     case 'mardra':
-      return [{ key: 'trade', label: 'Trade with her', price: 0, enabled: !game.traded }]
+      return [
+        {
+          key: 'trade',
+          label: 'Trade with her',
+          price: 0,
+          enabled: !game.traded,
+        },
+      ]
     case 'pile':
       return p.owed
         ? []
-        : p.pack.map((item, i) => ({ key: `offer:${i}`, label: `Lay ${itemName(game, item)} on the pile`, price: 0, enabled: item.kind !== 'ledger' }))
+        : p.pack.map((item, i) => ({
+            key: `offer:${i}`,
+            label: `Lay ${itemName(game, item)} on the pile`,
+            price: 0,
+            enabled: item.kind !== 'ledger',
+          }))
     case 'rauk':
       return [{ key: 'ask', label: 'Ask her how', price: 0, enabled: true }]
     default:
@@ -678,7 +775,9 @@ function trade(game: Game, rng: Rng, lines: string[]): void {
     const forgotten = rng.pick(creatures)
     game.known = game.known.filter((k) => k !== forgotten)
   }
-  lines.push('She names everything you carry and gives you something for the road. You will find out later what she took.')
+  lines.push(
+    'She names everything you carry and gives you something for the road. You will find out later what she took.',
+  )
   checkGrey(game, rng, lines)
 }
 
@@ -703,11 +802,15 @@ function shopCommand(game: Game, rng: Rng, key: string, lines: string[]): void {
     if (!item) return
     p.pack.splice(Number(arg), 1)
     p.marks -= offer.price
-    lines.push(`Barr weighs ${itemName(game, item)} and gives you ${-offer.price} marks.`)
+    lines.push(
+      `Barr weighs ${itemName(game, item)} and gives you ${-offer.price} marks.`,
+    )
   } else if (verb === 'name') {
     p.marks -= offer.price
     learn(game, arg)
-    lines.push(`${say(rng, 'naming')} It is ${ITEMS[arg]?.name ?? MONSTERS[arg]?.known}.`)
+    lines.push(
+      `${say(rng, 'naming')} It is ${ITEMS[arg]?.name ?? MONSTERS[arg]?.known}.`,
+    )
   } else if (verb === 'trade') {
     trade(game, rng, lines)
   } else if (verb === 'offer') {
@@ -715,7 +818,9 @@ function shopCommand(game: Game, rng: Rng, key: string, lines: string[]): void {
     if (!item) return
     p.pack.splice(Number(arg), 1)
     p.owed = true
-    lines.push(`You lay ${itemName(game, item)} on the salt-pile. The sea will give you back, once.`)
+    lines.push(
+      `You lay ${itemName(game, item)} on the salt-pile. The sea will give you back, once.`,
+    )
   } else if (verb === 'ask') {
     lines.push(`Rauk: "${say(rng, 'advice')}"`)
   }
@@ -734,7 +839,8 @@ function answer(game: Game, rng: Rng, yes: boolean, lines: string[]): void {
     if (yes) {
       const tenth = Math.max(1, Math.floor(p.marks / 10))
       p.marks = Math.max(0, p.marks - tenth)
-      for (const m of game.level.monsters) if (m.kind === 'firstcloak' && !m.refused) m.peaceful = true
+      for (const m of game.level.monsters)
+        if (m.kind === 'firstcloak' && !m.refused) m.peaceful = true
       lines.push(`You pay ${tenth} marks. "Thank you." They stand aside.`)
     } else {
       for (const m of game.level.monsters)
@@ -747,10 +853,13 @@ function answer(game: Game, rng: Rng, yes: boolean, lines: string[]): void {
     return
   }
   for (let y = 0; y < game.level.h; y++)
-    for (let x = 0; x < game.level.w; x++) if (at(game.level, x, y) === 'S') set(game.level, x, y, '.')
+    for (let x = 0; x < game.level.w; x++)
+      if (at(game.level, x, y) === 'S') set(game.level, x, y, '.')
   game.offered.push(game.depth)
   if (!yes) {
-    lines.push(pools.gift.find((g) => g.startsWith('Refuse')) ?? 'Refuse, then.')
+    lines.push(
+      pools.gift.find((g) => g.startsWith('Refuse')) ?? 'Refuse, then.',
+    )
     return
   }
   if (prompt.gift === 'purse') {
@@ -769,7 +878,10 @@ function answer(game: Game, rng: Rng, yes: boolean, lines: string[]): void {
   else if (theft === 'map') game.level.seen = game.level.seen.map(() => false)
   else if (theft === 'item') {
     const dearest = p.pack
-      .map((item, i) => ({ i, price: ITEMS[item.kind]?.sarn ? -1 : (ITEMS[item.kind]?.price ?? 0) }))
+      .map((item, i) => ({
+        i,
+        price: ITEMS[item.kind]?.sarn ? -1 : (ITEMS[item.kind]?.price ?? 0),
+      }))
       .sort((a, b) => b.price - a.price)[0]
     if (dearest && dearest.price >= 0) p.pack.splice(dearest.i, 1)
     else p.grey++
@@ -803,7 +915,9 @@ function monstersAct(game: Game, rng: Rng, lines: string[]): void {
     if (kind.counts) {
       if (sees && d2 <= (radius + 1) ** 2) {
         m.notches++
-        lines.push(`${cap(monsterName(game, m))} cuts a notch in the salt. (${m.notches})`)
+        lines.push(
+          `${cap(monsterName(game, m))} cuts a notch in the salt. (${m.notches})`,
+        )
       }
       continue
     }
@@ -817,7 +931,9 @@ function monstersAct(game: Game, rng: Rng, lines: string[]): void {
         if (kind.tithes && !m.refused) {
           if (!game.prompt) {
             game.prompt = { kind: 'tithe', monster: m.id }
-            lines.push(`${cap(monsterName(game, m))} bows. "Pardon. A tenth." Pay? (y/n)`)
+            lines.push(
+              `${cap(monsterName(game, m))} bows. "Pardon. A tenth." Pay? (y/n)`,
+            )
           }
           break
         }
@@ -845,7 +961,11 @@ function drag(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   p.x = from.x
   p.y = from.y
   lines.push('The rope draws you along behind it.')
-  if (game.level.down && m.x === game.level.down.x && m.y === game.level.down.y) {
+  if (
+    game.level.down &&
+    m.x === game.level.down.x &&
+    m.y === game.level.down.y
+  ) {
     lines.push('It goes down the stair, and so do you.')
     travel(game, rng, game.depth + 1, 'top', lines)
   }
@@ -857,8 +977,13 @@ function notched(game: Game, rng: Rng, lines: string[]): void {
   for (const m of game.level.monsters) m.notches = 0
   const p = game.player
   p.hp -= rng.roll(6) + game.depth
-  lines.push('The ninth notch. A rope comes down out of the dark and finds your neck.')
-  if (p.hp <= 0) return dying(game, rng, `hanged by the ninth notch at depth ${game.depth}`, lines)
+  lines.push(
+    'The ninth notch. A rope comes down out of the dark and finds your neck.',
+  )
+  if (p.hp <= 0) {
+    dying(game, rng, `hanged by the ninth notch at depth ${game.depth}`, lines)
+    return
+  }
   if (game.depth < LAST_DEPTH) {
     lines.push('It drags you down through the floor.')
     travel(game, rng, game.depth + 1, 'top', lines)
@@ -909,32 +1034,57 @@ function endTurn(game: Game, rng: Rng, lines: string[]): void {
   const water = waterAt(game.level, game.tide, p.x, p.y)
   if (water >= 2 && game.turn % (p.bg === 'wrecker' ? 3 : 2) === 0) {
     p.hp--
-    if (game.turn % 4 === 0) lines.push('You are under. Find the stair, or air.')
-    if (p.hp <= 0) return dying(game, rng, `drowned at depth ${game.depth}`, lines)
+    if (game.turn % 4 === 0)
+      lines.push('You are under. Find the stair, or air.')
+    if (p.hp <= 0) {
+      dying(game, rng, `drowned at depth ${game.depth}`, lines)
+      return
+    }
   }
-  if (water >= 1 && p.bg !== 'wrecker' && !hasSarnLamp(game) && game.turn % 3 === 0) {
+  if (
+    water >= 1 &&
+    p.bg !== 'wrecker' &&
+    !hasSarnLamp(game) &&
+    game.turn % 3 === 0
+  ) {
     const lamp = rollDie(rng, p.lamp)
-    if (lamp !== p.lamp) lines.push('The wet gets into the lamp. It burns lower.')
+    if (lamp !== p.lamp)
+      lines.push('The wet gets into the lamp. It burns lower.')
     p.lamp = lamp
   }
-  if (greyAt(game.level, game.tide, p.x, p.y) && rng.chance(0.12)) theGreyTakes(game, rng, lines)
+  if (greyAt(game.level, game.tide, p.x, p.y) && rng.chance(0.12))
+    theGreyTakes(game, rng, lines)
 
   if (game.turn % 40 === 0 && !hasSarnLamp(game)) {
     const lamp = rollDie(rng, p.lamp)
-    if (lamp !== p.lamp) lines.push(lamp === 0 ? 'The lamp goes out.' : 'The lamp burns lower.')
+    if (lamp !== p.lamp)
+      lines.push(lamp === 0 ? 'The lamp goes out.' : 'The lamp burns lower.')
     p.lamp = lamp
   }
   if (game.turn % 60 === 0) {
     const water = rollDie(rng, p.water)
-    if (water !== p.water) lines.push(water === 0 ? 'The last of the water is gone.' : 'The water is getting low.')
+    if (water !== p.water)
+      lines.push(
+        water === 0
+          ? 'The last of the water is gone.'
+          : 'The water is getting low.',
+      )
     p.water = water
   }
   if (p.water === 0 && game.turn % 25 === 0) {
     p.hp--
     lines.push('Your mouth is salt. You need water.')
-    if (p.hp <= 0) return dying(game, rng, `died of thirst at depth ${game.depth}`, lines)
+    if (p.hp <= 0) {
+      dying(game, rng, `died of thirst at depth ${game.depth}`, lines)
+      return
+    }
   }
-  if (p.water > 0 && p.hp < p.maxHp && game.turn % Math.max(2, 8 - p.level) === 0) p.hp++
+  if (
+    p.water > 0 &&
+    p.hp < p.maxHp &&
+    game.turn % Math.max(2, 8 - p.level) === 0
+  )
+    p.hp++
 
   notched(game, rng, lines)
 }
@@ -983,7 +1133,9 @@ function command(game: Game, rng: Rng, cmd: Command, lines: string[]): boolean {
       p.pack.push(found.item)
       if (found.item.kind === 'ledger') {
         if (at(game.level, p.x, p.y) === '_') set(game.level, p.x, p.y, '.')
-        lines.push('You take up the ledger. It is heavier than a man can carry far, and lighter than it ought to be. The last line in it reads: held the drain, days still counting.')
+        lines.push(
+          'You take up the ledger. It is heavier than a man can carry far, and lighter than it ought to be. The last line in it reads: held the drain, days still counting.',
+        )
       } else lines.push(`You take ${itemName(game, found.item)}.`)
       return true
     }
@@ -999,7 +1151,11 @@ function command(game: Game, rng: Rng, cmd: Command, lines: string[]): boolean {
     }
     case 'mean':
       p.meaning = !p.meaning
-      lines.push(p.meaning ? 'You will mean the next blow. It will cost you.' : 'You let it go.')
+      lines.push(
+        p.meaning
+          ? 'You will mean the next blow. It will cost you.'
+          : 'You let it go.',
+      )
       return false
     case 'name': {
       const [dx, dy] = DIRS[cmd.dir]
@@ -1019,7 +1175,9 @@ function command(game: Game, rng: Rng, cmd: Command, lines: string[]): boolean {
       }
       p.will -= cost
       learn(game, m.kind)
-      lines.push(`You say its name, and mean it. It is ${monsterName(game, m)}, and it knows you know.`)
+      lines.push(
+        `You say its name, and mean it. It is ${monsterName(game, m)}, and it knows you know.`,
+      )
       return true
     }
     case 'stop': {
@@ -1048,7 +1206,9 @@ function command(game: Game, rng: Rng, cmd: Command, lines: string[]): boolean {
         return false
       }
       p.rope = rollDie(rng, p.rope)
-      lines.push('You throw the rope up into the dark, and it holds, and you climb.')
+      lines.push(
+        'You throw the rope up into the dark, and it holds, and you climb.',
+      )
       travel(game, rng, game.depth - 1, 'bottom', lines)
       return true
     }
@@ -1075,10 +1235,19 @@ export function act(prev: Game, cmd: Command): Outcome {
   const rng = makeRng(game.seed)
   const tookTime = command(game, rng, cmd, lines)
   if (tookTime && !game.over) endTurn(game, rng, lines)
-  if (!game.over && game.player.hp <= 0) dying(game, rng, `died at depth ${game.depth}`, lines)
+  if (!game.over && game.player.hp <= 0)
+    dying(game, rng, `died at depth ${game.depth}`, lines)
   checkGrey(game, rng, lines)
+  reveal(game)
   game.seed = rng.seed()
   return { game, lines }
+}
+
+/** Mark what the lamp shows as seen, so the map remembers it. */
+export function reveal(game: Game): void {
+  if (game.depth === 0) return
+  for (const i of visible(game.level, game.player, lightRadius(game)))
+    game.level.seen[i] = true
 }
 
 /** What the tide is doing, for the page. */

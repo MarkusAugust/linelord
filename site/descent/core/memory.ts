@@ -38,7 +38,12 @@ export interface LedgerLine {
   date: string
 }
 
-function read<T>(store: Store, key: string, fallback: T, valid: (v: unknown) => v is T): T {
+function read<T>(
+  store: Store,
+  key: string,
+  fallback: T,
+  valid: (v: unknown) => v is T,
+): T {
   try {
     const raw = store.get(key)
     if (raw === null) return fallback
@@ -65,7 +70,13 @@ const isStrings = (v: unknown): v is string[] =>
 
 const isLedger = (v: unknown): v is LedgerLine[] =>
   Array.isArray(v) &&
-  v.every((l) => typeof l === 'object' && l !== null && typeof (l as LedgerLine).name === 'string' && typeof (l as LedgerLine).depth === 'number')
+  v.every(
+    (l) =>
+      typeof l === 'object' &&
+      l !== null &&
+      typeof (l as LedgerLine).name === 'string' &&
+      typeof (l as LedgerLine).depth === 'number',
+  )
 
 const isBones = (v: unknown): v is Bones =>
   typeof v === 'object' && v !== null && typeof (v as Bones).name === 'string'
@@ -77,10 +88,24 @@ const isGame = (v: unknown): v is Game =>
   typeof (v as Game).player === 'object' &&
   typeof (v as Game).level === 'object'
 
-export const loadKnown = (store: Store): string[] => read(store, KEYS.known, [], isStrings)
-export const loadLedger = (store: Store): LedgerLine[] => read(store, KEYS.ledger, [], isLedger)
-export const loadBones = (store: Store): Bones | null => read<Bones | null>(store, KEYS.bones, null, (v): v is Bones | null => v === null || isBones(v))
-export const loadRun = (store: Store): Game | null => read<Game | null>(store, KEYS.run, null, (v): v is Game | null => v === null || isGame(v))
+export const loadKnown = (store: Store): string[] =>
+  read(store, KEYS.known, [], isStrings)
+export const loadLedger = (store: Store): LedgerLine[] =>
+  read(store, KEYS.ledger, [], isLedger)
+export const loadBones = (store: Store): Bones | null =>
+  read<Bones | null>(
+    store,
+    KEYS.bones,
+    null,
+    (v): v is Bones | null => v === null || isBones(v),
+  )
+export const loadRun = (store: Store): Game | null =>
+  read<Game | null>(
+    store,
+    KEYS.run,
+    null,
+    (v): v is Game | null => v === null || isGame(v),
+  )
 
 /** Keep the run, and what has been learned in it. */
 export function saveRun(store: Store, game: Game): void {
@@ -126,7 +151,10 @@ export function endRun(store: Store, game: Game, date: Date): LedgerLine[] {
   write(store, KEYS.ledger, ledger)
   write(store, KEYS.known, game.known)
   if (game.over?.ending === 'unasked')
-    write(store, KEYS.bones, { name: game.player.name, weapon: game.player.weapon })
+    write(store, KEYS.bones, {
+      name: game.player.name,
+      weapon: game.player.weapon,
+    })
   try {
     store.remove(KEYS.run)
   } catch {

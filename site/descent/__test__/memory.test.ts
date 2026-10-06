@@ -76,7 +76,8 @@ describe('the memory of the descent', () => {
 
   it('keeps no more than the ledger holds', () => {
     const store = memoryStore()
-    for (let i = 0; i < LEDGER_SIZE + 5; i++) endRun(store, finished('dead', 'x'), DAY)
+    for (let i = 0; i < LEDGER_SIZE + 5; i++)
+      endRun(store, finished('dead', 'x'), DAY)
     expect(loadLedger(store)).toHaveLength(LEDGER_SIZE)
   })
 
@@ -91,7 +92,10 @@ describe('the memory of the descent', () => {
   })
 
   it('writes a ledger line the way the ledger would', () => {
-    const line = ledgerLine(finished('dead', 'killed by a Picker at depth 3'), DAY)
+    const line = ledgerLine(
+      finished('dead', 'killed by a Picker at depth 3'),
+      DAY,
+    )
     expect(line).toEqual({
       name: 'Hild',
       bg: 'wrecker',
@@ -102,10 +106,18 @@ describe('the memory of the descent', () => {
       cause: 'killed by a Picker at depth 3',
       date: '2026-10-06',
     })
-    expect(describeLine(line)).toBe('Hild, Shingle-rat, held depth 7 for 412 turns, and was killed by a Picker.')
-    expect(describeLine({ ...line, ending: 'escaped' })).toContain('came up through the roof with the ledger')
-    expect(describeLine({ ...line, ending: 'unasked' })).toContain('became one of the Unasked')
-    expect(describeLine({ ...line, cause: 'drowned at depth 2' })).toContain('and drowned.')
+    expect(describeLine(line)).toBe(
+      'Hild, Shingle-rat, held depth 7 for 412 turns, and was killed by a Picker.',
+    )
+    expect(describeLine({ ...line, ending: 'escaped' })).toContain(
+      'came up through the roof with the ledger',
+    )
+    expect(describeLine({ ...line, ending: 'unasked' })).toContain(
+      'became one of the Unasked',
+    )
+    expect(describeLine({ ...line, cause: 'drowned at depth 2' })).toContain(
+      'and drowned.',
+    )
     const unfinished = newGame({ name: 'Hild', bg: 'ashborn', seed: 1 })
     expect(ledgerLine(unfinished, DAY).ending).toBe('dead')
   })

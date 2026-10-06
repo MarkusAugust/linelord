@@ -3,7 +3,14 @@ import { ITEMS, MONSTERS, needsNaming, tierOf, titleOf } from '../core/content'
 import { inSight, line, visible } from '../core/fov'
 import { at, generate, H, index, set, town, W, walkable } from '../core/level'
 import { makeRng } from '../core/rng'
-import { CYCLE, floodLevel, greyAt, greyReach, phase, waterAt } from '../core/tide'
+import {
+  CYCLE,
+  floodLevel,
+  greyAt,
+  greyReach,
+  phase,
+  waterAt,
+} from '../core/tide'
 import { creatures, opening, pools } from '../lore'
 import { levelFrom } from './helpers'
 
@@ -38,16 +45,20 @@ describe('the random source', () => {
 
 describe('the canon the game draws on', () => {
   it('has every pool it speaks from, Sarn opening in five lines, and its creatures', () => {
-    for (const pool of Object.values(pools)) expect(pool.length).toBeGreaterThan(0)
+    for (const pool of Object.values(pools))
+      expect(pool.length).toBeGreaterThan(0)
     expect(opening).toHaveLength(5)
     expect(opening[0]).toContain('The sea is going out')
-    for (const m of Object.values(MONSTERS)) expect(creatures[m.creature].name).toBeTruthy()
+    for (const m of Object.values(MONSTERS))
+      expect(creatures[m.creature].name).toBeTruthy()
   })
 })
 
 describe('the tiers and the titles', () => {
   it('puts ten floors in four tiers', () => {
-    expect([1, 2, 3, 5, 6, 8, 9, 10].map(tierOf)).toEqual([1, 1, 2, 2, 3, 3, 4, 4])
+    expect([1, 2, 3, 5, 6, 8, 9, 10].map(tierOf)).toEqual([
+      1, 1, 2, 2, 3, 3, 4, 4,
+    ])
   })
 
   it('calls you what the coast calls you', () => {
@@ -107,7 +118,10 @@ describe('the tide', () => {
 })
 
 describe('what the lamp shows', () => {
-  const { level } = levelFrom(['#########', '#...#...#', '#.......#', '#########'], 1)
+  const { level } = levelFrom(
+    ['#########', '#...#...#', '#.......#', '#########'],
+    1,
+  )
 
   it('draws straight lines', () => {
     expect(line({ x: 0, y: 0 }, { x: 3, y: 0 })).toEqual([
@@ -158,7 +172,8 @@ describe('the ground', () => {
       expect(level.elev[index(level, down.x, down.y)]).toBe(0)
       expect(level.monsters.length).toBeGreaterThan(0)
       expect(level.items.length).toBeGreaterThan(0)
-      for (const m of level.monsters) expect(walkable(at(level, m.x, m.y))).toBe(true)
+      for (const m of level.monsters)
+        expect(walkable(at(level, m.x, m.y))).toBe(true)
     }
   })
 
@@ -188,5 +203,14 @@ describe('the ground', () => {
       if (item.kind === 'marks') expect(item.amount ?? 0).toBeGreaterThan(0)
       else expect(ITEMS[item.kind]).toBeDefined()
     }
+  })
+})
+
+describe('Wrackhead, drawn', () => {
+  it('is square, with every door in the south wall where walking past does not open it', () => {
+    const t = town()
+    expect(new Set(t.tiles.map((r) => r.length)).size).toBe(1)
+    const south = t.tiles[t.h - 1] ?? ''
+    for (const d of '1234567') expect(south).toContain(d)
   })
 })

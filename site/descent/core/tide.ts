@@ -38,21 +38,34 @@ export function greyReach(tide: number, depth: number): number {
   const extra = depth >= 10 ? 2 : 0
   if (t < 50) return Math.min(6, Math.floor(t / 7)) + extra
   if (t < 60) return 6 + extra
-  if (t < 90) return Math.max(0, 6 - Math.floor((t - 60) / 3)) + (t < 70 ? extra : 0)
+  if (t < 90)
+    return Math.max(0, 6 - Math.floor((t - 60) / 3)) + (t < 70 ? extra : 0)
   return 0
 }
 
 /** How deep the water is over a cell: 0 is dry, 2 or more is over your head. */
-export function waterAt(level: Level, tide: number, x: number, y: number): number {
+export function waterAt(
+  level: Level,
+  tide: number,
+  x: number,
+  y: number,
+): number {
   if (level.depth === 0) return 0
   const tile = at(level, x, y)
   if (tile === '#' || tile === '+') return 0
   return Math.max(0, floodLevel(tide) - elevation(level, x, y))
 }
 
-export function greyAt(level: Level, tide: number, x: number, y: number): boolean {
+export function greyAt(
+  level: Level,
+  tide: number,
+  x: number,
+  y: number,
+): boolean {
   const reach = greyReach(tide, level.depth)
   if (reach === 0) return false
   if (at(level, x, y) === '#') return false
-  return level.grey.some((g) => (g.x - x) ** 2 + (g.y - y) ** 2 <= reach * reach)
+  return level.grey.some(
+    (g) => (g.x - x) ** 2 + (g.y - y) ** 2 <= reach * reach,
+  )
 }

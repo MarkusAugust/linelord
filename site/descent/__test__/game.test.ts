@@ -33,7 +33,12 @@ const east: Command = { type: 'move', dir: 'e' }
 const west: Command = { type: 'move', dir: 'w' }
 
 /** Hit until it goes down, or give up. */
-function fight(game: Game, cmd: Command, until: (g: Game) => boolean, limit = 60) {
+function fight(
+  game: Game,
+  cmd: Command,
+  until: (g: Game) => boolean,
+  limit = 60,
+) {
   let g = game
   const lines: string[] = []
   for (let i = 0; i < limit && !until(g) && !g.over; i++) {
@@ -53,7 +58,12 @@ const ROOM = ['#########', '#<..@..>#', '#.......#', '#########']
 
 describe('a new run', () => {
   it('starts on the shingle at Wrackhead with a knife, a jerkin and thirty marks', () => {
-    const g = newGame({ name: '  Hild ', bg: 'wrecker', seed: 1, known: ['picker'] })
+    const g = newGame({
+      name: '  Hild ',
+      bg: 'wrecker',
+      seed: 1,
+      known: ['picker'],
+    })
     expect(g.depth).toBe(0)
     expect(g.player.name).toBe('Hild')
     expect(g.player.weapon).toBe('knife')
@@ -61,8 +71,17 @@ describe('a new run', () => {
     expect(g.player.marks).toBe(30)
     expect(g.player.rope).toBe(8)
     expect(g.known).toEqual(['picker'])
-    expect(newGame({ name: ' ', bg: 'novice', seed: 1 }).player.name).toBe('Nameless')
-    expect(newGame({ name: 'A', bg: 'novice', seed: 1, bones: { name: 'Ulf', weapon: 'axe' } }).bones?.name).toBe('Ulf')
+    expect(newGame({ name: ' ', bg: 'novice', seed: 1 }).player.name).toBe(
+      'Nameless',
+    )
+    expect(
+      newGame({
+        name: 'A',
+        bg: 'novice',
+        seed: 1,
+        bones: { name: 'Ulf', weapon: 'axe' },
+      }).bones?.name,
+    ).toBe('Ulf')
   })
 
   it('never changes the game it was given', () => {
@@ -93,13 +112,19 @@ describe('moving', () => {
 
   it('picks up marks underfoot and says what else lies there', () => {
     const g = gameOn(ROOM, 1)
-    g.level.items.push({ x: 5, y: 1, item: { kind: 'marks', amount: 12 } }, { x: 5, y: 1, item: { kind: 'knife' } })
+    g.level.items.push(
+      { x: 5, y: 1, item: { kind: 'marks', amount: 12 } },
+      { x: 5, y: 1, item: { kind: 'knife' } },
+    )
     const out = run(g, east)
     expect(out.game.player.marks).toBe(42)
     expect(out.game.player.gained).toBe(12)
     expect(out.lines.join(' ')).toContain('a knife here')
     const two = gameOn(ROOM, 1)
-    two.level.items.push({ x: 5, y: 1, item: { kind: 'knife' } }, { x: 5, y: 1, item: { kind: 'salt' } })
+    two.level.items.push(
+      { x: 5, y: 1, item: { kind: 'knife' } },
+      { x: 5, y: 1, item: { kind: 'salt' } },
+    )
     expect(run(two, east).lines.join(' ')).toContain('2 things here')
   })
 
@@ -149,7 +174,9 @@ describe('the stairs and the rope', () => {
 
   it('says so when there is no stair, and the rope holds a held man', () => {
     const g = gameOn(ROOM, 1)
-    expect(run(g, { type: 'stairs' }).lines).toEqual(['There is no stair here.'])
+    expect(run(g, { type: 'stairs' }).lines).toEqual([
+      'There is no stair here.',
+    ])
     g.player.held = 99
     g.player.x = 1
     expect(run(g, { type: 'stairs' }).lines).toEqual(['The rope holds you.'])
@@ -161,7 +188,9 @@ describe('the stairs and the rope', () => {
     const up = run(g, { type: 'rope' })
     expect(up.game.depth).toBe(2)
     const down = up.game.level.down
-    expect(down && up.game.player.x === down.x && up.game.player.y === down.y).toBe(true)
+    expect(
+      down && up.game.player.x === down.x && up.game.player.y === down.y,
+    ).toBe(true)
     g.player.rope = 0
     expect(run(g, { type: 'rope' }).lines).toEqual(['You have no rope left.'])
     const town = newGame({ name: 'H', bg: 'ashborn', seed: 1 })
@@ -201,14 +230,25 @@ describe('the pack', () => {
     const out = run(g, { type: 'use', index: 0 }, { type: 'use', index: 0 })
     expect(out.game.player.weapon).toBe('axe')
     expect(out.game.player.armour).toBe('mail')
-    expect(out.game.player.pack.map((i) => i.kind).sort()).toEqual(['knife', 'leather'])
+    expect(out.game.player.pack.map((i) => i.kind).sort()).toEqual([
+      'knife',
+      'leather',
+    ])
   })
 
   it('fills the lamp, the water and the rope, and washes with salt', () => {
     const g = gameOn(ROOM, 1)
     Object.assign(g.player, { lamp: 4, water: 0, rope: 0, hp: 2 })
-    g.player.pack = [{ kind: 'oil' }, { kind: 'skin' }, { kind: 'coil' }, { kind: 'salt' }]
-    const out = run(g, ...[0, 0, 0, 0].map((index): Command => ({ type: 'use', index })))
+    g.player.pack = [
+      { kind: 'oil' },
+      { kind: 'skin' },
+      { kind: 'coil' },
+      { kind: 'salt' },
+    ]
+    const out = run(
+      g,
+      ...[0, 0, 0, 0].map((index): Command => ({ type: 'use', index })),
+    )
     expect(out.game.player.lamp).toBe(8)
     expect(out.game.player.water).toBe(8)
     expect(out.game.player.rope).toBe(8)
@@ -242,11 +282,18 @@ describe('the pack', () => {
 
   it('reads a page, and says what a trinket and the ledger are', () => {
     const g = gameOn(ROOM, 7)
-    g.player.pack = [{ kind: 'page' }, { kind: 'ring' }, { kind: 'ledger' }, { kind: 'sarn-lamp' }]
+    g.player.pack = [
+      { kind: 'page' },
+      { kind: 'ring' },
+      { kind: 'ledger' },
+      { kind: 'sarn-lamp' },
+    ]
     const page = run(g, { type: 'use', index: 0 })
     expect(page.game.level.seen.every(Boolean)).toBe(true)
     expect(run(g, { type: 'use', index: 1 }).lines[0]).toContain('A warm ring')
-    expect(run(g, { type: 'use', index: 2 }).lines[0]).toContain('not a measure of worth')
+    expect(run(g, { type: 'use', index: 2 }).lines[0]).toContain(
+      'not a measure of worth',
+    )
     expect(run(g, { type: 'use', index: 3 }).lines[0]).toContain('already lit')
     expect(run(g, { type: 'use', index: 9 }).game.turn).toBe(0)
   })
@@ -316,7 +363,9 @@ describe('fighting', () => {
     put(dying, 'firstcloak', 5, 1).refused = true
     const dead = fight(dying, wait, (x) => x.over !== null)
     expect(dead.game.over?.ending).toBe('dead')
-    expect(dead.game.over?.cause).toContain('killed by a grey-cloaked shape at depth 1')
+    expect(dead.game.over?.cause).toContain(
+      'killed by a grey-cloaked shape at depth 1',
+    )
   })
 
   it('is given back once by the sea, if the salt-pile was paid', () => {
@@ -464,7 +513,9 @@ describe('the tide and the grey', () => {
       const g = gameOn(ROOM, 1, { elev: 1, seed })
       g.tide = 70
       g.player.hp = 200
-      lines.push(...run(g, wait, wait, wait, wait, wait, wait, wait, wait, wait).lines)
+      lines.push(
+        ...run(g, wait, wait, wait, wait, wait, wait, wait, wait, wait).lines,
+      )
     }
     expect(lines).toContain('The wet gets into the lamp. It burns lower.')
   })
@@ -505,12 +556,16 @@ describe('the tide and the grey', () => {
   it('heals with water, and not without', () => {
     const g = gameOn(ROOM, 1)
     g.player.hp = 5
-    expect(run(g, ...Array.from({ length: 12 }, () => wait)).game.player.hp).toBeGreaterThan(5)
+    expect(
+      run(g, ...Array.from({ length: 12 }, () => wait)).game.player.hp,
+    ).toBeGreaterThan(5)
   })
 
   it('holds the stream with will, during the flood only', () => {
     const g = gameOn(ROOM, 1)
-    expect(run(g, { type: 'stop' }).lines[0]).toContain('Nothing here is flowing')
+    expect(run(g, { type: 'stop' }).lines[0]).toContain(
+      'Nothing here is flowing',
+    )
     g.tide = 65
     expect(run(g, { type: 'stop' }).lines[0]).toContain('takes 3 will')
     g.player.will = 3
@@ -518,7 +573,9 @@ describe('the tide and the grey', () => {
     expect(held.game.held).toBe(14)
     expect(held.game.tide).toBe(65)
     held.game.held = 1
-    expect(run(held.game, wait).lines).toContain('You let the stream go. It goes.')
+    expect(run(held.game, wait).lines).toContain(
+      'You let the stream go. It goes.',
+    )
   })
 
   it('reports the tide, and dims the lamp in the grey', () => {
@@ -547,14 +604,20 @@ describe('the tide and the grey', () => {
 describe('names', () => {
   it('names a creature in the field with will, cheaper for a Novice', () => {
     const g = gameOn(ROOM, 1)
-    expect(run(g, { type: 'name', dir: 'e' }).lines[0]).toContain('nothing there')
+    expect(run(g, { type: 'name', dir: 'e' }).lines[0]).toContain(
+      'nothing there',
+    )
     put(g, 'picker', 5, 1)
-    expect(run(g, { type: 'name', dir: 'e' }).lines[0]).toContain('takes 2 will')
+    expect(run(g, { type: 'name', dir: 'e' }).lines[0]).toContain(
+      'takes 2 will',
+    )
     g.player.will = 2
     const named = run(g, { type: 'name', dir: 'e' })
     expect(named.game.known).toContain('picker')
     expect(named.lines[0]).toContain('It is a Picker')
-    expect(run(named.game, { type: 'name', dir: 'e' }).lines[0]).toContain('already')
+    expect(run(named.game, { type: 'name', dir: 'e' }).lines[0]).toContain(
+      'already',
+    )
     const novice = gameOn(ROOM, 1, { bg: 'novice' })
     put(novice, 'picker', 5, 1)
     expect(run(novice, { type: 'name', dir: 'e' }).game.player.will).toBe(3)
@@ -565,8 +628,13 @@ describe('Sarn', () => {
   it('offers, and every gift is a theft', () => {
     const takings = new Set<string>()
     for (let seed = 1; seed < 60; seed++) {
-      const g = gameOn(['#######', '#<@S.>#', '#######'], 3, { seed })
+      const g = gameOn(
+        ['#################', '#<@S...........>#', '#################'],
+        3,
+        { seed },
+      )
       g.player.pack = [{ kind: 'axe' }]
+      g.player.lamp = 0
       g.known = ['picker']
       g.level.seen = g.level.seen.map(() => true)
       const offered = run(g, east)
@@ -577,11 +645,17 @@ describe('Sarn', () => {
       expect(taken.game.offered).toEqual([3])
       if (p.maxHp < 16) takings.add('maxhp')
       if (taken.game.known.length === 0) takings.add('names')
-      if (!taken.game.level.seen.some(Boolean)) takings.add('map')
+      if (taken.game.level.seen.filter(Boolean).length < 20) takings.add('map')
       if (!p.pack.some((i) => i.kind === 'axe')) takings.add('item')
       if (p.grey === 2) takings.add('grey')
     }
-    expect([...takings].sort()).toEqual(['grey', 'item', 'map', 'maxhp', 'names'])
+    expect([...takings].sort()).toEqual([
+      'grey',
+      'item',
+      'map',
+      'maxhp',
+      'names',
+    ])
   })
 
   it('gives a purse, a blade or a lamp', () => {
@@ -602,7 +676,9 @@ describe('Sarn', () => {
       const g = gameOn(['#######', '#<@S.>#', '#######'], 3, { seed })
       g.player.pack = []
       const out = run(g, east, { type: 'answer', yes: true })
-      const sarnOnly = out.game.player.pack.every((i) => i.kind.startsWith('sarn'))
+      const sarnOnly = out.game.player.pack.every((i) =>
+        i.kind.startsWith('sarn'),
+      )
       if (sarnOnly && out.game.player.grey === 1) found = true
     }
     expect(found).toBe(true)
@@ -623,7 +699,9 @@ describe('the ways a run ends', () => {
     const g = gameOn(HALL, 10)
     g.level.items.push({ x: 4, y: 1, item: { kind: 'ledger' } })
     const noLedger = run(g, west)
-    expect(noLedger.lines.join(' ')).toContain('You came down here for something')
+    expect(noLedger.lines.join(' ')).toContain(
+      'You came down here for something',
+    )
     const got = run(g, east, east, { type: 'get' })
     expect(got.lines.join(' ')).toContain('held the drain, days still counting')
     expect(at(got.game.level, 4, 1)).toBe('.')
@@ -651,10 +729,10 @@ describe('Wrackhead', () => {
     const g = newGame({ name: 'Hild', bg: 'ashborn', seed: 3 })
     const y = g.level.tiles.findIndex((r) => r.includes(digit))
     const x = g.level.tiles[y]?.indexOf(digit) ?? 0
-    g.player.x = x - 1
-    g.player.y = y
+    g.player.x = x
+    g.player.y = y - 1
     setup?.(g)
-    return run(g, east)
+    return run(g, { type: 'move', dir: 's' })
   }
 
   it('opens a shop by its door, and leaves it by walking or saying so', () => {
@@ -662,7 +740,9 @@ describe('Wrackhead', () => {
     expect(forge.game.shop).toBe('barr')
     expect(forge.lines[0]).toBe("Barr's forge.")
     expect(run(forge.game, { type: 'leave' }).game.shop).toBeNull()
-    expect(run(forge.game, west).game.shop).toBeNull()
+    const out = run(forge.game, { type: 'move', dir: 'n' })
+    expect(out.game.shop).toBeNull()
+    expect(out.game.player.y).toBe(forge.game.player.y - 1)
   })
 
   it('sells at the forge, and buys back at a third', () => {
@@ -681,7 +761,9 @@ describe('Wrackhead', () => {
     forge.game.known.push('ring')
     expect(sellPrice(forge.game, { kind: 'ring' })).toBe(20)
     expect(sellPrice(forge.game, { kind: 'ledger' })).toBe(0)
-    expect(run(forge.game, { type: 'shop', key: 'buy:axe' }).game.player.marks).toBe(30)
+    expect(
+      run(forge.game, { type: 'shop', key: 'buy:axe' }).game.player.marks,
+    ).toBe(30)
   })
 
   it('fills the lamp, the skin and the rope at the net-loft, and sells salt', () => {
@@ -698,7 +780,9 @@ describe('Wrackhead', () => {
     expect(out.game.player.lamp).toBe(8)
     expect(out.game.player.water).toBe(8)
     expect(out.game.player.rope).toBe(8)
-    expect(out.game.player.pack.filter((i) => i.kind === 'salt')).toHaveLength(2)
+    expect(out.game.player.pack.filter((i) => i.kind === 'salt')).toHaveLength(
+      2,
+    )
     expect(out.game.player.marks).toBe(30 - 6 - 4 - 8 - 5)
   })
 
@@ -707,8 +791,15 @@ describe('Wrackhead', () => {
       g.player.pack = [{ kind: 'vial-cloud' }, { kind: 'knife' }]
       g.player.slain = ['picker']
     })
-    expect(offers(ruun.game).map((o) => o.key)).toEqual(['name:vial-cloud', 'name:picker'])
-    const out = run(ruun.game, { type: 'shop', key: 'name:vial-cloud' }, { type: 'shop', key: 'name:picker' })
+    expect(offers(ruun.game).map((o) => o.key)).toEqual([
+      'name:vial-cloud',
+      'name:picker',
+    ])
+    const out = run(
+      ruun.game,
+      { type: 'shop', key: 'name:vial-cloud' },
+      { type: 'shop', key: 'name:picker' },
+    )
     expect(out.game.known).toEqual(['vial-cloud', 'picker'])
     expect(out.game.player.marks).toBe(5)
     expect(offers(out.game)).toEqual([])
@@ -754,8 +845,13 @@ describe('Wrackhead', () => {
 
   it('ignores an offer that is not on the counter', () => {
     const forge = atShop('1')
-    expect(run(forge.game, { type: 'shop', key: 'buy:sarn-blade' }).game.player.marks).toBe(30)
-    expect(run(forge.game, { type: 'shop', key: 'sell:9' }).game.player.marks).toBe(30)
+    expect(
+      run(forge.game, { type: 'shop', key: 'buy:sarn-blade' }).game.player
+        .marks,
+    ).toBe(30)
+    expect(
+      run(forge.game, { type: 'shop', key: 'sell:9' }).game.player.marks,
+    ).toBe(30)
   })
 
   it('does not let you drop things on the shingle', () => {

@@ -49,5 +49,7 @@ export function line(a: Pos, b: Pos): Pos[] {
 /** Whether `b` can be seen from `a` at all, lamp or none. */
 export function inSight(level: Level, a: Pos, b: Pos): boolean {
   const path = line(a, b)
-  return path.every((p, i) => i === path.length - 1 || !opaque(at(level, p.x, p.y)))
+  return path.every(
+    (p, i) => i === path.length - 1 || !opaque(at(level, p.x, p.y)),
+  )
 }

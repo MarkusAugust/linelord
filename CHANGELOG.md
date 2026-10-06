@@ -15,6 +15,14 @@ because the earlier answer was wrong.
 - The demo page carries Open Graph and X card tags and a picture of its own
   (`site/og.png`, drawn from `site/card.html`), so a link to
   linelord.sobernetics.no is shown with a card rather than as a bare address.
+- The demo page has a way down. `>`, the stair at the foot of the page or
+  `?descend` in the address opens *The Descent into Kell*, a small roguelike in
+  the Gallowmark canon: ten floors of drowned Kell under Wrackhead, a tide that
+  floods the low ground while the grey rises at low water, and a ledger of every
+  run, kept in the browser. It is loaded only when someone goes down, and it
+  changes nothing about the command-line tool. The page now loads Datastar's
+  Rocket bundle, which is free as of Datastar 1.0.4 and includes the rest of
+  Datastar, so it is still one script.
 
 ## [1.0.0-rc.3] — 2026-10-04
 

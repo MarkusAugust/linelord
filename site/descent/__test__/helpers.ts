@@ -6,7 +6,11 @@ import type { Background, Game, Level } from '../core/types'
  * A level drawn by hand. `@` marks where the player stands and is floor;
  * every cell is at `elev` unless a digit row says otherwise.
  */
-export function levelFrom(rows: string[], depth: number, elev = 3): { level: Level; at: { x: number; y: number } } {
+export function levelFrom(
+  rows: string[],
+  depth: number,
+  elev = 3,
+): { level: Level; at: { x: number; y: number } } {
   const w = Math.max(...rows.map((r) => r.length))
   const h = rows.length
   let at = { x: 1, y: 1 }
@@ -43,8 +47,16 @@ export function levelFrom(rows: string[], depth: number, elev = 3): { level: Lev
 }
 
 /** A run on a hand-drawn level at some depth. */
-export function gameOn(rows: string[], depth: number, opts: { bg?: Background; seed?: number; elev?: number } = {}): Game {
-  const game = newGame({ name: 'Hild', bg: opts.bg ?? 'ashborn', seed: opts.seed ?? 7 })
+export function gameOn(
+  rows: string[],
+  depth: number,
+  opts: { bg?: Background; seed?: number; elev?: number } = {},
+): Game {
+  const game = newGame({
+    name: 'Hild',
+    bg: opts.bg ?? 'ashborn',
+    seed: opts.seed ?? 7,
+  })
   const { level, at } = levelFrom(rows, depth, opts.elev)
   game.depth = depth
   game.level = level

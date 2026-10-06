@@ -454,3 +454,41 @@ a {
   height: 18px;
   width: auto;
 }
+
+/*
+ * The way down: a stair at the foot of the page, and the dialog the game opens
+ * in. The game's own styles come with the game (site/descent/descent.css).
+ */
+.descent-dialog {
+  width: min(100vw - 16px, 1100px);
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  padding: 0;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+}
+
+.descent-dialog::backdrop {
+  background: rgb(0 0 0 / 0.72);
+}
+
+.ebb {
+  margin-top: 24px;
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+}
+
+.ebb a {
+  color: var(--ink-dim);
+  text-decoration: none;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+}
+
+.ebb a:hover,
+.ebb a:focus-visible {
+  color: var(--steel);
+  border-color: var(--rule);
+}

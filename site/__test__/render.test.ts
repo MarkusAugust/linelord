@@ -173,7 +173,7 @@ describe('renderSite', () => {
     const html = renderSite(sampleReport())
 
     expect(html).toContain(
-      'https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar.js',
+      'https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar-rocket.js',
     )
     const scripts = html.match(/<script/g) ?? []
     expect(scripts.length).toBe(1)
@@ -390,5 +390,19 @@ describe('renderSite', () => {
 
     expect(html).not.toContain(nasty)
     expect(html).toContain('&lt;script&gt;')
+  })
+
+  it('keeps a way down at the foot of the page, and loads the game only when it is taken', () => {
+    const html = renderSite(sampleReport())
+
+    expect(html).toContain('<dialog class="descent-dialog" id="descent"')
+    expect(html).toContain('<descent-run></descent-run>')
+    expect(html).toContain('class="ebb"')
+    expect(html).toContain('href="?descend"')
+    expect(html).toContain(
+      "import(new URL('descent.js', document.baseURI).href)",
+    )
+    expect(html).toContain("evt.key === '>'")
+    expect(html).toContain("has('descend')")
   })
 })
