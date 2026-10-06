@@ -10,13 +10,11 @@
  * LineLord itself makes no network call: this is a development step, and the
  * generated file is committed.
  */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { loadLore, ROOT } from './loreSource'
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = join(ROOT, 'src/adapters/opentui/resources/gallowmarkQuotes.ts')
-const SIBLING = join(ROOT, '../../gallowmark/dist/lore.json')
 const PROJECT = 'linelord'
 const POOLS = [
   'farewell',
@@ -25,40 +23,6 @@ const POOLS = [
   'analyzing',
   'complete',
 ] as const
-
-interface Quote {
-  id: string
-  text: string
-  speaker: string | null
-  pool: string
-  usedIn: string[]
-  status: 'canon' | 'draft' | 'retired'
-  tags: string[]
-}
-
-function loadLore(arg: string | undefined): {
-  generatedAt: string
-  quotes: Quote[]
-} {
-  if (arg) return JSON.parse(readFileSync(arg, 'utf8'))
-  if (existsSync(SIBLING)) return JSON.parse(readFileSync(SIBLING, 'utf8'))
-  const gh = Bun.spawnSync(
-    [
-      'gh',
-      'api',
-      'repos/MarkusAugust/gallowmark/contents/dist/lore.json',
-      '-H',
-      'Accept: application/vnd.github.raw',
-    ],
-    { stdout: 'pipe', stderr: 'pipe' },
-  )
-  if (gh.exitCode !== 0) {
-    throw new Error(
-      `no lore.json given, none at ${SIBLING}, and gh failed:\n${gh.stderr?.toString() ?? ''}`,
-    )
-  }
-  return JSON.parse(gh.stdout.toString())
-}
 
 const lore = loadLore(process.argv[2])
 const pools: Record<(typeof POOLS)[number], string[]> = {
