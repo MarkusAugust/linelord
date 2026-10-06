@@ -27,7 +27,9 @@ import {
   offerFor,
   offers,
   reveal,
+  statsOf,
   verbOf,
+  versus,
 } from '../core/game'
 import {
   HOLD_TITLES,
@@ -299,10 +301,14 @@ rocket('descent-run', {
       $$.wet = ph === 'flood' || ph === 'turning'
       $$.meaning = p.meaning
       $$.pending = pending ?? ''
-      $$.pack = p.pack.map((item) => ({
-        name: itemName(g, item),
-        verb: verbOf(item),
-      }))
+      $$.pack = p.pack.map((item) => {
+        const stats = statsOf(g, item)
+        return {
+          name: itemName(g, item),
+          verb: verbOf(item),
+          stats: stats ? `${stats} · ${versus(g, item)}` : '',
+        }
+      })
       $$.picking =
         pending === 'use'
           ? 'Press the letter of what to use. Esc to cancel.'
@@ -310,8 +316,12 @@ rocket('descent-run', {
             ? 'Press the letter of what to drop. Esc to cancel.'
             : ''
       const gear = inHand(g)
-      $$.weapon = gear.weapon ? itemName(g, gear.weapon) : 'bare hands'
-      $$.armour = gear.armour ? itemName(g, gear.armour) : 'nothing'
+      $$.weapon = gear.weapon
+        ? `${itemName(g, gear.weapon)} · ${statsOf(g, gear.weapon)}`
+        : 'bare hands · 1d2, +0 to hit'
+      $$.armour = gear.armour
+        ? `${itemName(g, gear.armour)} · ${statsOf(g, gear.armour)}`
+        : 'nothing · armour 0'
       $$.prompt = g.prompt
         ? g.prompt.kind === 'tithe'
           ? 'Pay a tenth?'
@@ -330,6 +340,7 @@ rocket('descent-run', {
               : '',
         enabled: o.enabled,
         hotkey: o.hotkey,
+        detail: o.detail ?? '',
       }))
       const near = g.level.monsters
         .filter(
@@ -711,6 +722,7 @@ rocket('descent-run', {
               <li>
                 <button class="descent__offer" type="button" data-attr:disabled="!o.enabled" data-on:click="@buy(o.key)">
                   <kbd data-text="o.hotkey"></kbd> <span data-text="o.label"></span> <span class="descent__price" data-text="o.price"></span>
+                  <span class="descent__detail" data-show="o.detail !== ''" data-text="o.detail"></span>
                 </button>
               </li>
             </template>
@@ -793,7 +805,10 @@ rocket('descent-run', {
             <template data-for="item, i in $$pack">
               <li>
                 <kbd data-text="String.fromCharCode(97 + i)"></kbd>
-                <span data-text="item.name"></span>
+                <span>
+                  <span data-text="item.name"></span>
+                  <span class="descent__detail" data-show="item.stats !== ''" data-text="item.stats"></span>
+                </span>
                 <button class="descent__mini" type="button" data-on:click="@use(i)" data-text="item.verb"></button>
                 <button class="descent__mini" type="button" data-on:click="@drop(i)">Drop</button>
               </li>
