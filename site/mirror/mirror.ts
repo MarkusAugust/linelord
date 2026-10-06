@@ -50,7 +50,7 @@ interface Frame {
 
 interface Water {
   draw: (f: Frame) => void
-  textures: (reflect: HTMLCanvasElement, kell: HTMLCanvasElement) => void
+  textures: (kell: HTMLCanvasElement) => void
   /** The lines drawn in the sand, redrawn whenever one of them changes. */
   sand: (lines: HTMLCanvasElement) => void
 }
@@ -134,25 +134,14 @@ function water(canvas: HTMLCanvasElement): Water | null {
     gl.uniform1i(at(name), unit)
     return tex
   }
-  const reflectTex = sheet(0, 'u_reflect')
   const kellTex = sheet(1, 'u_kell')
   const sandTex = sheet(2, 'u_sand')
   let textured = 0
   const isLight = light()
   return {
-    textures: (reflect, kell) => {
+    textures: (kell) => {
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
-      gl.activeTexture(gl.TEXTURE0)
-      gl.bindTexture(gl.TEXTURE_2D, reflectTex)
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        reflect,
-      )
       gl.activeTexture(gl.TEXTURE1)
       gl.bindTexture(gl.TEXTURE_2D, kellTex)
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, kell)
@@ -193,34 +182,6 @@ function water(canvas: HTMLCanvasElement): Water | null {
 /* The water is soft; it is drawn at less than the screen's density, which a
    phone's GPU will thank us for. */
 const scale = () => Math.min(window.devicePixelRatio || 1, 1.5) * 0.7
-
-/** The name as the water shows it: upside down, under the line, faint. */
-function reflectSheet(w: number, h: number, line: number): HTMLCanvasElement {
-  const sheet = document.createElement('canvas')
-  sheet.width = w
-  sheet.height = h
-  const ctx = sheet.getContext('2d')
-  const heading = document.querySelector('h1')
-  if (!ctx || !heading) return sheet
-  const style = getComputedStyle(heading)
-  const size = Math.min(
-    Number.parseFloat(style.fontSize) * scale() * 0.9,
-    h * 0.3,
-  )
-  ctx.font = `${style.fontWeight} ${size}px ${style.fontFamily}`
-  if ('letterSpacing' in ctx) ctx.letterSpacing = `${size * 0.12}px`
-  ctx.fillStyle = style.color
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'top'
-  ctx.save()
-  // Soft and drawn out downward, as a reflection in moving water is.
-  ctx.filter = `blur(${Math.max(1, size * 0.06)}px)`
-  ctx.translate(w / 2, h - line * 0.55 + size * 0.15)
-  ctx.scale(1, -1.25)
-  ctx.fillText('LINELORD', 0, -size * 1.05)
-  ctx.restore()
-  return sheet
-}
 
 const TILE: Record<string, string> = {
   '#': '#6e655a',
@@ -429,11 +390,7 @@ function setup(el: HTMLElement) {
     canvas.width = Math.max(1, Math.round(box.width * scale()))
     canvas.height = Math.max(1, Math.round(box.height * scale()))
     if (!surfaceGl) return
-    const line = waterline(canvas.height, tide(Date.now()))
-    surfaceGl.textures(
-      reflectSheet(canvas.width, canvas.height, line),
-      kellSheet(canvas.width, canvas.height),
-    )
+    surfaceGl.textures(kellSheet(canvas.width, canvas.height))
     lines(performance.now(), true)
   }
 

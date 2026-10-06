@@ -118,7 +118,7 @@ describe('the colour of the water', () => {
     ])
       expect(FRAGMENT).toMatch(new RegExp(`uniform (float|vec2) ${u};`))
     expect(FRAGMENT).toContain(`uniform vec4 u_ripples[${MAX_RIPPLES}];`)
-    expect(FRAGMENT).toContain('uniform sampler2D u_reflect;')
+    expect(FRAGMENT).not.toContain('u_reflect')
     expect(FRAGMENT).toContain('uniform sampler2D u_kell;')
     expect(FRAGMENT).toContain('uniform sampler2D u_sand;')
     expect(VERTEX).toContain('attribute vec2 a_pos;')

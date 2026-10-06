@@ -24,8 +24,7 @@ because the earlier answer was wrong.
   Rocket bundle, which is free as of Datastar 1.0.4 and includes the rest of
   Datastar, so it is still one script.
 - The page ends in the sea. It fades into dark water in the page's own browns
-  and gold, the name standing upside down in it, at a height that follows a
-  real tide on the clock. Between the page and the water lies a strip of wet
+  and gold, at a height that follows a real tide on the clock. Between the page and the water lies a strip of wet
   sand with a line drawn across it: Jarn's, the Linelord of the Gallowmark
   canon. The flood covers it and the ebb gives it back, drawn again along the
   beach. A finger or a mouse dragged over the sand draws a line of your own,

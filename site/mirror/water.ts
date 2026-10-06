@@ -1,9 +1,8 @@
 /**
  * The sea at the foot of the page, and the way down through it.
  *
- * The page fades into dark water. The name stands over it, upside down in the
- * reflection; the water stands higher or lower with a tide that runs on the
- * clock. Touched, it rings, and where the rings break the surface the drowned
+ * The page fades into dark water, which stands higher or lower with a tide
+ * that runs on the clock. Touched, it rings, and where the rings break the surface the drowned
  * city shows underneath. Held, the rings turn into a whirlpool, and held long
  * enough the water rises over the whole page and the game comes up out of the
  * dark. Closed, the dark goes and the water falls back off the page.
@@ -220,7 +219,6 @@ uniform float u_dark;
 uniform float u_light;
 uniform float u_k;
 uniform float u_textures;
-uniform sampler2D u_reflect;
 uniform sampler2D u_kell;
 uniform sampler2D u_sand;
 uniform float u_shore;
@@ -292,9 +290,6 @@ void main() {
   float broken = clamp(abs(lift) * 1.5 + pull * 1.4, 0.0, 1.0);
 
   vec2 uv = clamp((p + bend) / u_res, 0.0, 1.0);
-  // The name's reflection is broken into lines that slide against each other.
-  vec2 streak = vec2(sin(p.y * 0.16 + u_t * 1.2) * 0.004 + sin(p.y * 0.05 - u_t * 0.6) * 0.003, 0.0);
-  vec4 shown = texture2D(u_reflect, clamp(uv + streak, 0.0, 1.0)) * u_textures;
   vec4 kell = texture2D(u_kell, uv) * u_textures;
 
   vec3 deep = mix(${glsl(PALETTE.dark.deep)}, ${glsl(PALETTE.light.deep)}, u_light);
@@ -304,7 +299,6 @@ void main() {
 
   vec3 col = mix(deep, mid, smoothstep(0.3, 0.75, swell) * 0.7);
   col *= mix(1.0, 0.6, clamp(depth / u_res.y, 0.0, 1.0));
-  col = mix(col, foam, shown.a * 0.1 * (1.0 - broken) * smoothstep(0.0, u_feather * 0.6, depth));
   col = mix(col, kell.rgb, kell.a * broken);
   col += rim * max(lift, 0.0) * 0.35;
   col = mix(col, rim, smoothstep(u_feather * 0.05, 0.0, abs(depth)) * 0.25);
