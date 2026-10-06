@@ -227,10 +227,14 @@ uniform sampler2D u_plate;
 uniform sampler2D u_sand;
 
 // The engraving's ink at a point: 1 where the burin cut, 0 where it did not.
-// Read a little soft (a mip bias), so lines that move by less than a pixel
-// do not flicker.
+// The cut at a point, by local contrast: each line against the ink around
+// it. Where the hatching is dense its lines still stand apart from their gaps
+// instead of running together into black; where it is sparse they are cut
+// full depth.
 float ink(vec2 uv) {
-  return smoothstep(0.15, 0.8, texture2D(u_engraving, uv, 0.5).r);
+  float sharp = texture2D(u_engraving, uv).r;
+  float around = texture2D(u_engraving, uv, 4.0).r;
+  return clamp((sharp - around) * 1.7 + around * 0.45, 0.0, 1.0);
 }
 
 float hash1(float x) {
@@ -266,13 +270,18 @@ void main() {
   // repeats, so it never shows a seam.
   float tile = h * u_aspect;
   float ux = u_res.x >= tile ? p.x / u_res.x : 0.5 + (p.x - u_res.x * 0.5) / tile;
-  vec2 uv = vec2(ux, row);
+  // The sea nearest the shore is the engraving's densest hatching. Spread it:
+  // give the rows by the shore more of the screen and those further out a
+  // little less, so its lines stand apart instead of running into black.
+  float seaward = clamp((row - ${SHORE_ROW.toFixed(3)}) / ${(1 - SHORE_ROW).toFixed(3)}, 0.0, 1.0);
+  float spread = ${SHORE_ROW.toFixed(3)} + ${(1 - SHORE_ROW).toFixed(3)} * pow(seaward, 1.25);
+  vec2 uv = vec2(ux, mix(row, spread, step(${SHORE_ROW.toFixed(3)}, row) * (u_shore > 0.5 ? 1.0 : 0.0)));
 
   // The swell comes in toward the shore: each row rises and falls a little,
   // later than the row nearer the eye, so the crests walk up the beach and
   // draw back. Small and slow, and nothing moves sideways.
   float near = clamp((row - ${SHORE_ROW.toFixed(3)}) / 0.6, 0.0, 1.0);
-  vec2 drift = vec2(0.0, sin(u_t * 0.6 - row * 22.0) * 0.006 * (0.35 + near)) * sea;
+  vec2 drift = vec2(0.0, sin(u_t * 0.75 - row * 22.0) * 0.009 * (0.35 + near)) * sea;
 
   // Rings and the whirlpool bend the cut lines where the water is touched.
   vec2 bend = vec2(0.0);
