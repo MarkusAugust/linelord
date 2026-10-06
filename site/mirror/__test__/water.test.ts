@@ -5,6 +5,7 @@ import {
   crosses,
   DIVE_MS,
   dive,
+  engravingRow,
   FRAGMENT,
   glsl,
   HOLD_MS,
@@ -15,6 +16,7 @@ import {
   MAX_RIPPLES,
   PALETTE,
   ripple,
+  SHORE_ROW,
   SURFACE_MS,
   saying,
   surface,
@@ -83,18 +85,15 @@ describe('going down and coming up', () => {
   })
 })
 
-describe('the colour of the water', () => {
+describe('the colour of the plate', () => {
   const channels = (hex: string) =>
     [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16))
 
-  it('is the page own, and has no blue in it', () => {
-    expect(PALETTE.dark.rim).toBe('#c8a34a')
+  it('is the page own: steel for the light in the grooves, the paper for the dark, and no blue', () => {
+    expect(PALETTE.gold).toBe('#c8a34a')
     expect(PALETTE.night).toBe('#14110d')
-    for (const hex of [
-      PALETTE.night,
-      ...Object.values(PALETTE.dark),
-      ...Object.values(PALETTE.light),
-    ]) {
+    expect(PALETTE.paper).toBe('#f4efe4')
+    for (const hex of Object.values(PALETTE)) {
       const [r = 0, g = 0, b = 0] = channels(hex)
       expect(b).toBeLessThanOrEqual(r)
       expect(b).toBeLessThanOrEqual(g)
@@ -102,7 +101,7 @@ describe('the colour of the water', () => {
   })
 
   it('is what the shader draws with, and the shader declares what the page sets', () => {
-    expect(FRAGMENT).toContain(glsl(PALETTE.dark.mid))
+    expect(FRAGMENT).toContain(glsl(PALETTE.gold))
     expect(FRAGMENT).toContain(glsl(PALETTE.night))
     for (const u of [
       'u_res',
@@ -115,14 +114,28 @@ describe('the colour of the water', () => {
       'u_k',
       'u_textures',
       'u_shore',
+      'u_aspect',
     ])
       expect(FRAGMENT).toMatch(new RegExp(`uniform (float|vec2) ${u};`))
     expect(FRAGMENT).toContain(`uniform vec4 u_ripples[${MAX_RIPPLES}];`)
+    for (const t of ['u_engraving', 'u_plate', 'u_sand'])
+      expect(FRAGMENT).toContain(`uniform sampler2D ${t};`)
+    expect(FRAGMENT).not.toContain('u_kell')
     expect(FRAGMENT).not.toContain('u_reflect')
-    expect(FRAGMENT).toContain('uniform sampler2D u_kell;')
-    expect(FRAGMENT).toContain('uniform sampler2D u_sand;')
     expect(VERTEX).toContain('attribute vec2 a_pos;')
     expect(glsl('#ff8000')).toBe('vec3(1.000, 0.502, 0.000)')
+  })
+})
+
+describe('the engraving', () => {
+  it('meets the page where its shore is, at the height the tide stands', () => {
+    // The shore row of the engraving lands on the waterline, whatever the tide.
+    for (const level of [0, 0.5, 1]) {
+      const h = 400
+      const y = waterline(h, level)
+      expect(engravingRow(y, h, y)).toBeCloseTo(SHORE_ROW)
+    }
+    expect(engravingRow(400, 400, waterline(400, 0.5))).toBeLessThan(SHORE_ROW)
   })
 })
 

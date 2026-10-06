@@ -8,9 +8,6 @@
  * on a canvas over the whole window for the second it lasts and then removed.
  * Nothing is drawn while the water is off screen or the game is open.
  */
-import { MONSTERS } from '../descent/core/content'
-import { generate } from '../descent/core/level'
-import { makeRng } from '../descent/core/rng'
 import { pools } from '../descent/lore'
 import {
   crosses,
@@ -50,7 +47,8 @@ interface Frame {
 
 interface Water {
   draw: (f: Frame) => void
-  textures: (kell: HTMLCanvasElement) => void
+  /** The engraving's ink and the steel it is cut into. */
+  images: (ink: HTMLCanvasElement, plate: HTMLImageElement) => void
   /** The lines drawn in the sand, redrawn whenever one of them changes. */
   sand: (lines: HTMLCanvasElement) => void
 }
@@ -111,6 +109,7 @@ function water(canvas: HTMLCanvasElement): Water | null {
     k: at('u_k'),
     textures: at('u_textures'),
     shore: at('u_shore'),
+    aspect: at('u_aspect'),
   }
   const sheet = (unit: number, name: string) => {
     const tex = gl.createTexture()
@@ -134,17 +133,46 @@ function water(canvas: HTMLCanvasElement): Water | null {
     gl.uniform1i(at(name), unit)
     return tex
   }
-  const kellTex = sheet(1, 'u_kell')
+  const inkTex = sheet(0, 'u_engraving')
+  const plateTex = sheet(1, 'u_plate')
   const sandTex = sheet(2, 'u_sand')
+  /* The plate repeats; the engraving is drawn once, clamped at its edges. Both
+     are drawn smaller than they are made, and get mipmaps so the fine lines
+     do not shimmer. */
+  const tiled = (
+    unit: number,
+    tex: WebGLTexture | null,
+    image: TexImageSource,
+    clampT: boolean,
+  ) => {
+    gl.activeTexture(gl.TEXTURE0 + unit)
+    gl.bindTexture(gl.TEXTURE_2D, tex)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
+    gl.texParameteri(
+      gl.TEXTURE_2D,
+      gl.TEXTURE_WRAP_S,
+      clampT ? gl.CLAMP_TO_EDGE : gl.REPEAT,
+    )
+    gl.texParameteri(
+      gl.TEXTURE_2D,
+      gl.TEXTURE_WRAP_T,
+      clampT ? gl.CLAMP_TO_EDGE : gl.REPEAT,
+    )
+    gl.texParameteri(
+      gl.TEXTURE_2D,
+      gl.TEXTURE_MIN_FILTER,
+      gl.LINEAR_MIPMAP_LINEAR,
+    )
+    gl.generateMipmap(gl.TEXTURE_2D)
+  }
   let textured = 0
   const isLight = light()
   return {
-    textures: (kell) => {
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
+    images: (ink, plate) => {
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
-      gl.activeTexture(gl.TEXTURE1)
-      gl.bindTexture(gl.TEXTURE_2D, kellTex)
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, kell)
+      tiled(0, inkTex, ink, true)
+      tiled(1, plateTex, plate, false)
       textured = 1
     },
     sand: (lines) => {
@@ -172,6 +200,7 @@ function water(canvas: HTMLCanvasElement): Water | null {
       gl.uniform1f(u.k, f.k)
       gl.uniform1f(u.textures, textured)
       gl.uniform1f(u.shore, f.shore)
+      gl.uniform1f(u.aspect, INK_W / INK_H)
       gl.clearColor(0, 0, 0, 0)
       gl.clear(gl.COLOR_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
@@ -183,67 +212,70 @@ function water(canvas: HTMLCanvasElement): Water | null {
    phone's GPU will thank us for. */
 const scale = () => Math.min(window.devicePixelRatio || 1, 1.5) * 0.7
 
-const TILE: Record<string, string> = {
-  '#': '#6e655a',
-  '.': '#4f493f',
-  '<': '#f0e6d0',
-  '>': '#f0e6d0',
-  '+': '#a7794a',
+const INK_W = 2048
+const INK_H = 512
+
+/** Fetches an image the page carries beside this module. */
+function picture(name: string): Promise<HTMLImageElement> {
+  return new Promise((done, fail) => {
+    const image = new Image()
+    image.decoding = 'async'
+    image.onload = () => done(image)
+    image.onerror = fail
+    image.src = new URL(name, document.baseURI).href
+  })
 }
 
-/** Drowned Kell as the game draws it: a floor of the Quaysteps, in its own colours. */
-function kellSheet(w: number, h: number): HTMLCanvasElement {
+/**
+ * The engraving as the shader reads it: ink in the red channel (1 where the
+ * burin cut), stretched to a power of two so it can repeat along the beach,
+ * and the thin rule at its foot cut off. It is drawn once across the width,
+ * so it never repeats.
+ */
+function inkSheet(image: HTMLImageElement): HTMLCanvasElement {
   const sheet = document.createElement('canvas')
-  sheet.width = w
-  sheet.height = h
-  const ctx = sheet.getContext('2d')
+  sheet.width = INK_W
+  sheet.height = INK_H
+  const ctx = sheet.getContext('2d', { willReadFrequently: true })
   if (!ctx) return sheet
-  const cell = Math.max(8, Math.round(14 * scale()))
-  ctx.font = `${cell}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`
-  ctx.textBaseline = 'top'
-  let n = 1
-  const floor = generate(1, makeRng(0x4b454c4c), () => n++)
-  const across = cell * 0.62
-  for (let oy = 0; oy * cell < h; oy += floor.h) {
-    for (let ox = 0; ox * across < w; ox += floor.w) {
-      floor.tiles.forEach((row, y) => {
-        ;[...row].forEach((t, x) => {
-          const m = floor.monsters.find((o) => o.x === x && o.y === y)
-          const glyph = m ? (MONSTERS[m.kind]?.glyph ?? t) : t
-          ctx.fillStyle = m ? '#d8664d' : (TILE[t] ?? '#4f493f')
-          ctx.fillText(glyph, (ox + x) * across, (oy + y) * cell)
-        })
-      })
+  const keep = image.naturalHeight * 0.965
+  ctx.drawImage(image, 0, 0, image.naturalWidth, keep, 0, 0, INK_W, INK_H)
+  const data = ctx.getImageData(0, 0, INK_W, INK_H)
+  const px = data.data
+  const lum = (i: number) =>
+    0.299 * (px[i] ?? 255) +
+    0.587 * (px[i + 1] ?? 255) +
+    0.114 * (px[i + 2] ?? 255)
+  const out = new Uint8ClampedArray(px.length)
+  for (let y = 0; y < INK_H; y++) {
+    for (let x = 0; x < INK_W; x++) {
+      const i = (y * INK_W + x) * 4
+      const v = 255 - lum(i)
+      out[i] = v
+      out[i + 1] = v
+      out[i + 2] = v
+      out[i + 3] = 255
     }
   }
+  ctx.putImageData(new ImageData(out, INK_W, INK_H), 0, 0)
   return sheet
 }
 
-/** A stroke as a man draws it in wet sand: a groove, with the light on its far edge. */
+/** A stroke cut into the plate: the shader lights it as it lights the engraving. */
 function groove(
   ctx: CanvasRenderingContext2D,
   points: readonly (readonly [number, number])[],
   width: number,
-  isLight: boolean,
 ): void {
   if (points.length < 2) return
-  const path = (dy: number) => {
-    ctx.beginPath()
-    points.forEach(([x, y], i) => {
-      if (i === 0) ctx.moveTo(x, y + dy)
-      else ctx.lineTo(x, y + dy)
-    })
-  }
+  ctx.beginPath()
+  points.forEach(([x, y], i) => {
+    if (i === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  })
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
-  path(-width * 0.5)
-  ctx.strokeStyle = isLight
-    ? 'rgba(255, 250, 238, 0.7)'
-    : 'rgba(200, 163, 74, 0.35)'
-  ctx.lineWidth = width * 0.6
-  ctx.stroke()
-  path(0)
-  ctx.strokeStyle = isLight ? 'rgba(90, 70, 40, 0.75)' : 'rgba(8, 6, 3, 0.85)'
+  ctx.strokeStyle = 'rgba(255, 255, 255, 1)'
   ctx.lineWidth = width
   ctx.stroke()
 }
@@ -254,7 +286,6 @@ function sandSheet(
   h: number,
   drawn: number,
   mine: readonly (readonly [number, number])[] | null,
-  isLight: boolean,
 ): HTMLCanvasElement {
   const sheet = document.createElement('canvas')
   sheet.width = w
@@ -269,13 +300,12 @@ function sandSheet(
       x,
       y0 + Math.sin(x * 0.013) * h * 0.012 + Math.sin(x * 0.041) * h * 0.005,
     ])
-  groove(ctx, his, width, isLight)
+  groove(ctx, his, width)
   if (mine)
     groove(
       ctx,
       mine.map(([x, y]) => [x * w, h - y * h] as [number, number]),
       width * 0.85,
-      isLight,
     )
   return sheet
 }
@@ -332,6 +362,13 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches
 
 let mirror: ReturnType<typeof setup> | null = null
 
+/* Fetched once, shared by the plate at the foot of the page and the one over
+   the window on the way down and up. */
+const plates: Promise<[HTMLCanvasElement, HTMLImageElement]> = Promise.all([
+  picture('engraving.webp').then(inkSheet),
+  picture('plate.webp'),
+])
+
 function setup(el: HTMLElement) {
   const canvas = document.createElement('canvas')
   canvas.className = 'mirror__water'
@@ -360,8 +397,6 @@ function setup(el: HTMLElement) {
   let drawing: [number, number][] | null = null
   const revealFrom = performance.now()
   let lastDrawn = -1
-  const isLight = light() === 1
-
   /* The lines in the sand: Jarn's, drawn out along the beach the first time
      the shore is seen, and as the tide allows; and yours, until a flood has
      been over it. */
@@ -380,9 +415,7 @@ function setup(el: HTMLElement) {
     if (!force && drawn === lastDrawn && !drawing) return
     lastDrawn = drawn
     const points = drawing ?? mine?.points ?? null
-    surfaceGl.sand(
-      sandSheet(canvas.width, canvas.height, drawn, points, isLight),
-    )
+    surfaceGl.sand(sandSheet(canvas.width, canvas.height, drawn, points))
   }
 
   const fit = () => {
@@ -390,9 +423,15 @@ function setup(el: HTMLElement) {
     canvas.width = Math.max(1, Math.round(box.width * scale()))
     canvas.height = Math.max(1, Math.round(box.height * scale()))
     if (!surfaceGl) return
-    surfaceGl.textures(kellSheet(canvas.width, canvas.height))
     lines(performance.now(), true)
   }
+
+  /* The engraving and the plate come after the water: until they have, the
+     plate shows plain, and then the cut appears in it. */
+  plates.then(([ink, plate]) => {
+    surfaceGl?.images(ink, plate)
+    paint(performance.now())
+  })
 
   const dialog = document.getElementById('descent')
   const playing = () => dialog instanceof HTMLDialogElement && dialog.open
@@ -611,6 +650,7 @@ function setup(el: HTMLElement) {
     veil.className = 'mirror__veil'
     veil.setAttribute('aria-hidden', 'true')
     const pour = water(veil)
+    if (pour) plates.then(([ink, plate]) => pour.images(ink, plate))
     if (!pour) {
       openGame()
       going = false
@@ -688,6 +728,7 @@ function setup(el: HTMLElement) {
       veil.className = 'mirror__veil'
       veil.setAttribute('aria-hidden', 'true')
       const pour = water(veil)
+      if (pour) plates.then(([ink, plate]) => pour.images(ink, plate))
       if (!pour) return ring()
       document.body.append(veil)
       veil.width = Math.round(window.innerWidth * scale())

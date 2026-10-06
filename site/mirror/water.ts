@@ -26,11 +26,11 @@ const rising = (now: number) => Math.cos((2 * Math.PI * now) / TIDE_MS) > 0
  * Where Jarn's line lies in the sand, as a share of the canvas's height from
  * the bottom: above the water at the ebb, under it at the flood.
  */
-export const LINE_AT = 0.6
+export const LINE_AT = 0.69
 
 /** The tide level at which the water reaches a height `y` (a share from the bottom). */
 export function coverLevel(y: number): number {
-  return (y - 0.5) / 0.18
+  return (y - 0.62) / 0.1
 }
 
 /**
@@ -86,7 +86,7 @@ export function saying(now: number, mine: { crossed: boolean } | null): string {
  * it the water fades into the page.
  */
 export function waterline(height: number, level: number): number {
-  return height * (0.5 + 0.18 * level)
+  return height * (0.62 + 0.1 * level)
 }
 
 /** A ring on the water: where it started, when, and how hard. */
@@ -167,29 +167,30 @@ export function surface(ms: number): {
 }
 
 /**
- * The water's colours, from the page's own: brown and gold, the ink for the
- * foam, the steel for the light on it, the paper for the dark. Never blue;
- * the blue belongs to the water in the game.
+ * The plate's colours, from the page's own: the steel gold for the light that
+ * catches the grooves, the paper for the dark, and on a light page the paper
+ * for the plate and a brown ink for the cut. No blue; that is the game's.
  */
 export const PALETTE = {
-  dark: {
-    deep: '#1e170d',
-    mid: '#5c4720',
-    foam: '#e8e2d4',
-    rim: '#c8a34a',
-    sand: '#40352a',
-    wet: '#2b2318',
-  },
-  light: {
-    deep: '#4a3818',
-    mid: '#8a6d30',
-    foam: '#fbf6ea',
-    rim: '#f4efe4',
-    sand: '#e2d6bc',
-    wet: '#c4b391',
-  },
+  gold: '#c8a34a',
   night: '#14110d',
+  paper: '#f4efe4',
+  ink: '#3a2d18',
+  dim: '#8a6d1f',
 } as const
+
+/** Where the shore is in the engraving: the share of its height from the top. */
+export const SHORE_ROW = 0.34
+
+/**
+ * The row of the engraving (a share of its height from the top) to draw at
+ * height `y` of a canvas `h` tall, counted from the bottom, when the water's
+ * top stands at `surface`: the engraving's own shore lands on the waterline,
+ * and the tide moves the whole engraving up and down with it.
+ */
+export function engravingRow(y: number, h: number, surface: number): number {
+  return SHORE_ROW + (surface - y) / h
+}
 
 /** A colour as GLSL writes it. */
 export function glsl(hex: string): string {
@@ -219,55 +220,71 @@ uniform float u_dark;
 uniform float u_light;
 uniform float u_k;
 uniform float u_textures;
-uniform sampler2D u_kell;
-uniform sampler2D u_sand;
 uniform float u_shore;
+uniform float u_aspect;
+uniform sampler2D u_engraving;
+uniform sampler2D u_plate;
+uniform sampler2D u_sand;
 
-float hash(vec3 p) {
-  p = fract(p * 0.3183099 + 0.1);
-  p *= 17.0;
-  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+// The engraving's ink at a point: 1 where the burin cut, 0 where it did not.
+// The cut at a point, by local contrast: each line against the ink around
+// it. Where the hatching is dense its lines still stand apart from their gaps
+// instead of running together into black; where it is sparse they are cut
+// full depth.
+float ink(vec2 uv) {
+  float sharp = texture2D(u_engraving, uv).r;
+  float around = texture2D(u_engraving, uv, 4.0).r;
+  return clamp((sharp - around) * 1.7 + around * 0.45, 0.0, 1.0);
 }
 
-float noise(vec3 x) {
-  vec3 i = floor(x);
-  vec3 f = fract(x);
+float hash1(float x) {
+  return fract(sin(x * 127.1) * 43758.5453);
+}
+
+// A soft, slow noise along the beach, for the ragged edge of the wash.
+float ragged(float x) {
+  float i = floor(x);
+  float f = fract(x);
   f = f * f * (3.0 - 2.0 * f);
-  return mix(
-    mix(mix(hash(i), hash(i + vec3(1, 0, 0)), f.x),
-        mix(hash(i + vec3(0, 1, 0)), hash(i + vec3(1, 1, 0)), f.x), f.y),
-    mix(mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x),
-        mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x), f.y),
-    f.z);
-}
-
-float fbm(vec3 p) {
-  float v = 0.0;
-  float a = 0.5;
-  for (int i = 0; i < 3; i++) {
-    v += a * noise(p);
-    p *= 2.03;
-    a *= 0.5;
-  }
-  return v;
+  return mix(hash1(i), hash1(i + 1.0), f);
 }
 
 void main() {
   vec2 p = gl_FragCoord.xy;
-  // The edge of the sea moves a little along the beach, as the wash does.
-  float wash = (sin(p.x * 0.018 + u_t * 0.7) * 2.5 + sin(p.x * 0.051 - u_t * 1.1) * 1.5) * u_shore;
-  float depth = u_surface + wash - p.y;
-  float water = u_shore > 0.5
-    ? smoothstep(-1.5, 2.5, depth)
-    : smoothstep(-u_feather * 0.15, u_feather, depth);
+  float h = u_res.y;
 
-  // A slow swell, stretched along the water as swells are.
-  vec2 q = p / u_res.y;
-  float swell = fbm(vec3(q * vec2(2.2, 7.0) + vec2(u_t * 0.03, 0.0), u_t * 0.08));
-  vec2 bend = vec2(sin(p.y * 0.07 + u_t * 1.3) * 2.5, (swell - 0.5) * 6.0);
+  // Which row of the engraving this is. On the page the engraving's shore
+  // stands on the waterline; in the passages the sea fills everything below
+  // the rising surface.
+  float row = u_shore > 0.5
+    ? ${SHORE_ROW.toFixed(3)} + (u_surface - p.y) / h
+    : 0.45 + clamp((u_surface - p.y) / (h * 1.6), 0.0, 0.5);
+  // The wash: the sea's edge runs up the sand and back, slowly, ragged along
+  // the beach, and the sand and the sea fade into each other across it.
+  float wash = (sin(u_t * 0.35) * 0.012 + (ragged(p.x / 90.0 + u_t * 0.05) - 0.5) * 0.03) * u_shore;
+  float sea = u_shore > 0.5
+    ? smoothstep(${(SHORE_ROW - 0.08).toFixed(3)}, ${(SHORE_ROW + 0.07).toFixed(3)}, row + wash)
+    : 1.0;
+  // One engraving across the whole width: stretched a little where the window
+  // is wider than it, and cut from the middle where it is narrower. It never
+  // repeats, so it never shows a seam.
+  float tile = h * u_aspect;
+  float ux = u_res.x >= tile ? p.x / u_res.x : 0.5 + (p.x - u_res.x * 0.5) / tile;
+  // The sea nearest the shore is the engraving's densest hatching. Spread it:
+  // give the rows by the shore more of the screen and those further out a
+  // little less, so its lines stand apart instead of running into black.
+  float seaward = clamp((row - ${SHORE_ROW.toFixed(3)}) / ${(1 - SHORE_ROW).toFixed(3)}, 0.0, 1.0);
+  float spread = ${SHORE_ROW.toFixed(3)} + ${(1 - SHORE_ROW).toFixed(3)} * pow(seaward, 1.25);
+  vec2 uv = vec2(ux, mix(row, spread, step(${SHORE_ROW.toFixed(3)}, row) * (u_shore > 0.5 ? 1.0 : 0.0)));
 
-  // Rings: a wave front moving out from where the water was touched, dying
-  // as it goes. Where they rise or fall steeply the surface breaks.
+  // The swell comes in toward the shore: each row rises and falls a little,
+  // later than the row nearer the eye, so the crests walk up the beach and
+  // draw back. Small and slow, and nothing moves sideways.
+  float near = clamp((row - ${SHORE_ROW.toFixed(3)}) / 0.6, 0.0, 1.0);
+  vec2 drift = vec2(0.0, sin(u_t * 0.75 - row * 22.0) * 0.009 * (0.35 + near)) * sea;
+
+  // Rings and the whirlpool bend the cut lines where the water is touched.
+  vec2 bend = vec2(0.0);
   float lift = 0.0;
   for (int i = 0; i < ${MAX_RIPPLES}; i++) {
     vec4 r = u_ripples[i];
@@ -278,47 +295,39 @@ void main() {
     float band = smoothstep(front + 40.0, front, d) * smoothstep(front - 160.0, front - 20.0, d);
     float w = sin((d - front) * 0.08) * band * exp(-r.z * 1.2) * r.w;
     lift += w;
-    bend += off / max(d, 1.0) * w * 7.0;
+    bend += off / max(d, 1.0) * w * 8.0;
   }
-
-  // The whirlpool where you hold: it turns the water round the point and
-  // opens a dark throat in it.
-  vec2 h = p - u_hold_at;
-  float hr = length(h);
+  vec2 hv = p - u_hold_at;
+  float hr = length(hv);
   float pull = u_hold * exp(-hr / (120.0 + 260.0 * u_hold));
-  bend += vec2(-h.y, h.x) / max(hr, 1.0) * pull * 26.0;
-  float broken = clamp(abs(lift) * 1.5 + pull * 1.4, 0.0, 1.0);
+  bend += vec2(-hv.y, hv.x) / max(hr, 1.0) * pull * 30.0;
+  uv += drift + bend / h * sea;
+  uv.y = clamp(uv.y, 0.002, 0.998);
 
-  vec2 uv = clamp((p + bend) / u_res, 0.0, 1.0);
-  vec4 kell = texture2D(u_kell, uv) * u_textures;
-
-  vec3 deep = mix(${glsl(PALETTE.dark.deep)}, ${glsl(PALETTE.light.deep)}, u_light);
-  vec3 mid = mix(${glsl(PALETTE.dark.mid)}, ${glsl(PALETTE.light.mid)}, u_light);
-  vec3 rim = mix(${glsl(PALETTE.dark.rim)}, ${glsl(PALETTE.light.rim)}, u_light);
-  vec3 foam = mix(${glsl(PALETTE.dark.foam)}, ${glsl(PALETTE.light.foam)}, u_light);
-
-  vec3 col = mix(deep, mid, smoothstep(0.3, 0.75, swell) * 0.7);
-  col *= mix(1.0, 0.6, clamp(depth / u_res.y, 0.0, 1.0));
-  col = mix(col, kell.rgb, kell.a * broken);
-  col += rim * max(lift, 0.0) * 0.35;
-  col = mix(col, rim, smoothstep(u_feather * 0.05, 0.0, abs(depth)) * 0.25);
-  col *= 1.0 - u_hold * exp(-hr / 70.0) * 0.9;
-
-  // The beach above the water: wet and dark at the edge, drier and fading
-  // into the page further up, with the lines drawn in it.
-  float above = -depth;
-  vec3 dry = mix(${glsl(PALETTE.dark.sand)}, ${glsl(PALETTE.light.sand)}, u_light);
-  vec3 damp = mix(${glsl(PALETTE.dark.wet)}, ${glsl(PALETTE.light.wet)}, u_light);
-  vec3 sand = mix(damp, dry, smoothstep(0.0, u_feather * 0.6, above));
-  sand *= 0.94 + 0.12 * noise(vec3(p * 0.9, 0.0));
+  // The cut, and its slope, from which the light is worked out.
+  float g = ink(uv) * u_textures;
   vec4 drawn = texture2D(u_sand, p / u_res);
-  sand = mix(sand, drawn.rgb, drawn.a);
-  float beach = (1.0 - smoothstep(u_feather * 0.45, u_feather, above)) * u_shore;
-  col = mix(sand, col, water);
-  col = mix(col, rim, smoothstep(3.0, 0.0, abs(depth)) * 0.35 * u_shore);
+  float lineCut = drawn.a * (1.0 - sea) * u_shore;
+  g = max(g, lineCut);
+
+  // No glints in the grooves: they are simply cut, dark. A broad, soft sheen
+  // passes slowly over the plate, warm, the way light moves on old metal.
+  vec3 steel = texture2D(u_plate, p / 640.0, 1.0).rgb;
+  vec3 plate = mix(steel * 0.8, mix(${glsl(PALETTE.paper)}, steel * 1.7, 0.18), u_light);
+  vec3 cut = mix(plate * 0.18, ${glsl(PALETTE.ink)}, u_light);
+  vec3 col = mix(plate * 1.05, cut, g * 0.9);
+  float across = p.x / u_res.x;
+  float sheen = exp(-pow((across - fract(u_t * 0.015) * 1.6 + 0.3) * 2.6, 2.0));
+  col += mix(${glsl(PALETTE.gold)}, ${glsl(PALETTE.dim)}, u_light) * sheen * (1.0 - g) * 0.22;
+  col += ${glsl(PALETTE.gold)} * max(lift, 0.0) * 0.2 * sea;
+  col *= 1.0 - u_hold * exp(-hr / 70.0) * 0.9;
   col = mix(col, ${glsl(PALETTE.night)}, u_dark);
 
-  float a = max(max(water, beach), u_dark) * u_k;
+  // The plate fades into the page above the shore's stipple.
+  float plateIn = u_shore > 0.5
+    ? smoothstep(0.03, 0.2, row)
+    : smoothstep(-u_feather * 0.15, u_feather, u_surface - p.y);
+  float a = max(plateIn, u_dark) * u_k;
   gl_FragColor = vec4(col * a, a);
 }
 `
