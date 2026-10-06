@@ -84,7 +84,7 @@ the numbers are not survives every rewording of every screen.
 
 LineLord wears a barbarian theme, and lays it on thick. Its names come from
 the [Gallowmark canon](https://github.com/MarkusAugust/gallowmark): Gorvek of
-Bonereach, Sarn the Faceless, Captain Drusk of the Greycloaks, Brother Nask
+Bonereach, Sarn the Faceless, Captain Drusk of the Greycloaks, Brother Ruun
 the river-priest, Vurn the Ashborn, the river-god Thurn, the drowned city of
 Kell, the Ashfall. Use that vocabulary in screens, help text, tests and prose,
 and do not invent a third register. **A name that is not in the canon is not

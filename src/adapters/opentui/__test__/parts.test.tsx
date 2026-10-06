@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'bun:test'
 import { BattleRecord, Heading, MeasureRow } from '../parts'
-import { type Driven, drive, fixtureRealm, NASK } from './harness'
+import { type Driven, drive, fixtureRealm, RUUN } from './harness'
 
 let screen: Driven | undefined
 afterEach(() => {
@@ -87,12 +87,12 @@ describe('MeasureRow', () => {
 describe('BattleRecord', () => {
   it('draws every measure of a warrior against the realm', async () => {
     const realm = fixtureRealm()
-    const nask = realm.rankings.find((one) => one.authorId === NASK.id)
-    if (!nask) throw new Error('Nask should be ranked')
+    const ruun = realm.rankings.find((one) => one.authorId === RUUN.id)
+    if (!ruun) throw new Error('Ruun should be ranked')
     screen = await drive(
       <box style={{ flexDirection: 'column' }}>
         <BattleRecord
-          warrior={nask}
+          warrior={ruun}
           rankings={realm.rankings}
           totals={realm.totals}
           barWidth={10}

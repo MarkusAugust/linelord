@@ -21,7 +21,7 @@ import { survivalByAuthor } from '../longevity'
  */
 
 const GORVEK = { name: 'Gorvek of Bonereach', email: 'gorvek@bonereach.realm' }
-const NASK = { name: 'Brother Nask', email: 'nask@thurn.realm' }
+const RUUN = { name: 'Brother Ruun', email: 'ruun@thurn.realm' }
 const MONTHLY = { interval: 'month' as const, maxSnapshots: 60 }
 
 describe('gatherHistory', () => {
@@ -153,7 +153,7 @@ describe('gatherHistory', () => {
     repo = await createTestRepo()
     await repo.commit({
       message: 'the invocation of Thurn',
-      author: NASK,
+      author: RUUN,
       date: new Date('2025-01-10T10:00:00Z'),
       write: { 'rites.ts': 'one\ntwo\nthree\n' },
     })
@@ -171,7 +171,7 @@ describe('gatherHistory', () => {
     // Before the walk he is genuinely absent: nothing he wrote survives in
     // HEAD, so the analysis of HEAD has never heard of him.
     expect(service.getAnalysis().authors.map((one) => one.email)).not.toContain(
-      NASK.email,
+      RUUN.email,
     )
 
     await service.gatherHistory()
@@ -180,12 +180,12 @@ describe('gatherHistory', () => {
     // screens and the report read has to be reread -- otherwise his row is
     // there and nameless, which shows nobody.
     const authors = service.getAnalysis().authors
-    expect(authors.map((one) => one.email)).toContain(NASK.email)
+    expect(authors.map((one) => one.email)).toContain(RUUN.email)
 
     const survival = survivalByAuthor(service.getHistory().history, authors)
     const forgotten = survival.find((one) => one.survivingLines === 0)
-    expect(forgotten?.name).toBe(NASK.name)
-    expect(forgotten?.email).toBe(NASK.email)
+    expect(forgotten?.name).toBe(RUUN.name)
+    expect(forgotten?.email).toBe(RUUN.email)
   }, 60000)
 
   it('reports the progress of a walk that can take minutes', async () => {

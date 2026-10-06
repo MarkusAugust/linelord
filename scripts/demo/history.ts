@@ -82,9 +82,9 @@ export const DEMO_AUTHORS = {
    * lines he is absent from every screen that reads HEAD, and the survival
    * figures are the only place he appears at all.
    */
-  nask: {
-    name: 'Brother Nask',
-    email: 'nask@thurn.realm',
+  ruun: {
+    name: 'Brother Ruun',
+    email: 'ruun@thurn.realm',
   },
 } as const satisfies Record<string, DemoAuthor>
 
@@ -156,7 +156,7 @@ function riverWatch(): string {
   ].join('\n')
 }
 
-/** Nask's work, written early and deleted before the present. */
+/** Ruun's work, written early and deleted before the present. */
 function invocation(): string {
   const verses = Array.from(
     { length: 34 },
@@ -215,7 +215,7 @@ function sigil(): Uint8Array {
   ])
 }
 
-const { gorvek, gorvekAtKell, drusk, nask, sarn } = DEMO_AUTHORS
+const { gorvek, gorvekAtKell, drusk, ruun, sarn } = DEMO_AUTHORS
 
 export const DEMO_HISTORY: readonly DemoCommit[] = [
   {
@@ -253,7 +253,7 @@ export const DEMO_HISTORY: readonly DemoCommit[] = [
   },
   {
     message: 'The invocation of Thurn, before every reckoning',
-    author: nask,
+    author: ruun,
     ago: years(4) - 20,
     write: { 'src/rites/invocation.ts': invocation() },
   },

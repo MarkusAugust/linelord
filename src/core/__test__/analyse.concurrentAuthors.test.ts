@@ -21,7 +21,7 @@ const WARRIORS = [
   { name: 'Gorvek of Bonereach', email: 'gorvek@bonereach.realm' },
   { name: 'Sarn the Faceless', email: 'sarn@kell.realm' },
   { name: 'Captain Drusk', email: 'drusk@greycloaks.realm' },
-  { name: 'Brother Nask', email: 'nask@kell.realm' },
+  { name: 'Brother Ruun', email: 'ruun@kell.realm' },
   { name: 'Vurn the Ashborn', email: 'vurn@bonereach.realm' },
 ]
 
