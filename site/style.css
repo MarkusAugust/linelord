@@ -226,7 +226,8 @@ body {
 main {
   max-width: 62rem;
   margin: 0 auto;
-  padding: 2.5rem 16px 4rem;
+  /* Little at the foot: the sea comes up close under the last line. */
+  padding: 2.5rem 16px 0.5rem;
 }
 
 h1 {
@@ -503,6 +504,7 @@ a {
 
 .ebb {
   margin-top: 24px;
+  margin-bottom: 0;
   color: var(--ink-dim);
   font-size: 0.8rem;
 }

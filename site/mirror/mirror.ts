@@ -8,16 +8,12 @@
  * on a canvas over the whole window for the second it lasts and then removed.
  * Nothing is drawn while the water is off screen or the game is open.
  */
-import { pools } from '../descent/lore'
 import {
-  crosses,
   DIVE_MS,
   dive,
   FRAGMENT,
   HOLD_MS,
   hold,
-  jarnDrawn,
-  LINE_AT,
   live,
   MAX_RIPPLES,
   type Ripple,
@@ -27,7 +23,6 @@ import {
   surface,
   tide,
   VERTEX,
-  washed,
   waterline,
 } from './water'
 
@@ -41,16 +36,14 @@ interface Frame {
   hold: number
   dark: number
   k: number
-  /** 1 for the beach above the water, 0 for the water alone (the passages). */
-  shore: number
+  /** How far below the surface the engraving's open sea reaches, in pixels. */
+  depth: number
 }
 
 interface Water {
   draw: (f: Frame) => void
   /** The engraving's ink and the steel it is cut into. */
   images: (ink: HTMLCanvasElement, plate: HTMLImageElement) => void
-  /** The lines drawn in the sand, redrawn whenever one of them changes. */
-  sand: (lines: HTMLCanvasElement) => void
 }
 
 /** Whether the page is light, read off the colour it actually has. */
@@ -108,7 +101,7 @@ function water(canvas: HTMLCanvasElement): Water | null {
     light: at('u_light'),
     k: at('u_k'),
     textures: at('u_textures'),
-    shore: at('u_shore'),
+    depth: at('u_depth'),
     aspect: at('u_aspect'),
   }
   const sheet = (unit: number, name: string) => {
@@ -135,7 +128,6 @@ function water(canvas: HTMLCanvasElement): Water | null {
   }
   const inkTex = sheet(0, 'u_engraving')
   const plateTex = sheet(1, 'u_plate')
-  const sandTex = sheet(2, 'u_sand')
   /* The plate repeats; the engraving is drawn once, clamped at its edges. Both
      are drawn smaller than they are made, and get mipmaps so the fine lines
      do not shimmer. */
@@ -175,13 +167,6 @@ function water(canvas: HTMLCanvasElement): Water | null {
       tiled(1, plateTex, plate, false)
       textured = 1
     },
-    sand: (lines) => {
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
-      gl.activeTexture(gl.TEXTURE2)
-      gl.bindTexture(gl.TEXTURE_2D, sandTex)
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, lines)
-    },
     draw: (f) => {
       gl.viewport(0, 0, canvas.width, canvas.height)
       gl.uniform2f(u.res, canvas.width, canvas.height)
@@ -199,7 +184,7 @@ function water(canvas: HTMLCanvasElement): Water | null {
       gl.uniform1f(u.light, isLight)
       gl.uniform1f(u.k, f.k)
       gl.uniform1f(u.textures, textured)
-      gl.uniform1f(u.shore, f.shore)
+      gl.uniform1f(u.depth, f.depth)
       gl.uniform1f(u.aspect, INK_W / INK_H)
       gl.clearColor(0, 0, 0, 0)
       gl.clear(gl.COLOR_BUFFER_BIT)
@@ -261,97 +246,6 @@ function inkSheet(image: HTMLImageElement): HTMLCanvasElement {
   return sheet
 }
 
-/** A stroke cut into the plate: the shader lights it as it lights the engraving. */
-function groove(
-  ctx: CanvasRenderingContext2D,
-  points: readonly (readonly [number, number])[],
-  width: number,
-): void {
-  if (points.length < 2) return
-  ctx.beginPath()
-  points.forEach(([x, y], i) => {
-    if (i === 0) ctx.moveTo(x, y)
-    else ctx.lineTo(x, y)
-  })
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-  ctx.strokeStyle = 'rgba(255, 255, 255, 1)'
-  ctx.lineWidth = width
-  ctx.stroke()
-}
-
-/** Jarn's line along the beach, as far as he has drawn it, and yours. */
-function sandSheet(
-  w: number,
-  h: number,
-  drawn: number,
-  mine: readonly (readonly [number, number])[] | null,
-): HTMLCanvasElement {
-  const sheet = document.createElement('canvas')
-  sheet.width = w
-  sheet.height = h
-  const ctx = sheet.getContext('2d')
-  if (!ctx) return sheet
-  const width = Math.max(2, h * 0.012)
-  const y0 = h - LINE_AT * h
-  const his: [number, number][] = []
-  for (let x = w * 0.02; x <= w * 0.02 + w * 0.96 * drawn; x += 4)
-    his.push([
-      x,
-      y0 + Math.sin(x * 0.013) * h * 0.012 + Math.sin(x * 0.041) * h * 0.005,
-    ])
-  groove(ctx, his, width)
-  if (mine)
-    groove(
-      ctx,
-      mine.map(([x, y]) => [x * w, h - y * h] as [number, number]),
-      width * 0.85,
-    )
-  return sheet
-}
-
-const store = {
-  get: (k: string): string | null => {
-    try {
-      return localStorage.getItem(k)
-    } catch {
-      // No storage: the line in the sand lasts as long as the page.
-      return null
-    }
-  },
-  set: (k: string, v: string) => {
-    try {
-      localStorage.setItem(k, v)
-    } catch {
-      // As above: kept for this page only.
-    }
-  },
-  remove: (k: string) => {
-    try {
-      localStorage.removeItem(k)
-    } catch {
-      // As above.
-    }
-  },
-}
-
-interface Mine {
-  points: [number, number][]
-  at: number
-  crossed: boolean
-}
-
-function readMine(): Mine | null {
-  try {
-    const raw = store.get('shore.line')
-    const v = raw ? (JSON.parse(raw) as Mine) : null
-    return v && Array.isArray(v.points) && typeof v.at === 'number' ? v : null
-  } catch {
-    // A line that cannot be read was never drawn.
-    return null
-  }
-}
-
 function openGame(): void {
   import(new URL('descent.js', document.baseURI).href)
   const dialog = document.getElementById('descent')
@@ -393,37 +287,10 @@ function setup(el: HTMLElement) {
   let going = false
   let hinted = false
   let lastFrame = 0
-  let mine = readMine()
-  let drawing: [number, number][] | null = null
-  const revealFrom = performance.now()
-  let lastDrawn = -1
-  /* The lines in the sand: Jarn's, drawn out along the beach the first time
-     the shore is seen, and as the tide allows; and yours, until a flood has
-     been over it. */
-  const lines = (now: number, force = false) => {
-    if (!surfaceGl) return
-    if (
-      mine &&
-      washed(mine.at, Date.now(), Math.min(...mine.points.map(([, y]) => y)))
-    ) {
-      mine = null
-      store.remove('shore.line')
-    }
-    const reveal = still ? 1 : Math.min(1, (now - revealFrom) / 2500)
-    const drawn =
-      Math.round(Math.min(jarnDrawn(Date.now()), reveal) * 200) / 200
-    if (!force && drawn === lastDrawn && !drawing) return
-    lastDrawn = drawn
-    const points = drawing ?? mine?.points ?? null
-    surfaceGl.sand(sandSheet(canvas.width, canvas.height, drawn, points))
-  }
-
   const fit = () => {
     const box = canvas.getBoundingClientRect()
     canvas.width = Math.max(1, Math.round(box.width * scale()))
     canvas.height = Math.max(1, Math.round(box.height * scale()))
-    if (!surfaceGl) return
-    lines(performance.now(), true)
   }
 
   /* The engraving and the plate come after the water: until they have, the
@@ -440,19 +307,19 @@ function setup(el: HTMLElement) {
     if (!surfaceGl) return
     rings = live(rings, now)
     const h = hold(since, now)
+    const top = waterline(canvas.height, tide(Date.now()))
     surfaceGl.draw({
       t: still ? 0 : now / 1000,
-      surface: waterline(canvas.height, tide(Date.now())),
-      feather: canvas.height * 0.4,
+      surface: top,
+      feather: canvas.height * 0.2,
       ripples: still ? [] : rings,
       now,
       holdAt: at,
       hold: still ? 0 : h,
       dark: 0,
       k: 1,
-      shore: 1,
+      depth: top,
     })
-    lines(now)
     bar.style.transform = `scaleX(${h})`
     if (h >= 1 && since !== null) {
       since = null
@@ -461,11 +328,7 @@ function setup(el: HTMLElement) {
   }
 
   const frame = (now: number) => {
-    const busy =
-      since !== null ||
-      rings.length > 0 ||
-      drawing !== null ||
-      now - revealFrom < 2600
+    const busy = since !== null || rings.length > 0
     // At rest the swell is slow, and half the frames do for it.
     if (busy || now - lastFrame > 32) {
       lastFrame = now
@@ -549,48 +412,8 @@ function setup(el: HTMLElement) {
   }
 
   let lastMove = 0
-  /* Above the water's edge is sand, and a finger there draws a line. */
-  const onSand = (point: [number, number]) =>
-    point[1] > waterline(canvas.height, tide(Date.now())) + canvas.height * 0.02
-  const norm = ([x, y]: [number, number]): [number, number] => [
-    x / canvas.width,
-    y / canvas.height,
-  ]
-  const finishLine = (evt: { clientX: number; clientY: number }) => {
-    const points = drawing
-    drawing = null
-    if (!points || points.length < 3) return lines(performance.now(), true)
-    const crossed = crosses(points, LINE_AT)
-    mine = { points, at: Date.now(), crossed }
-    store.set('shore.line', JSON.stringify(mine))
-    if (crossed) {
-      store.set('descent.challenger', String(Date.now()))
-      showHint(evt, pools.jarn[0] ?? 'Did you mean to?', true)
-    }
-    lines(performance.now(), true)
-    say()
-  }
-
-  /* A finger that starts in the sand is drawing, not scrolling: the page
-     stays put for that one touch. Anywhere else it scrolls as ever. */
-  el.addEventListener(
-    'touchstart',
-    (evt) => {
-      const t = evt.touches[0]
-      if (t && !still && onSand(local(t))) evt.preventDefault()
-    },
-    { passive: false },
-  )
-
   el.addEventListener('pointermove', (evt) => {
     const now = performance.now()
-    if (drawing) {
-      const point = norm(local(evt))
-      const last = drawing[drawing.length - 1]
-      if (!last || Math.hypot(point[0] - last[0], point[1] - last[1]) > 0.004)
-        drawing.push(point)
-      return
-    }
     if (since !== null) at = local(evt)
     else if (now - lastMove > 280) {
       lastMove = now
@@ -600,20 +423,12 @@ function setup(el: HTMLElement) {
   })
   el.addEventListener('pointerdown', (evt) => {
     const point = local(evt)
-    if (onSand(point) && !still) {
-      drawing = [norm(point)]
-      wake()
-      return
-    }
     touch(point[0], point[1], 1)
     showHint(evt)
     press(point)
   })
   for (const name of ['pointerup', 'pointerleave', 'pointercancel'])
-    el.addEventListener(name, (evt) => {
-      if (drawing) return finishLine(evt as PointerEvent)
-      release()
-    })
+    el.addEventListener(name, release)
   el.addEventListener('contextmenu', (evt) => evt.preventDefault())
   /* A press with a mouse or a finger does not focus the water, so closing the
      game gives the focus back to where it was rather than leaving a ring round
@@ -692,7 +507,7 @@ function setup(el: HTMLElement) {
         hold: 1 - d.rise * 0.6,
         dark: d.dark,
         k: 1,
-        shore: 0,
+        depth: veil.height * 1.6,
       })
       if (d.done) return finish()
       requestAnimationFrame(step)
@@ -758,7 +573,7 @@ function setup(el: HTMLElement) {
           hold: 0,
           dark: s.dark,
           k: 1 - s.fall * 0.999,
-          shore: 0,
+          depth: veil.height * 1.6,
         })
         if (s.done) return leave()
         requestAnimationFrame(step)
@@ -767,10 +582,10 @@ function setup(el: HTMLElement) {
     }).observe(dialog, { attributes: true, attributeFilter: ['open'] })
   }
 
-  /* The line above the water says what the shore is doing, by the same clock. */
+  /* The line above the water says which way the sea is going, by the same clock. */
   function say() {
     const caption = document.querySelector('.ebb')
-    if (caption) caption.textContent = saying(Date.now(), mine)
+    if (caption) caption.textContent = saying(Date.now())
   }
 
   fit()
@@ -778,10 +593,7 @@ function setup(el: HTMLElement) {
   wake()
 
   say()
-  setInterval(() => {
-    say()
-    lines(performance.now())
-  }, 60_000)
+  setInterval(say, 60_000)
 
   return {
     /** Down from wherever the page is: through the middle of the water. */

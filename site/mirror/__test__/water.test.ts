@@ -1,29 +1,21 @@
 import { describe, expect, it } from 'bun:test'
-import { pools } from '../../descent/lore'
 import {
-  coverLevel,
-  crosses,
   DIVE_MS,
   dive,
-  engravingRow,
   FRAGMENT,
   glsl,
   HOLD_MS,
   hold,
-  jarnDrawn,
-  LINE_AT,
   live,
   MAX_RIPPLES,
   PALETTE,
   ripple,
-  SHORE_ROW,
   SURFACE_MS,
   saying,
   surface,
   TIDE_MS,
   tide,
   VERTEX,
-  washed,
   waterline,
 } from '../water'
 
@@ -40,6 +32,10 @@ describe('the tide', () => {
     expect(waterline(300, 1)).toBeGreaterThan(waterline(300, 0))
     expect(waterline(300, 0)).toBeGreaterThan(0)
     expect(waterline(300, 1)).toBeLessThan(300)
+  })
+
+  it('fills most of the foot of the page, close under the text above it, even at the ebb', () => {
+    expect(waterline(300, 0)).toBeGreaterThanOrEqual(300 * 0.8)
   })
 })
 
@@ -108,106 +104,36 @@ describe('the colour of the plate', () => {
       'u_t',
       'u_surface',
       'u_feather',
+      'u_depth',
       'u_hold',
       'u_dark',
       'u_light',
       'u_k',
       'u_textures',
-      'u_shore',
       'u_aspect',
     ])
       expect(FRAGMENT).toMatch(new RegExp(`uniform (float|vec2) ${u};`))
     expect(FRAGMENT).toContain(`uniform vec4 u_ripples[${MAX_RIPPLES}];`)
-    for (const t of ['u_engraving', 'u_plate', 'u_sand'])
+    for (const t of ['u_engraving', 'u_plate'])
       expect(FRAGMENT).toContain(`uniform sampler2D ${t};`)
     expect(FRAGMENT).not.toContain('u_kell')
     expect(FRAGMENT).not.toContain('u_reflect')
+    // Only the sea: no beach, and nothing drawn in it.
+    expect(FRAGMENT).not.toContain('u_shore')
+    expect(FRAGMENT).not.toContain('u_sand')
     expect(VERTEX).toContain('attribute vec2 a_pos;')
     expect(glsl('#ff8000')).toBe('vec3(1.000, 0.502, 0.000)')
   })
 })
 
-describe('the engraving', () => {
-  it('meets the page where its shore is, at the height the tide stands', () => {
-    // The shore row of the engraving lands on the waterline, whatever the tide.
-    for (const level of [0, 0.5, 1]) {
-      const h = 400
-      const y = waterline(h, level)
-      expect(engravingRow(y, h, y)).toBeCloseTo(SHORE_ROW)
-    }
-    expect(engravingRow(400, 400, waterline(400, 0.5))).toBeLessThan(SHORE_ROW)
-  })
-})
-
-describe('the line in the sand', () => {
-  const at = (level: number, rising: boolean) => {
-    // The moment in the first cycle with this level, on the rising or falling side.
-    const phase = Math.asin(level * 2 - 1) / (2 * Math.PI)
-    return (rising ? phase : 0.5 - phase) * TIDE_MS
-  }
-
-  it('lies where the flood reaches it and the ebb leaves it', () => {
-    expect(coverLevel(LINE_AT)).toBeGreaterThan(0.15)
-    expect(coverLevel(LINE_AT)).toBeLessThan(0.85)
-  })
-
-  it('is all there while the flood comes up to it, gone under it, and drawn again as the sea goes out', () => {
-    expect(jarnDrawn(at(0.3, true))).toBe(1)
-    expect(jarnDrawn(at(0.95, true))).toBe(0)
-    const just = jarnDrawn(at(coverLevel(LINE_AT) - 0.02, false))
-    expect(just).toBeGreaterThan(0)
-    expect(just).toBeLessThan(1)
-    expect(jarnDrawn(at(0.05, false))).toBe(1)
-  })
-
-  it('knows when a flood has been over a line since it was drawn', () => {
-    const low = at(0.1, false)
-    expect(washed(low, low + 60_000, LINE_AT)).toBe(false)
-    expect(washed(low, low + TIDE_MS / 2, LINE_AT)).toBe(true)
-    expect(washed(low, low + TIDE_MS * 3, 0.99)).toBe(false)
-  })
-
-  it('crosses his line only by going from one side of it to the other', () => {
-    expect(
-      crosses(
-        [
-          [0.1, 0.5],
-          [0.2, 0.7],
-        ],
-        LINE_AT,
-      ),
-    ).toBe(true)
-    expect(
-      crosses(
-        [
-          [0.1, 0.62],
-          [0.9, 0.65],
-        ],
-        LINE_AT,
-      ),
-    ).toBe(false)
-    expect(crosses([], LINE_AT)).toBe(false)
-  })
-})
-
 describe('what the foot of the page says', () => {
   const T = TIDE_MS
-  it('says what the shore is doing, from the same clock as the water', () => {
-    expect(saying(0, null)).toBe('The sea is coming in.')
-    expect(saying(T / 4, null)).toBe(
-      pools.shore.find((l) => l.startsWith('The sea takes')) ?? 'missing',
-    )
-    expect(saying(T / 2, null)).toBe('The sea is going out.')
-    expect(saying((T * 3) / 4, null)).toBe(
-      pools.shore.find((l) => l.startsWith('The Linelord')) ?? 'missing',
-    )
-    expect(saying(T, null)).toBe(saying(0, null))
-  })
-
-  it('says it is your line, once you have drawn across his', () => {
-    expect(saying(0, { crossed: true })).toBe(
-      pools.shore.find((l) => l.startsWith('Your line')) ?? 'missing',
-    )
-    expect(saying(0, { crossed: false })).toBe('The sea is coming in.')
+  it('says which way the sea is going, from the same clock as the water', () => {
+    expect(saying(0)).toBe('The sea is coming in.')
+    expect(saying(T / 8)).toBe('The sea is coming in.')
+    expect(saying(T / 2)).toBe('The sea is going out.')
+    expect(saying((T * 5) / 8)).toBe('The sea is going out.')
+    expect(saying((T * 3) / 4 + 1)).toBe('The sea is coming in.')
+    expect(saying(T)).toBe(saying(0))
   })
 })
