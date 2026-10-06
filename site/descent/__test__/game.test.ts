@@ -11,8 +11,10 @@ import {
   offers,
   rollDie,
   sellPrice,
+  statsOf,
   tideReport,
   verbOf,
+  versus,
 } from '../core/game'
 import { firstWorld, HOLD_TITLES, withTaken } from '../core/holds'
 import { at, generate, index, spawn } from '../core/level'
@@ -795,6 +797,52 @@ describe('old iron and new', () => {
     g.player.edge = 8
     g.player.fit = 8
     expect(offers(g).some((o) => o.key.startsWith('mend:'))).toBe(false)
+  })
+})
+
+describe('what iron is worth', () => {
+  it('says what a weapon cuts for and how well it finds its mark, and what armour keeps out', () => {
+    const g = gameOn(ROOM, 1)
+    expect(statsOf(g, { kind: 'axe' })).toBe('1d8, +0 to hit')
+    expect(statsOf(g, { kind: 'spear' })).toBe('1d6, +2 to hit')
+    expect(statsOf(g, { kind: 'hook' })).toBe('1d6, +0 to hit, cuts rope')
+    expect(statsOf(g, { kind: 'axe', old: true })).toBe(
+      '1d8, +0 to hit, −1 damage',
+    )
+    expect(statsOf(g, { kind: 'axe', wear: 0 })).toBe(
+      '1d8, +0 to hit, half damage',
+    )
+    expect(statsOf(g, { kind: 'mail' })).toBe('armour 4')
+    expect(statsOf(g, { kind: 'mail', old: true })).toBe('armour 3')
+    expect(statsOf(g, { kind: 'mail', wear: 0 })).toBe('armour 0')
+    expect(statsOf(g, { kind: 'salt' })).toBeNull()
+  })
+
+  it('weighs a thing against what is in hand or worn', () => {
+    const g = gameOn(ROOM, 1)
+    expect(versus(g, { kind: 'axe' })).toBe('▲ 2 damage, ▼ 1 to hit')
+    expect(versus(g, { kind: 'spear' })).toBe('▲ 1 damage, ▲ 1 to hit')
+    expect(versus(g, { kind: 'knife' })).toBe('the same as yours')
+    expect(versus(g, { kind: 'mail' })).toBe('▲ 2 armour')
+    expect(versus(g, { kind: 'mail', old: true })).toBe('▲ 1 armour')
+    g.player.armour = 'cloakmail'
+    expect(versus(g, { kind: 'leather' })).toBe('▼ 3 armour')
+    g.player.weapon = null
+    expect(versus(g, { kind: 'knife' })).toBe('▲ 1 damage, ▲ 1 to hit')
+    g.player.edge = 0
+    g.player.weapon = 'axe'
+    expect(versus(g, { kind: 'axe' })).toBe('▲ 2 damage')
+    expect(versus(g, { kind: 'salt' })).toBeNull()
+  })
+
+  it("puts the numbers on Barr's counter", () => {
+    const g = gameOn(ROOM, 0)
+    g.shop = 'barr'
+    const axe = offers(g).find((o) => o.key === 'buy:axe')
+    expect(axe?.detail).toBe('1d8, +0 to hit · ▲ 2 damage, ▼ 1 to hit')
+    expect(offers(g).find((o) => o.key === 'buy:leather')?.detail).toBe(
+      'armour 2 · the same as yours',
+    )
   })
 })
 

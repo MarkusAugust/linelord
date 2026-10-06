@@ -48,6 +48,10 @@ because the earlier answer was wrong.
   weapon until it is blunt and cuts half, armour until it splits and keeps
   nothing out. Barr puts the edge back on, and mends, for marks. The pack says
   which is which.
+- Every weapon and armour says what it is worth, in the pack, in hand and on
+  Barr's counter: its dice and what it adds to hit, or what it keeps out, as it
+  stands after age and wear, and how it weighs against what you have now, as in
+  "▲ 2 damage, ▼ 1 to hit".
 - The holders do not wait for you. At every low water, one who holds nothing
   goes after someone who does, another holder or you, and a fresh hold falls
   far more easily than an old one; a hold you took in the run just ended is
