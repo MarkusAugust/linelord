@@ -15,23 +15,26 @@ because the earlier answer was wrong.
 - The demo page carries Open Graph and X card tags and a picture of its own
   (`site/og.png`, drawn from `site/card.html`), so a link to
   linelord.sobernetics.no is shown with a card rather than as a bare address.
-- The demo page has a way down. The O in the name, `>` anywhere on the page or
-  `?descend` in the address opens *The Descent into Kell*, a small roguelike in
+- The demo page has a way down. The sea at the foot of the page, `>` anywhere
+  on the page or `?descend` in the address opens *The Descent into Kell*, a small roguelike in
   the Gallowmark canon: ten floors of drowned Kell under Wrackhead, a tide that
   floods the low ground while the grey rises at low water, and a ledger of every
   run, kept in the browser. It is loaded only when someone goes down, and it
   changes nothing about the command-line tool. The page now loads Datastar's
   Rocket bundle, which is free as of Datastar 1.0.4 and includes the rest of
   Datastar, so it is still one script.
-- The O in the name is a drain. A little water lies in it and sloshes, in the
-  page's own browns and gold; when
-  the pointer or the focus finds it, it stirs. Pressed, it spins up into a
-  whirlpool that grows over the page until the page goes dark, and the game
-  comes up out of the dark with Sarn's opening a line at a time. The O is back
-  at rest when the game opens, and nothing is drawn while it is open. It is
-  WebGL, a few kilobytes loaded with the page; without WebGL the O shows a
-  plain ring and opens the game directly, and with reduced motion asked for
-  the water lies still and the game opens without the whirlpool.
+- The page ends in the sea. It fades into dark water in the page's own browns
+  and gold, the name standing upside down in it, at a height that follows a
+  real tide on the clock. Touched, it rings, and the drowned city shows where
+  the rings break the surface; held for a second and a half, the rings turn
+  into a whirlpool and the water rises over the page, and the game comes up out
+  of the dark, filling the window. Closing it brings you up again at the water,
+  where you went in. `>` anywhere on the page and `?descend` go down the same
+  way, and the water can be held from the keyboard with Enter or Space. Its
+  module is fetched only when the water comes near the screen; without WebGL
+  the sea is a plain gradient that still takes you down, and with reduced
+  motion asked for it lies still, the hold is a line that fills, and the way
+  down is a fade.
 
 ## [1.0.0-rc.3] — 2026-10-04
 

@@ -392,30 +392,30 @@ describe('renderSite', () => {
     expect(html).toContain('&lt;script&gt;')
   })
 
-  it('keeps a way down through the O of the name, and loads the game only when it is taken', () => {
+  it('keeps the sea at the foot of the page, and fetches its water only when it comes near', () => {
     const html = renderSite(sampleReport())
 
+    expect(html).toContain('<h1>LineLord</h1>')
+    expect(html).not.toContain('class="drain"')
     expect(html).toContain('<dialog class="descent-dialog" id="descent"')
     expect(html).toContain('<descent-run></descent-run>')
-    expect(html).toMatch(
-      /<h1 aria-label="LineLord">LineL<button[\s\S]*?class="drain"[\s\S]*?">o<\/button>rd<\/h1>/,
-    )
-    expect(html).toContain('aria-label="Go down into drowned Kell"')
+    const sea = html.indexOf('class="mirror"')
+    expect(sea).toBeGreaterThan(html.indexOf('</main>'))
+    expect(html).toContain('role="button"')
+    expect(html).toContain('tabindex="0"')
+    expect(html).toContain('Hold to go down into drowned Kell.')
+    expect(html).toContain('new IntersectionObserver(')
     expect(html).toContain(
-      'class="drain" aria-label="Go down into drowned Kell" data-init=',
-    )
-    expect(html).toContain('{ timeout: 2000 }')
-    expect(html).toContain("addEventListener('load'")
-    expect(html).toContain("import(new URL('drain.js', document.baseURI).href)")
-    expect(html).toContain(
-      '!/(has|no)-water/.test(evt.currentTarget.className)',
+      "import(new URL('mirror.js', document.baseURI).href)",
     )
     expect(html).toContain('<p class="ebb">The sea is going out.</p>')
-    expect(html).not.toContain('href="?descend"')
-    expect(html).toContain(
-      "import(new URL('descent.js', document.baseURI).href)",
-    )
+  })
+
+  it('goes down through the water from > anywhere on the page, and from ?descend', () => {
+    const html = renderSite(sampleReport())
+
     expect(html).toContain("evt.key === '>'")
     expect(html).toContain("has('descend')")
+    expect(html).toContain('.then((water) => water.descend())')
   })
 })

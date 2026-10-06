@@ -48,24 +48,16 @@ const DATASTAR =
   'https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar-rocket.js'
 
 /**
- * Going down: the game's module is fetched the first time, and the dialog it
- * draws into is opened, directly: this is what `>` anywhere on the page and
- * `?descend` in the address do. The O of the name is the drain under the iron
- * hall, and pressing it goes the long way, down through the water (drain.js). The address is made whole against
- * the page, because an `import()` in a Datastar expression would otherwise be
- * resolved against Datastar's own address on the CDN.
+ * The sea at the foot of the page, and the way down through it (site/mirror).
+ * The water's module is fetched when the water comes near the screen; `>`
+ * anywhere on the page and `?descend` in the address fetch it too and go
+ * down through it. The address is made whole against the page, because an
+ * `import()` in a Datastar expression would otherwise be resolved against
+ * Datastar's own address on the CDN.
  */
-/**
- * The water in the O, and the way down through it: drain.js draws the pool
- * and owns the press. It is fetched after the page has loaded and the browser
- * is idle, so starting WebGL never stands between the page and its first
- * paint. Until it has come, a press on the O opens the game directly.
- */
-const WATER =
-  "(document.readyState === 'complete' ? Promise.resolve() : new Promise((done) => addEventListener('load', done, { once: true }))).then(() => ('requestIdleCallback' in window ? requestIdleCallback((() => import(new URL('drain.js', document.baseURI).href)), { timeout: 2000 }) : setTimeout(() => import(new URL('drain.js', document.baseURI).href), 200)))"
-
-const DESCEND =
-  "(import(new URL('descent.js', document.baseURI).href), document.getElementById('descent').open || document.getElementById('descent').showModal())"
+const MIRROR = "import(new URL('mirror.js', document.baseURI).href)"
+const DESCEND = `${MIRROR}.then((water) => water.descend())`
+const NEAR = `new IntersectionObserver((seen, watch) => { if (seen.some((s) => s.isIntersecting)) { watch.disconnect(); ${MIRROR} } }, { rootMargin: '300px' }).observe(el)`
 
 export const SCREENS = [
   { id: 'overview', label: 'Repository Overview' },
@@ -347,7 +339,7 @@ function renderHeader(report: Report): string {
 
   return `
     <header>
-      <h1 aria-label="LineLord">LineL<button type="button" class="drain" aria-label="Go down into drowned Kell" data-init="${WATER}" data-on:click="!/(has|no)-water/.test(evt.currentTarget.className) && ${DESCEND}">o</button>rd</h1>
+      <h1>LineLord</h1>
       <p class="tagline">The Barbarian's Guide to Git Repository Conquest</p>
       <p class="quote">
         “What is best in code? To crush the bugs, see them driven from your
@@ -454,6 +446,13 @@ export function renderSite(report: Report): string {
       ${panels}
       ${renderFooter(report)}
     </main>
+    <div
+      class="mirror"
+      role="button"
+      tabindex="0"
+      aria-label="The sea at the foot of the page. Hold to go down into drowned Kell."
+      data-init="${NEAR}"
+    ></div>
     <dialog class="descent-dialog" id="descent" aria-label="The Descent into Kell">
       <descent-run></descent-run>
     </dialog>
