@@ -193,7 +193,7 @@ export function spawn(
     hp,
     maxHp: hp,
     awake: false,
-    peaceful: false,
+    peaceful: m.waits === true,
     refused: false,
     notches: 0,
   }

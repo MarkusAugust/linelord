@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { ITEMS, MONSTERS, needsNaming, tierOf, titleOf } from '../core/content'
+import { ITEMS, LEVELS, MONSTERS, needsNaming, tierOf } from '../core/content'
 import { inSight, line, visible } from '../core/fov'
 import { at, generate, H, index, set, town, W, walkable } from '../core/level'
 import { makeRng } from '../core/rng'
@@ -11,7 +11,7 @@ import {
   phase,
   waterAt,
 } from '../core/tide'
-import { creatures, opening, pools } from '../lore'
+import { creatures, holders, opening, pools } from '../lore'
 import { levelFrom } from './helpers'
 
 const ids = () => {
@@ -50,7 +50,11 @@ describe('the canon the game draws on', () => {
     expect(opening).toHaveLength(5)
     expect(opening[0]).toContain('The sea is going out')
     for (const m of Object.values(MONSTERS))
-      expect(creatures[m.creature].name).toBeTruthy()
+      expect(
+        m.creature
+          ? creatures[m.creature].name
+          : m.holder && holders[m.holder].name,
+      ).toBeTruthy()
   })
 })
 
@@ -61,10 +65,11 @@ describe('the tiers and the titles', () => {
     ])
   })
 
-  it('calls you what the coast calls you', () => {
-    expect(titleOf(1)).toBe('Shingle-rat')
-    expect(titleOf(10)).toBe('Wall-holder')
-    expect(titleOf(99)).toBe('Wall-holder')
+  it('asks more blood for every level', () => {
+    expect(LEVELS[0]).toBe(0)
+    expect(LEVELS).toHaveLength(10)
+    for (let i = 1; i < LEVELS.length; i++)
+      expect(LEVELS[i] ?? 0).toBeGreaterThan(LEVELS[i - 1] ?? 0)
   })
 
   it('knows which things need naming before they are known', () => {

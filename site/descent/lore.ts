@@ -24,6 +24,18 @@ export type Pool =
   | 'escape'
   | 'shore'
   | 'jarn'
+  | 'hollin'
+  | 'hollin-yields'
+  | 'grue'
+  | 'grue-yields'
+  | 'sethra'
+  | 'sethra-yields'
+  | 'corve'
+  | 'corve-yields'
+  | 'wrack'
+  | 'title-won'
+  | 'title-lost'
+  | 'linelord-won'
 export type CreatureId =
   | 'pickers'
   | 'firstcloaks'
@@ -32,6 +44,7 @@ export type CreatureId =
   | 'notchers'
   | 'the-drawn'
   | 'the-standing'
+export type HolderId = 'hollin' | 'grue' | 'sethra' | 'corve' | 'jarn'
 
 export const pools: Record<Pool, readonly string[]> = {
   'arrive-quays': [
@@ -126,6 +139,40 @@ export const pools: Record<Pool, readonly string[]> = {
     "Your line, across Jarn's.",
   ],
   jarn: ['Did you mean to?'],
+  hollin: [
+    'First down, first up. You are neither.',
+    'I counted these steps before the sea did.',
+  ],
+  'hollin-yields': ['Take them, then. Count them every morning. See how long.'],
+  grue: [
+    'A tenth. Of you, if you have nothing else.',
+    'Nobody goes down past my door. They go down past my price.',
+  ],
+  'grue-yields': ['Go on, then. The door was never mine. The toll was.'],
+  sethra: [
+    'Everything in these vaults was carried down by someone braver.',
+    "I do not stop anyone. I wait for them to come back up. Most don't.",
+  ],
+  'sethra-yields': ['I will be here after you. I am always here after.'],
+  corve: [
+    'Forty years in this chair. The ledger has me on every page.',
+    'Sit, if you can stand up again after.',
+  ],
+  'corve-yields': ['Take the chair. It will take you back.'],
+  wrack: [
+    'Old ground, and yours. It is still not good.',
+    'That one went down with your name. The sea has given it back.',
+    'Your wrack holds what you dropped. It does not remember dropping it.',
+  ],
+  'title-won': [
+    'Held. Not earned. The ledger does not know the difference.',
+    'The ledger has a new name in it. It has had many.',
+  ],
+  'title-lost': [
+    'Someone held it longer. That is all the ledger asks.',
+    'Your name is a line further down now.',
+  ],
+  'linelord-won': ['You hold more than I do. Draw your own line.'],
 }
 
 export const opening: readonly string[] = [
@@ -174,3 +221,39 @@ export const creatures: Record<CreatureId, { name: string; summary: string }> =
         'The grey in the iron hall, standing still like milk in a bowl and rising when the sea goes out; it does not hurt you, it takes things from you.',
     },
   }
+
+export const holders: Record<
+  HolderId,
+  { name: string; epithet: string; summary: string }
+> = {
+  hollin: {
+    name: 'Hollin',
+    epithet: 'the First Down',
+    summary:
+      'The picker who went down the Quaysteps the first winter of the Ebb, before anyone else dared, and has held them since on no better grounds than that she was first.',
+  },
+  grue: {
+    name: 'Grue',
+    epithet: 'the Toll',
+    summary:
+      'The coast man who took the one toll-house in the Lowstreets that kept its roof, and has charged everyone who goes past it a tenth ever since; he has never gone deeper, because he has never needed to.',
+  },
+  sethra: {
+    name: 'Sethra',
+    epithet: 'the Patient',
+    summary:
+      'The woman who waits in the Brinevaults while others go deeper, and takes what they carried when they do not come back; she holds the vaults by outliving everyone who passes through them.',
+  },
+  corve: {
+    name: 'Corve',
+    epithet: 'the Rust-Sitter',
+    summary:
+      'The warrior who reached the Iron Hall before anyone living and sat down beside the drowned king and the ledger; his armour has rusted shut on him, the grey has taken most of what he was, and the ledger counts him on every page.',
+  },
+  jarn: {
+    name: 'Jarn',
+    epithet: 'the Linelord',
+    summary:
+      'The one the ledger names as holding the most ground in the Mark, and so the Linelord; he holds the shingle under Wrackhead, and at every low water draws a line across the sand with an iron blade from Kell.',
+  },
+}

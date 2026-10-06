@@ -3,6 +3,8 @@
  * plain data: a run is written to storage as JSON and read back the same.
  */
 
+import type { Tier, World } from './holds'
+
 export type Background = 'ashborn' | 'wrecker' | 'novice'
 
 /** 8 = d8, 6 = d6, 4 = d4, 0 = spent. */
@@ -39,6 +41,10 @@ export interface Monster {
   notches: number
   /** A warrior of an earlier run, come back as one of the Unasked. */
   bones?: { name: string; weapon: string | null }
+  /** A holder who has said who they are. */
+  spoke?: boolean
+  /** A holder who has given way, and the hold with it. */
+  yielded?: boolean
 }
 
 export interface Level {
@@ -127,6 +133,10 @@ export interface Game {
   tide: number
   /** Waiting in the Lowstreets for this run to meet. */
   bones?: Bones
+  /** Who held what when this run went down. Runs saved before there were holds have none. */
+  world?: World
+  /** The holds this run has taken. */
+  taken?: Tier[]
 }
 
 export type Command =

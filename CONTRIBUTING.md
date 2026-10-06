@@ -97,9 +97,11 @@ the GitHub CLI). Add or change a quote in Gallowmark's `quotes/`, rebuild its
 export, run the sync here, and commit the generated file.
 
 The game on the demo page takes its lines the same way, from the quotes with
-`used-in: [descent]`, into `site/descent/lore.ts`, by `bun run sync-descent`.
+`used-in: [descent]`, into `site/descent/lore.ts`, by `bun run sync-descent`,
+which also brings the names and epithets of the holders of Kell's depths.
 Its rules are in `site/descent/core` as plain functions over a run, tested like
-the rest; `site/descent/ui` is the page's side of it and only draws.
+the rest; who holds what between runs is `holds.ts`, kept behind the same store
+port as the ledger. `site/descent/ui` is the page's side of it and only draws.
 
 ## Before you push: the self-review
 

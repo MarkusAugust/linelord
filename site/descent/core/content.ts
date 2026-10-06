@@ -5,6 +5,7 @@
  * Gallowmark); the numbers are the game's.
  */
 import type { CreatureId } from '../lore'
+import type { Rival } from './holds'
 import type { Background, Die } from './types'
 
 export const LAST_DEPTH = 10
@@ -29,7 +30,9 @@ export function tierOf(depth: number): 1 | 2 | 3 | 4 {
 }
 
 export interface MonsterKind {
-  creature: CreatureId
+  /** What it is in the canon: one of its creatures, or one of the holders. */
+  creature?: CreatureId
+  holder?: Rival
   glyph: string
   /** What you call it before you know its name. */
   unknown: string
@@ -53,6 +56,8 @@ export interface MonsterKind {
   grabs?: boolean
   /** Takes marks on a hit. */
   steals?: boolean
+  /** Lets you be, until you raise a hand to it. */
+  waits?: boolean
 }
 
 export const MONSTERS: Record<string, MonsterKind> = {
@@ -133,6 +138,61 @@ export const MONSTERS: Record<string, MonsterKind> = {
     xp: 9,
     tiers: [3, 4],
     grabs: true,
+  },
+  // The holders. They are never laid down at random (no tiers): each waits
+  // on the last floor of the depth it holds.
+  hollin: {
+    holder: 'hollin',
+    glyph: 'H',
+    unknown: 'Hollin',
+    known: 'Hollin',
+    hp: 16,
+    ac: 11,
+    hit: 2,
+    dmg: [1, 4],
+    xp: 20,
+    tiers: [],
+    steals: true,
+  },
+  grue: {
+    holder: 'grue',
+    glyph: 'G',
+    unknown: 'Grue',
+    known: 'Grue',
+    hp: 26,
+    ac: 13,
+    hit: 4,
+    dmg: [1, 8],
+    xp: 30,
+    tiers: [],
+    stays: true,
+    tithes: true,
+  },
+  sethra: {
+    holder: 'sethra',
+    glyph: 'S',
+    unknown: 'Sethra',
+    known: 'Sethra',
+    hp: 24,
+    ac: 14,
+    hit: 5,
+    dmg: [1, 6],
+    xp: 40,
+    tiers: [],
+    waits: true,
+  },
+  corve: {
+    holder: 'corve',
+    glyph: 'C',
+    unknown: 'Corve',
+    known: 'Corve',
+    hp: 34,
+    ac: 15,
+    hit: 6,
+    dmg: [2, 6],
+    xp: 60,
+    tiers: [],
+    stays: true,
   },
 }
 
@@ -415,22 +475,13 @@ export const BACKGROUNDS: Record<Background, BackgroundKind> = {
   },
 }
 
-/** XP to reach each level, and what the coast calls you there. */
-export const TITLES: { xp: number; title: string }[] = [
-  { xp: 0, title: 'Shingle-rat' },
-  { xp: 10, title: 'Picker' },
-  { xp: 25, title: 'Diver' },
-  { xp: 45, title: 'Stairwalker' },
-  { xp: 70, title: 'Doorbreaker' },
-  { xp: 100, title: 'Saltblooded' },
-  { xp: 140, title: 'Ropecutter' },
-  { xp: 190, title: 'Greywalker' },
-  { xp: 250, title: 'Hallbound' },
-  { xp: 320, title: 'Wall-holder' },
+/**
+ * XP to reach each level. A level makes you stronger and nothing else: what
+ * the coast calls you is what you hold (`HOLD_TITLES`).
+ */
+export const LEVELS: readonly number[] = [
+  0, 10, 25, 45, 70, 100, 140, 190, 250, 320,
 ]
-
-export const titleOf = (level: number): string =>
-  TITLES[Math.min(level, TITLES.length) - 1]?.title ?? 'Shingle-rat'
 
 /** What Sarn offers, and what Sarn takes. Neither is said in advance. */
 export const GIFTS = ['sarn-blade', 'sarn-lamp', 'purse'] as const

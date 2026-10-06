@@ -23,6 +23,19 @@ because the earlier answer was wrong.
   changes nothing about the command-line tool. The page now loads Datastar's
   Rocket bundle, which is free as of Datastar 1.0.4 and includes the rest of
   Datastar, so it is still one script.
+- Kell is held, and the ledger says by whom. Each of its four depths has a
+  holder from the Gallowmark canon waiting on its last floor: Hollin the First
+  Down on the Quaysteps, Grue the Toll in the Lowstreets, Sethra the Patient in
+  the Brinevaults and Corve the Rust-Sitter in the Iron Hall. Beat one to a
+  third and they give way, and the hold is yours, with its title. Grue lets you
+  by for a tenth instead, and Sethra lets you be until you raise a hand to her.
+  A hold outlasts the run. At the low water after each run, a fresh hold is
+  easily taken back by the one it was taken from and an old one seldom; fresh
+  ground pays well at the start of the next run, and old ground little. The
+  ledger is a ranking now, of who holds the most ground, the oldest holding
+  first among equals, and the one at its head is the Linelord: Jarn, until
+  someone holds more than his shingle. Levels still make you stronger, but the
+  coast no longer calls you by them. What you are called is what you hold.
 - The page ends in the sea, engraved in steel: the open water of a
   copperplate engraving cut into a dark plate, close under the last line of
   text, a slow warm sheen passing over it and a small swell moving through it,

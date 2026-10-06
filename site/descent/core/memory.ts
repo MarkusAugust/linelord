@@ -1,13 +1,15 @@
 /**
  * What the descent remembers between runs, written against a port so that the
  * rules never touch the browser: the names learned, the ledger of every run,
- * the warrior who became one of the Unasked, and the run in progress.
+ * the warrior who became one of the Unasked, who holds what in Kell, and the
+ * run in progress.
  *
  * A store may refuse (a private window, storage switched off). Every read
  * then comes back empty and every write is dropped, and the game plays the
  * same, without a memory.
  */
-import { titleOf } from './content'
+import { firstWorld, HOLD_TITLES, isWorld, settle, type World } from './holds'
+import { makeRng } from './rng'
 import type { Bones, Ending, Game } from './types'
 
 export interface Store {
@@ -20,6 +22,7 @@ const KEYS = {
   known: 'descent.known',
   ledger: 'descent.ledger',
   bones: 'descent.bones',
+  world: 'descent.world',
   run: 'descent.run',
 } as const
 
@@ -29,6 +32,7 @@ export const LEDGER_SIZE = 20
 export interface LedgerLine {
   name: string
   bg: string
+  /** The holds the run took, as the ledger titles them; empty if none. */
   title: string
   depth: number
   turns: number
@@ -99,6 +103,9 @@ export const loadBones = (store: Store): Bones | null =>
     null,
     (v): v is Bones | null => v === null || isBones(v),
   )
+/** Who holds what in Kell: the old holders, until anyone has gone down. */
+export const loadWorld = (store: Store): World =>
+  read(store, KEYS.world, firstWorld(), isWorld)
 export const loadRun = (store: Store): Game | null =>
   read<Game | null>(
     store,
@@ -131,7 +138,7 @@ export function ledgerLine(game: Game, date: Date): LedgerLine {
   return {
     name: p.name,
     bg: p.bg,
-    title: titleOf(p.level),
+    title: (game.taken ?? []).map((t) => HOLD_TITLES[t]).join(' and '),
     depth: p.deepest,
     turns: game.turn,
     ending: game.over?.ending ?? 'dead',
@@ -142,14 +149,27 @@ export function ledgerLine(game: Game, date: Date): LedgerLine {
 
 /**
  * Write a finished run into the ledger, newest first, and put away what it
- * leaves behind: the run itself is gone, the names stay, and a warrior who
- * became one of the Unasked waits in the Lowstreets for the next.
+ * leaves behind: the run itself is gone, the names stay, a warrior who became
+ * one of the Unasked waits in the Lowstreets for the next, and the holds the
+ * run took are written into the world at the low water after it, which may
+ * give others back to the ones they were taken from. `news` says who did.
  */
-export function endRun(store: Store, game: Game, date: Date): LedgerLine[] {
+export function endRun(
+  store: Store,
+  game: Game,
+  date: Date,
+): { ledger: LedgerLine[]; news: string[] } {
   const line = ledgerLine(game, date)
   const ledger = [line, ...loadLedger(store)].slice(0, LEDGER_SIZE)
   write(store, KEYS.ledger, ledger)
   write(store, KEYS.known, game.known)
+  const { world, news } = settle(
+    loadWorld(store),
+    game.taken ?? [],
+    game.player.name,
+    makeRng(game.seed),
+  )
+  write(store, KEYS.world, world)
   if (game.over?.ending === 'unasked')
     write(store, KEYS.bones, {
       name: game.player.name,
@@ -161,7 +181,7 @@ export function endRun(store: Store, game: Game, date: Date): LedgerLine[] {
     // A run that cannot be cleared is offered again as "continue"; it is
     // already over, so continuing it shows the ending and nothing else.
   }
-  return ledger
+  return { ledger, news }
 }
 
 /** A ledger line as the ledger itself would write it. */
@@ -174,5 +194,6 @@ export function describe(line: LedgerLine): string {
         : line.cause
             .replace(/ at depth \d+$/, '')
             .replace(/^(killed|hanged)/, 'was $1')
-  return `${line.name}, ${line.title}, held depth ${line.depth} for ${line.turns} turns, and ${how}.`
+  const title = line.title ? `, ${line.title}` : ''
+  return `${line.name}${title}, held depth ${line.depth} for ${line.turns} turns, and ${how}.`
 }
