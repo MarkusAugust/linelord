@@ -516,7 +516,7 @@ a {
  */
 .mirror {
   position: relative;
-  height: clamp(220px, 34vh, 400px);
+  height: clamp(120px, 18vh, 220px);
   background: linear-gradient(to bottom, transparent, #2a2114 70%, #1e170d);
   cursor: pointer;
   touch-action: pan-y;

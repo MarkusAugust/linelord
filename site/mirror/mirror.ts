@@ -18,6 +18,7 @@ import {
   MAX_RIPPLES,
   type Ripple,
   ripple,
+  SEA_ROWS,
   SURFACE_MS,
   saying,
   surface,
@@ -200,6 +201,13 @@ const scale = () => Math.min(window.devicePixelRatio || 1, 1.5) * 0.7
 const INK_W = 2048
 const INK_H = 512
 
+/* The engraving's open sea at its own proportions: as deep as it is drawn
+   for the width it is stretched across, so a shallow strip of water shows the
+   top of the sea rather than all of it squeezed flat. */
+const seaDepth = (canvas: HTMLCanvasElement) =>
+  (SEA_ROWS[1] - SEA_ROWS[0]) *
+  Math.max(canvas.width / (INK_W / INK_H), canvas.height)
+
 /** Fetches an image the page carries beside this module. */
 function picture(name: string): Promise<HTMLImageElement> {
   return new Promise((done, fail) => {
@@ -318,7 +326,7 @@ function setup(el: HTMLElement) {
       hold: still ? 0 : h,
       dark: 0,
       k: 1,
-      depth: top,
+      depth: seaDepth(canvas),
     })
     bar.style.transform = `scaleX(${h})`
     if (h >= 1 && since !== null) {
