@@ -22,6 +22,8 @@ export type Pool =
   | 'drain'
   | 'death'
   | 'escape'
+  | 'shore'
+  | 'jarn'
 export type CreatureId =
   | 'pickers'
   | 'firstcloaks'
@@ -118,6 +120,12 @@ export const pools: Record<Pool, readonly string[]> = {
     'Out through the roof with the ledger under your arm. Behind you a man is still holding a river.',
     'You came up. He did not. The book has both your lines now.',
   ],
+  shore: [
+    'The Linelord draws a line in the sand.',
+    'The sea takes the line.',
+    "Your line, across Jarn's.",
+  ],
+  jarn: ['Did you mean to?'],
 }
 
 export const opening: readonly string[] = [

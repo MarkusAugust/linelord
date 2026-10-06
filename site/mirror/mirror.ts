@@ -11,12 +11,16 @@
 import { MONSTERS } from '../descent/core/content'
 import { generate } from '../descent/core/level'
 import { makeRng } from '../descent/core/rng'
+import { pools } from '../descent/lore'
 import {
+  crosses,
   DIVE_MS,
   dive,
   FRAGMENT,
   HOLD_MS,
   hold,
+  jarnDrawn,
+  LINE_AT,
   live,
   MAX_RIPPLES,
   type Ripple,
@@ -26,6 +30,7 @@ import {
   surface,
   tide,
   VERTEX,
+  washed,
   waterline,
 } from './water'
 
@@ -39,11 +44,15 @@ interface Frame {
   hold: number
   dark: number
   k: number
+  /** 1 for the beach above the water, 0 for the water alone (the passages). */
+  shore: number
 }
 
 interface Water {
   draw: (f: Frame) => void
   textures: (reflect: HTMLCanvasElement, kell: HTMLCanvasElement) => void
+  /** The lines drawn in the sand, redrawn whenever one of them changes. */
+  sand: (lines: HTMLCanvasElement) => void
 }
 
 /** Whether the page is light, read off the colour it actually has. */
@@ -101,6 +110,7 @@ function water(canvas: HTMLCanvasElement): Water | null {
     light: at('u_light'),
     k: at('u_k'),
     textures: at('u_textures'),
+    shore: at('u_shore'),
   }
   const sheet = (unit: number, name: string) => {
     const tex = gl.createTexture()
@@ -126,6 +136,7 @@ function water(canvas: HTMLCanvasElement): Water | null {
   }
   const reflectTex = sheet(0, 'u_reflect')
   const kellTex = sheet(1, 'u_kell')
+  const sandTex = sheet(2, 'u_sand')
   let textured = 0
   const isLight = light()
   return {
@@ -147,6 +158,13 @@ function water(canvas: HTMLCanvasElement): Water | null {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, kell)
       textured = 1
     },
+    sand: (lines) => {
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
+      gl.activeTexture(gl.TEXTURE2)
+      gl.bindTexture(gl.TEXTURE_2D, sandTex)
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, lines)
+    },
     draw: (f) => {
       gl.viewport(0, 0, canvas.width, canvas.height)
       gl.uniform2f(u.res, canvas.width, canvas.height)
@@ -164,6 +182,7 @@ function water(canvas: HTMLCanvasElement): Water | null {
       gl.uniform1f(u.light, isLight)
       gl.uniform1f(u.k, f.k)
       gl.uniform1f(u.textures, textured)
+      gl.uniform1f(u.shore, f.shore)
       gl.clearColor(0, 0, 0, 0)
       gl.clear(gl.COLOR_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
@@ -239,6 +258,109 @@ function kellSheet(w: number, h: number): HTMLCanvasElement {
   return sheet
 }
 
+/** A stroke as a man draws it in wet sand: a groove, with the light on its far edge. */
+function groove(
+  ctx: CanvasRenderingContext2D,
+  points: readonly (readonly [number, number])[],
+  width: number,
+  isLight: boolean,
+): void {
+  if (points.length < 2) return
+  const path = (dy: number) => {
+    ctx.beginPath()
+    points.forEach(([x, y], i) => {
+      if (i === 0) ctx.moveTo(x, y + dy)
+      else ctx.lineTo(x, y + dy)
+    })
+  }
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  path(-width * 0.5)
+  ctx.strokeStyle = isLight
+    ? 'rgba(255, 250, 238, 0.7)'
+    : 'rgba(200, 163, 74, 0.35)'
+  ctx.lineWidth = width * 0.6
+  ctx.stroke()
+  path(0)
+  ctx.strokeStyle = isLight ? 'rgba(90, 70, 40, 0.75)' : 'rgba(8, 6, 3, 0.85)'
+  ctx.lineWidth = width
+  ctx.stroke()
+}
+
+/** Jarn's line along the beach, as far as he has drawn it, and yours. */
+function sandSheet(
+  w: number,
+  h: number,
+  drawn: number,
+  mine: readonly (readonly [number, number])[] | null,
+  isLight: boolean,
+): HTMLCanvasElement {
+  const sheet = document.createElement('canvas')
+  sheet.width = w
+  sheet.height = h
+  const ctx = sheet.getContext('2d')
+  if (!ctx) return sheet
+  const width = Math.max(2, h * 0.012)
+  const y0 = h - LINE_AT * h
+  const his: [number, number][] = []
+  for (let x = w * 0.02; x <= w * 0.02 + w * 0.96 * drawn; x += 4)
+    his.push([
+      x,
+      y0 + Math.sin(x * 0.013) * h * 0.012 + Math.sin(x * 0.041) * h * 0.005,
+    ])
+  groove(ctx, his, width, isLight)
+  if (mine)
+    groove(
+      ctx,
+      mine.map(([x, y]) => [x * w, h - y * h] as [number, number]),
+      width * 0.85,
+      isLight,
+    )
+  return sheet
+}
+
+const store = {
+  get: (k: string): string | null => {
+    try {
+      return localStorage.getItem(k)
+    } catch {
+      // No storage: the line in the sand lasts as long as the page.
+      return null
+    }
+  },
+  set: (k: string, v: string) => {
+    try {
+      localStorage.setItem(k, v)
+    } catch {
+      // As above: kept for this page only.
+    }
+  },
+  remove: (k: string) => {
+    try {
+      localStorage.removeItem(k)
+    } catch {
+      // As above.
+    }
+  },
+}
+
+interface Mine {
+  points: [number, number][]
+  at: number
+  crossed: boolean
+}
+
+function readMine(): Mine | null {
+  try {
+    const raw = store.get('shore.line')
+    const v = raw ? (JSON.parse(raw) as Mine) : null
+    return v && Array.isArray(v.points) && typeof v.at === 'number' ? v : null
+  } catch {
+    // A line that cannot be read was never drawn.
+    return null
+  }
+}
+
 function openGame(): void {
   import(new URL('descent.js', document.baseURI).href)
   const dialog = document.getElementById('descent')
@@ -273,6 +395,34 @@ function setup(el: HTMLElement) {
   let going = false
   let hinted = false
   let lastFrame = 0
+  let mine = readMine()
+  let drawing: [number, number][] | null = null
+  const revealFrom = performance.now()
+  let lastDrawn = -1
+  const isLight = light() === 1
+
+  /* The lines in the sand: Jarn's, drawn out along the beach the first time
+     the shore is seen, and as the tide allows; and yours, until a flood has
+     been over it. */
+  const lines = (now: number, force = false) => {
+    if (!surfaceGl) return
+    if (
+      mine &&
+      washed(mine.at, Date.now(), Math.min(...mine.points.map(([, y]) => y)))
+    ) {
+      mine = null
+      store.remove('shore.line')
+    }
+    const reveal = still ? 1 : Math.min(1, (now - revealFrom) / 2500)
+    const drawn =
+      Math.round(Math.min(jarnDrawn(Date.now()), reveal) * 200) / 200
+    if (!force && drawn === lastDrawn && !drawing) return
+    lastDrawn = drawn
+    const points = drawing ?? mine?.points ?? null
+    surfaceGl.sand(
+      sandSheet(canvas.width, canvas.height, drawn, points, isLight),
+    )
+  }
 
   const fit = () => {
     const box = canvas.getBoundingClientRect()
@@ -284,6 +434,7 @@ function setup(el: HTMLElement) {
       reflectSheet(canvas.width, canvas.height, line),
       kellSheet(canvas.width, canvas.height),
     )
+    lines(performance.now(), true)
   }
 
   const dialog = document.getElementById('descent')
@@ -296,14 +447,16 @@ function setup(el: HTMLElement) {
     surfaceGl.draw({
       t: still ? 0 : now / 1000,
       surface: waterline(canvas.height, tide(Date.now())),
-      feather: canvas.height * 0.45,
+      feather: canvas.height * 0.4,
       ripples: still ? [] : rings,
       now,
       holdAt: at,
       hold: still ? 0 : h,
       dark: 0,
       k: 1,
+      shore: 1,
     })
+    lines(now)
     bar.style.transform = `scaleX(${h})`
     if (h >= 1 && since !== null) {
       since = null
@@ -312,7 +465,11 @@ function setup(el: HTMLElement) {
   }
 
   const frame = (now: number) => {
-    const busy = since !== null || rings.length > 0
+    const busy =
+      since !== null ||
+      rings.length > 0 ||
+      drawing !== null ||
+      now - revealFrom < 2600
     // At rest the swell is slow, and half the frames do for it.
     if (busy || now - lastFrame > 32) {
       lastFrame = now
@@ -360,9 +517,14 @@ function setup(el: HTMLElement) {
     )
     wake()
   }
-  const showHint = (evt: { clientX: number; clientY: number }) => {
-    if (hinted) return
+  const showHint = (
+    evt: { clientX: number; clientY: number },
+    text = 'Hold.',
+    always = false,
+  ) => {
+    if (hinted && !always) return
     hinted = true
+    hint.textContent = text
     const box = el.getBoundingClientRect()
     hint.style.left = `${evt.clientX - box.left}px`
     hint.style.top = `${evt.clientY - box.top}px`
@@ -391,8 +553,48 @@ function setup(el: HTMLElement) {
   }
 
   let lastMove = 0
+  /* Above the water's edge is sand, and a finger there draws a line. */
+  const onSand = (point: [number, number]) =>
+    point[1] > waterline(canvas.height, tide(Date.now())) + canvas.height * 0.02
+  const norm = ([x, y]: [number, number]): [number, number] => [
+    x / canvas.width,
+    y / canvas.height,
+  ]
+  const finishLine = (evt: { clientX: number; clientY: number }) => {
+    const points = drawing
+    drawing = null
+    if (!points || points.length < 3) return lines(performance.now(), true)
+    const crossed = crosses(points, LINE_AT)
+    mine = { points, at: Date.now(), crossed }
+    store.set('shore.line', JSON.stringify(mine))
+    if (crossed) {
+      store.set('descent.challenger', String(Date.now()))
+      showHint(evt, pools.jarn[0] ?? 'Did you mean to?', true)
+    }
+    lines(performance.now(), true)
+    say()
+  }
+
+  /* A finger that starts in the sand is drawing, not scrolling: the page
+     stays put for that one touch. Anywhere else it scrolls as ever. */
+  el.addEventListener(
+    'touchstart',
+    (evt) => {
+      const t = evt.touches[0]
+      if (t && !still && onSand(local(t))) evt.preventDefault()
+    },
+    { passive: false },
+  )
+
   el.addEventListener('pointermove', (evt) => {
     const now = performance.now()
+    if (drawing) {
+      const point = norm(local(evt))
+      const last = drawing[drawing.length - 1]
+      if (!last || Math.hypot(point[0] - last[0], point[1] - last[1]) > 0.004)
+        drawing.push(point)
+      return
+    }
     if (since !== null) at = local(evt)
     else if (now - lastMove > 280) {
       lastMove = now
@@ -402,12 +604,20 @@ function setup(el: HTMLElement) {
   })
   el.addEventListener('pointerdown', (evt) => {
     const point = local(evt)
+    if (onSand(point) && !still) {
+      drawing = [norm(point)]
+      wake()
+      return
+    }
     touch(point[0], point[1], 1)
     showHint(evt)
     press(point)
   })
   for (const name of ['pointerup', 'pointerleave', 'pointercancel'])
-    el.addEventListener(name, release)
+    el.addEventListener(name, (evt) => {
+      if (drawing) return finishLine(evt as PointerEvent)
+      release()
+    })
   el.addEventListener('contextmenu', (evt) => evt.preventDefault())
   el.addEventListener('keydown', (evt) => {
     if ((evt.key !== 'Enter' && evt.key !== ' ') || evt.repeat) return
@@ -481,6 +691,7 @@ function setup(el: HTMLElement) {
         hold: 1 - d.rise * 0.6,
         dark: d.dark,
         k: 1,
+        shore: 0,
       })
       if (d.done) return finish()
       requestAnimationFrame(step)
@@ -545,6 +756,7 @@ function setup(el: HTMLElement) {
           hold: 0,
           dark: s.dark,
           k: 1 - s.fall * 0.999,
+          shore: 0,
         })
         if (s.done) return leave()
         requestAnimationFrame(step)
@@ -553,17 +765,21 @@ function setup(el: HTMLElement) {
     }).observe(dialog, { attributes: true, attributeFilter: ['open'] })
   }
 
+  /* The line above the water says what the shore is doing, by the same clock. */
+  function say() {
+    const caption = document.querySelector('.ebb')
+    if (caption) caption.textContent = saying(Date.now(), mine)
+  }
+
   fit()
   paint(performance.now())
   wake()
 
-  /* The line above the water says what the tide is doing, by the same clock. */
-  const line = document.querySelector('.ebb')
-  const say = () => {
-    if (line) line.textContent = saying(Date.now())
-  }
   say()
-  setInterval(say, 60_000)
+  setInterval(() => {
+    say()
+    lines(performance.now())
+  }, 60_000)
 
   return {
     /** Down from wherever the page is: through the middle of the water. */

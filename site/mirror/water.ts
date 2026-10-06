@@ -11,6 +11,8 @@
  * Everything here is numbers and text; `mirror.ts` puts it on the page.
  */
 
+import { pools } from '../descent/lore'
+
 /** High water to high water: twelve hours and twenty-five minutes. */
 export const TIDE_MS = (12 * 60 + 25) * 60 * 1000
 
@@ -19,13 +21,64 @@ export function tide(now: number): number {
   return 0.5 + 0.5 * Math.sin((2 * Math.PI * now) / TIDE_MS)
 }
 
-/** What the foot of the page says about the sea at this moment. */
-export function saying(now: number): string {
+const rising = (now: number) => Math.cos((2 * Math.PI * now) / TIDE_MS) > 0
+
+/**
+ * Where Jarn's line lies in the sand, as a share of the canvas's height from
+ * the bottom: above the water at the ebb, under it at the flood.
+ */
+export const LINE_AT = 0.6
+
+/** The tide level at which the water reaches a height `y` (a share from the bottom). */
+export function coverLevel(y: number): number {
+  return (y - 0.5) / 0.18
+}
+
+/**
+ * How much of Jarn's line there is: none while the water is over it, all of
+ * it while the flood is still coming up to it, and more and more as the sea
+ * goes out and he walks the beach drawing it again.
+ */
+export function jarnDrawn(now: number): number {
   const level = tide(now)
-  if (level >= 0.85) return 'High water.'
-  if (level <= 0.15) return 'Low water.'
-  const rising = Math.cos((2 * Math.PI * now) / TIDE_MS) > 0
-  return rising ? 'The sea is coming in.' : 'The sea is going out.'
+  const cover = coverLevel(LINE_AT)
+  if (level >= cover) return 0
+  if (rising(now)) return 1
+  return Math.min(1, (cover - level) / 0.12)
+}
+
+/** Whether a flood has come over height `y` between `at` and `now`. */
+export function washed(at: number, now: number, y: number): boolean {
+  const need = coverLevel(y)
+  if (need > 1) return false
+  if (now - at >= TIDE_MS) return true
+  for (let i = 0; i <= 240; i++)
+    if (tide(at + ((now - at) * i) / 240) >= need) return true
+  return false
+}
+
+/** Whether a stroke goes from one side of a line at height `y` to the other. */
+export function crosses(
+  points: readonly (readonly [number, number])[],
+  y: number,
+): boolean {
+  return points.some(([, py]) => py < y) && points.some(([, py]) => py > y)
+}
+
+const shore = (start: string, fallback: string) =>
+  pools.shore.find((line) => line.startsWith(start)) ?? fallback
+
+/**
+ * What the foot of the page says: your line, if you have drawn across his;
+ * otherwise what the shore is doing, by the same clock as the water.
+ */
+export function saying(now: number, mine: { crossed: boolean } | null): string {
+  if (mine?.crossed) return shore('Your line', "Your line, across Jarn's.")
+  const level = tide(now)
+  if (level >= 0.85) return shore('The sea takes', 'The sea takes the line.')
+  if (level <= 0.15)
+    return shore('The Linelord', 'The Linelord draws a line in the sand.')
+  return rising(now) ? 'The sea is coming in.' : 'The sea is going out.'
 }
 
 /**
@@ -120,8 +173,22 @@ export function surface(ms: number): {
  * the blue belongs to the water in the game.
  */
 export const PALETTE = {
-  dark: { deep: '#1e170d', mid: '#5c4720', foam: '#e8e2d4', rim: '#c8a34a' },
-  light: { deep: '#4a3818', mid: '#8a6d30', foam: '#fbf6ea', rim: '#f4efe4' },
+  dark: {
+    deep: '#1e170d',
+    mid: '#5c4720',
+    foam: '#e8e2d4',
+    rim: '#c8a34a',
+    sand: '#40352a',
+    wet: '#2b2318',
+  },
+  light: {
+    deep: '#4a3818',
+    mid: '#8a6d30',
+    foam: '#fbf6ea',
+    rim: '#f4efe4',
+    sand: '#e2d6bc',
+    wet: '#c4b391',
+  },
   night: '#14110d',
 } as const
 
@@ -155,6 +222,8 @@ uniform float u_k;
 uniform float u_textures;
 uniform sampler2D u_reflect;
 uniform sampler2D u_kell;
+uniform sampler2D u_sand;
+uniform float u_shore;
 
 float hash(vec3 p) {
   p = fract(p * 0.3183099 + 0.1);
@@ -187,8 +256,12 @@ float fbm(vec3 p) {
 
 void main() {
   vec2 p = gl_FragCoord.xy;
-  float depth = u_surface - p.y;
-  float water = smoothstep(-u_feather * 0.15, u_feather, depth);
+  // The edge of the sea moves a little along the beach, as the wash does.
+  float wash = (sin(p.x * 0.018 + u_t * 0.7) * 2.5 + sin(p.x * 0.051 - u_t * 1.1) * 1.5) * u_shore;
+  float depth = u_surface + wash - p.y;
+  float water = u_shore > 0.5
+    ? smoothstep(-1.5, 2.5, depth)
+    : smoothstep(-u_feather * 0.15, u_feather, depth);
 
   // A slow swell, stretched along the water as swells are.
   vec2 q = p / u_res.y;
@@ -236,9 +309,22 @@ void main() {
   col += rim * max(lift, 0.0) * 0.35;
   col = mix(col, rim, smoothstep(u_feather * 0.05, 0.0, abs(depth)) * 0.25);
   col *= 1.0 - u_hold * exp(-hr / 70.0) * 0.9;
+
+  // The beach above the water: wet and dark at the edge, drier and fading
+  // into the page further up, with the lines drawn in it.
+  float above = -depth;
+  vec3 dry = mix(${glsl(PALETTE.dark.sand)}, ${glsl(PALETTE.light.sand)}, u_light);
+  vec3 damp = mix(${glsl(PALETTE.dark.wet)}, ${glsl(PALETTE.light.wet)}, u_light);
+  vec3 sand = mix(damp, dry, smoothstep(0.0, u_feather * 0.6, above));
+  sand *= 0.94 + 0.12 * noise(vec3(p * 0.9, 0.0));
+  vec4 drawn = texture2D(u_sand, p / u_res);
+  sand = mix(sand, drawn.rgb, drawn.a);
+  float beach = (1.0 - smoothstep(u_feather * 0.45, u_feather, above)) * u_shore;
+  col = mix(sand, col, water);
+  col = mix(col, rim, smoothstep(3.0, 0.0, abs(depth)) * 0.35 * u_shore);
   col = mix(col, ${glsl(PALETTE.night)}, u_dark);
 
-  float a = max(water, u_dark) * u_k;
+  float a = max(max(water, beach), u_dark) * u_k;
   gl_FragColor = vec4(col * a, a);
 }
 `

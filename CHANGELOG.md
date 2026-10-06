@@ -25,8 +25,13 @@ because the earlier answer was wrong.
   Datastar, so it is still one script.
 - The page ends in the sea. It fades into dark water in the page's own browns
   and gold, the name standing upside down in it, at a height that follows a
-  real tide on the clock; the line above it says what the tide is doing
-  (coming in, high water, going out, low water). Touched, it rings, and the drowned city shows where
+  real tide on the clock. Between the page and the water lies a strip of wet
+  sand with a line drawn across it: Jarn's, the Linelord of the Gallowmark
+  canon. The flood covers it and the ebb gives it back, drawn again along the
+  beach. A finger or a mouse dragged over the sand draws a line of your own,
+  kept until a flood has been over it; drawn across his, it marks you as his
+  challenger. The line above it all says what the shore is doing. Touched, the
+  water rings, and the drowned city shows where
   the rings break the surface; held for a second and a half, the rings turn
   into a whirlpool and the water rises over the page, and the game comes up out
   of the dark, filling the window. Closing it brings you up again at the water,
