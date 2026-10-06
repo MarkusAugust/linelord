@@ -6,6 +6,8 @@
  */
 
 .descent {
+  max-width: 1200px;
+  margin: 0 auto;
   --d-water: #3f7f9b;
   --d-deep: #2a5d8f;
   --d-grey: #7d7a73;

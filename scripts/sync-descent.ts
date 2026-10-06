@@ -35,6 +35,8 @@ const POOLS = [
   'drain',
   'death',
   'escape',
+  'shore',
+  'jarn',
 ] as const
 const CREATURES = [
   'pickers',

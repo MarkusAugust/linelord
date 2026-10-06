@@ -460,11 +460,14 @@ a {
  * game's own styles come with the game (site/descent/descent.css).
  */
 .descent-dialog {
-  width: min(100vw - 16px, 1100px);
-  max-width: calc(100vw - 16px);
-  max-height: calc(100dvh - 16px);
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
   padding: 0;
-  border: 1px solid var(--rule);
+  border: 0;
+  overflow: auto;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--mono);
@@ -474,21 +477,27 @@ a {
   background: rgb(0 0 0 / 0.72);
 }
 
-/* The game comes up out of the dark the whirlpool leaves. */
+/* Under the water, the game fills the window, and comes up out of the dark. */
 .descent-dialog[open] {
-  animation: surface 450ms ease-out;
+  animation: rise 600ms ease-out;
 }
 
-@keyframes surface {
+@keyframes rise {
   from {
     opacity: 0;
-    transform: scale(0.96);
+    transform: translateY(4vh);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .descent-dialog[open] {
-    animation: none;
+    animation: fade 250ms ease-out;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
   }
 }
 
@@ -499,91 +508,86 @@ a {
 }
 
 /*
- * The O of the name is the drain under the iron hall. It looks like the rest
- * of the word until the pointer or the focus finds it; then the water goes
- * out through it.
+ * The sea at the foot of the page. The page fades into it; mirror.js draws
+ * the water itself once it comes near the screen, and until then, or without
+ * WebGL, this gradient is the water.
  */
-.drain {
-  font: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
-  color: inherit;
-  background: none;
-  border: 0;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
+.mirror {
   position: relative;
-  isolation: isolate;
+  height: clamp(220px, 34vh, 400px);
+  background: linear-gradient(to bottom, transparent, #2a2114 70%, #1e170d);
+  cursor: pointer;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
 }
 
-/*
- * drain.js decides what the O does, and says so with a class: has-water when
- * the pool is drawn in it, no-water when it cannot be (no WebGL), and then
- * the ring below is shown on hover instead. Until it has decided, the O shows
- * nothing, so the ring never flashes before the water comes.
- */
-.drain__water {
+.mirror.has-water {
+  background: none;
+}
+
+.mirror:focus-visible {
+  outline: 2px solid var(--steel);
+  outline-offset: -4px;
+}
+
+.mirror__water {
   position: absolute;
-  left: 50%;
-  top: 52%;
-  width: 2.6em;
-  height: 2.6em;
-  transform: translate(-50%, -50%);
-  z-index: -1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
 }
 
-.drain::after {
-  content: "";
+/* The one word the water says, the first time it is touched. */
+.mirror__hint {
   position: absolute;
-  inset: 18% 6%;
-  border-radius: 50%;
-  border: 2px solid var(--steel);
+  transform: translate(-50%, -160%);
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
   opacity: 0;
-  transform: scale(1.6);
+  transition: opacity 600ms ease;
   pointer-events: none;
 }
 
-/* The whirlpool over the whole page, for the second it takes to go down. */
-.drain__veil {
+.mirror__hint.is-shown {
+  opacity: 0.85;
+}
+
+/* The hold, as a line, for someone who asked for less motion. */
+.mirror__progress {
+  display: none;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--steel);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mirror__progress {
+    display: block;
+  }
+
+  .mirror__hint {
+    transition: none;
+  }
+}
+
+/* The water over the whole window, for the second it takes to go down or up. */
+.mirror__veil {
   position: fixed;
   inset: 0;
   width: 100vw;
   height: 100vh;
   z-index: 1000;
   pointer-events: none;
-}
-
-.drain.no-water:hover,
-.drain.no-water:focus-visible {
-  color: var(--steel);
-}
-
-.drain:focus-visible {
-  outline: 2px solid var(--steel);
-  outline-offset: 4px;
-}
-
-.drain.no-water:hover::after,
-.drain.no-water:focus-visible::after {
-  animation: drain 1.8s ease-in infinite;
-}
-
-@keyframes drain {
-  from {
-    opacity: 0.8;
-    transform: scale(1.6);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.2);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .drain.no-water:hover::after,
-  .drain.no-water:focus-visible::after {
-    animation: none;
-  }
 }
