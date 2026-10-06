@@ -55,6 +55,9 @@ const DATASTAR =
  * the page, because an `import()` in a Datastar expression would otherwise be
  * resolved against Datastar's own address on the CDN.
  */
+/** The water in the O, fetched the first time the O is found. */
+const WATER = "import(new URL('drain.js', document.baseURI).href)"
+
 const DESCEND =
   "(import(new URL('descent.js', document.baseURI).href), document.getElementById('descent').open || document.getElementById('descent').showModal())"
 
@@ -338,7 +341,7 @@ function renderHeader(report: Report): string {
 
   return `
     <header>
-      <h1 aria-label="LineLord">LineL<button type="button" class="drain" aria-label="Go down into drowned Kell" data-on:click="${DESCEND}">o</button>rd</h1>
+      <h1 aria-label="LineLord">LineL<button type="button" class="drain" aria-label="Go down into drowned Kell" data-on:click="${DESCEND}" data-on:pointerenter__once="${WATER}" data-on:focus__once="${WATER}">o</button>rd</h1>
       <p class="tagline">The Barbarian's Guide to Git Repository Conquest</p>
       <p class="quote">
         “What is best in code? To crush the bugs, see them driven from your

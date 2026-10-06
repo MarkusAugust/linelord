@@ -49,4 +49,18 @@ await copyFile(
   join(outDir, 'descent.css'),
 )
 
+// The water in the O, its own small module, fetched when the O is first found.
+const water = await Bun.build({
+  entrypoints: [join(here, 'drain', 'drain.ts')],
+  target: 'browser',
+  format: 'esm',
+  minify: true,
+})
+const [drain] = water.outputs
+if (!water.success || !drain) {
+  for (const log of water.logs) console.error(log)
+  process.exit(1)
+}
+await writeFile(join(outDir, 'drain.js'), await drain.text())
+
 console.log(`Wrote ${join(outDir, 'index.html')} (${html.length} bytes)`)

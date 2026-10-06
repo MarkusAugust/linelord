@@ -496,6 +496,28 @@ a {
   margin: 0;
   cursor: pointer;
   position: relative;
+  isolation: isolate;
+}
+
+/* The water, once drain.js has put it there; the ring below is what is shown without it. */
+.drain__water {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 2.6em;
+  height: 2.6em;
+  transform: translate(-50%, -50%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.drain.has-water::after {
+  display: none;
+}
+
+.drain.has-water:hover,
+.drain.has-water:focus-visible {
+  color: #dff0f7;
 }
 
 .drain::after {

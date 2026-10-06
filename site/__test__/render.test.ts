@@ -401,6 +401,12 @@ describe('renderSite', () => {
       /<h1 aria-label="LineLord">LineL<button[^>]*class="drain"[^>]*>o<\/button>rd<\/h1>/,
     )
     expect(html).toContain('aria-label="Go down into drowned Kell"')
+    expect(html).toContain(
+      `data-on:pointerenter__once="import(new URL('drain.js', document.baseURI).href)"`,
+    )
+    expect(html).toContain(
+      `data-on:focus__once="import(new URL('drain.js', document.baseURI).href)"`,
+    )
     expect(html).toContain('<p class="ebb">The sea is going out.</p>')
     expect(html).not.toContain('href="?descend"')
     expect(html).toContain(

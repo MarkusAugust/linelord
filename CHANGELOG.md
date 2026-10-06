@@ -23,6 +23,10 @@ because the earlier answer was wrong.
   changes nothing about the command-line tool. The page now loads Datastar's
   Rocket bundle, which is free as of Datastar 1.0.4 and includes the rest of
   Datastar, so it is still one script.
+- The O in the name is a drain: when the pointer or the focus finds it, a WebGL
+  whirlpool turns in it, the Ebb going out. The few lines that draw it are
+  fetched only then; without WebGL, or with reduced motion asked for, the O
+  keeps its plain ring.
 
 ## [1.0.0-rc.3] — 2026-10-04
 
