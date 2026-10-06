@@ -15,6 +15,25 @@ void main() {
 }
 `
 
+/**
+ * The water's colours, from the page's own: the paper it lies on, the ink for
+ * its foam, the steel for the light on its surface. Brown and gold, the colour
+ * of a drowned coast, and never blue. `light` is for the page's light theme.
+ */
+export const PALETTE = {
+  dark: { deep: '#2a1f10', mid: '#7a5e28', foam: '#e8e2d4', rim: '#c8a34a' },
+  light: { deep: '#5a4420', mid: '#9c7a36', foam: '#fbf6ea', rim: '#f4efe4' },
+  night: '#14110d',
+} as const
+
+/** A colour as GLSL writes it. */
+export function glsl(hex: string): string {
+  const [r, g, b] = [1, 3, 5].map((i) =>
+    (Number.parseInt(hex.slice(i, i + 2), 16) / 255).toFixed(3),
+  )
+  return `vec3(${r}, ${g}, ${b})`
+}
+
 export const FRAGMENT = `
 precision mediump float;
 uniform vec2 u_center;
@@ -83,10 +102,10 @@ void main() {
   float body = mix(calm, swirl, u_stir);
   float white = mix(glint * 0.55, foam * smoothstep(0.15, 0.6, r) * 0.9, u_stir);
 
-  vec3 deep = mix(vec3(0.03, 0.12, 0.20), vec3(0.10, 0.34, 0.50), u_light);
-  vec3 mid = mix(vec3(0.16, 0.48, 0.68), vec3(0.30, 0.62, 0.80), u_light);
+  vec3 deep = mix(${glsl(PALETTE.dark.deep)}, ${glsl(PALETTE.light.deep)}, u_light);
+  vec3 mid = mix(${glsl(PALETTE.dark.mid)}, ${glsl(PALETTE.light.mid)}, u_light);
   vec3 col = mix(deep, mid, smoothstep(0.25, 0.8, body));
-  col = mix(col, vec3(0.78, 0.91, 0.97), white);
+  col = mix(col, mix(${glsl(PALETTE.dark.foam)}, ${glsl(PALETTE.light.foam)}, u_light), white);
   col *= mix(1.0, 0.15 + 0.85 * smoothstep(0.12, 0.38, r), u_stir);
 
   // The surface. At rest the water lies in the bottom of the hole of the O,
@@ -103,8 +122,8 @@ void main() {
   float below = 1.0 - smoothstep(surface - px, surface + px, gl_FragCoord.y);
   float rim = (1.0 - smoothstep(0.0, px * 1.6, abs(gl_FragCoord.y - surface))) * hole * (1.0 - u_stir);
   float pool = mix(hole * below, inside, u_stir);
-  col = mix(col, vec3(0.86, 0.95, 1.0), rim * 0.85);
-  col = mix(col, vec3(0.01, 0.02, 0.03), u_dark);
+  col = mix(col, mix(${glsl(PALETTE.dark.rim)}, ${glsl(PALETTE.light.rim)}, u_light), rim * 0.85);
+  col = mix(col, ${glsl(PALETTE.night)}, u_dark);
 
   float alpha = max(pool, rim * 0.9) * u_k * mix(1.0, 0.85, u_light * (1.0 - u_dark));
   gl_FragColor = vec4(col * alpha, alpha);

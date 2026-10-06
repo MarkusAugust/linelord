@@ -274,7 +274,19 @@ function openGame(): void {
   if (dialog instanceof HTMLDialogElement && !dialog.open) dialog.showModal()
 }
 
+/**
+ * When the game closes the browser gives focus back to whatever had it when
+ * the game opened. From the keyboard that is the O, which is right. A mouse or
+ * a finger would also focus the O on the press, and the ring and the stirring
+ * water would then still be there when the game closes; so a press does not
+ * take the focus, and it goes back to where it was.
+ */
+function settle(button: HTMLElement): void {
+  button.addEventListener('mousedown', (evt) => evt.preventDefault())
+}
+
 function start(button: HTMLElement): void {
+  settle(button)
   remeasure()
   matchMedia('(prefers-color-scheme: dark)').addEventListener(
     'change',
@@ -382,12 +394,16 @@ function start(button: HTMLElement): void {
     wanted = on || button.matches(':hover, :focus-visible') ? 1 : 0
     wake()
   }
-  dialog?.addEventListener('close', () => {
-    going = null
-    found = 0
-    wanted = 0
-    wake()
-  })
+  /* The game closing, seen on the dialog's own attribute: the close event
+     is not delivered everywhere it should be, and the pool must wake. */
+  if (dialog)
+    new MutationObserver(() => {
+      if (dialog.hasAttribute('open')) return
+      going = null
+      found = 0
+      wanted = button.matches(':hover, :focus-visible') ? 1 : 0
+      wake()
+    }).observe(dialog, { attributes: true, attributeFilter: ['open'] })
 
   button.addEventListener('pointerenter', notice(true))
   button.addEventListener('pointerleave', notice(false))

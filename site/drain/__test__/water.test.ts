@@ -7,7 +7,9 @@ import {
   descent,
   FOUND,
   FRAGMENT,
+  glsl,
   inkCentre,
+  PALETTE,
   SPUN,
   VERTEX,
 } from '../water'
@@ -151,5 +153,36 @@ describe('the hole in the O', () => {
     expect(counter(solid, 20, 20)).toBeNull()
     const open = new Uint8ClampedArray(20 * 20)
     expect(counter(open, 20, 20)).toBeNull()
+  })
+})
+
+describe('the colour of the water', () => {
+  const channels = (hex: string) =>
+    [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16))
+
+  it('is the page own: ink for the foam, steel for the rim, the paper for the dark', () => {
+    expect(PALETTE.dark.foam).toBe('#e8e2d4')
+    expect(PALETTE.dark.rim).toBe('#c8a34a')
+    expect(PALETTE.night).toBe('#14110d')
+    expect(PALETTE.light.rim).toBe('#f4efe4')
+  })
+
+  it('has no blue in it: brown and gold, as the drowned coast would be', () => {
+    const all = [
+      PALETTE.night,
+      ...Object.values(PALETTE.dark),
+      ...Object.values(PALETTE.light),
+    ]
+    for (const hex of all) {
+      const [r = 0, g = 0, b = 0] = channels(hex)
+      expect(b).toBeLessThanOrEqual(r)
+      expect(b).toBeLessThanOrEqual(g)
+    }
+  })
+
+  it('is what the shader draws with', () => {
+    expect(FRAGMENT).toContain(glsl(PALETTE.dark.mid))
+    expect(FRAGMENT).toContain(glsl(PALETTE.night))
+    expect(glsl('#ff8000')).toBe('vec3(1.000, 0.502, 0.000)')
   })
 })
