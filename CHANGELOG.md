@@ -25,7 +25,8 @@ because the earlier answer was wrong.
   Datastar, so it is still one script.
 - The page ends in the sea. It fades into dark water in the page's own browns
   and gold, the name standing upside down in it, at a height that follows a
-  real tide on the clock. Touched, it rings, and the drowned city shows where
+  real tide on the clock; the line above it says what the tide is doing
+  (coming in, high water, going out, low water). Touched, it rings, and the drowned city shows where
   the rings break the surface; held for a second and a half, the rings turn
   into a whirlpool and the water rises over the page, and the game comes up out
   of the dark, filling the window. Closing it brings you up again at the water,

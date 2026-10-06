@@ -11,6 +11,7 @@ import {
   PALETTE,
   ripple,
   SURFACE_MS,
+  saying,
   surface,
   TIDE_MS,
   tide,
@@ -114,5 +115,15 @@ describe('the colour of the water', () => {
     expect(FRAGMENT).toContain('uniform sampler2D u_kell;')
     expect(VERTEX).toContain('attribute vec2 a_pos;')
     expect(glsl('#ff8000')).toBe('vec3(1.000, 0.502, 0.000)')
+  })
+})
+
+describe('what the foot of the page says', () => {
+  it('says what the tide is doing, from the same clock as the water', () => {
+    expect(saying(0)).toBe('The sea is coming in.')
+    expect(saying(TIDE_MS / 4)).toBe('High water.')
+    expect(saying(TIDE_MS / 2)).toBe('The sea is going out.')
+    expect(saying((TIDE_MS * 3) / 4)).toBe('Low water.')
+    expect(saying(TIDE_MS)).toBe(saying(0))
   })
 })

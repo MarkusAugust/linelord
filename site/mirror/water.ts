@@ -19,6 +19,15 @@ export function tide(now: number): number {
   return 0.5 + 0.5 * Math.sin((2 * Math.PI * now) / TIDE_MS)
 }
 
+/** What the foot of the page says about the sea at this moment. */
+export function saying(now: number): string {
+  const level = tide(now)
+  if (level >= 0.85) return 'High water.'
+  if (level <= 0.15) return 'Low water.'
+  const rising = Math.cos((2 * Math.PI * now) / TIDE_MS) > 0
+  return rising ? 'The sea is coming in.' : 'The sea is going out.'
+}
+
 /**
  * Where the water's top stands on a canvas `height` pixels tall, counted from
  * the bottom: a little higher at the flood, a little lower at the ebb. Above

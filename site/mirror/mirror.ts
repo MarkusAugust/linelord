@@ -22,6 +22,7 @@ import {
   type Ripple,
   ripple,
   SURFACE_MS,
+  saying,
   surface,
   tide,
   VERTEX,
@@ -555,6 +556,14 @@ function setup(el: HTMLElement) {
   fit()
   paint(performance.now())
   wake()
+
+  /* The line above the water says what the tide is doing, by the same clock. */
+  const line = document.querySelector('.ebb')
+  const say = () => {
+    if (line) line.textContent = saying(Date.now())
+  }
+  say()
+  setInterval(say, 60_000)
 
   return {
     /** Down from wherever the page is: through the middle of the water. */
