@@ -10,7 +10,7 @@
  * The clock is the low water: one for every run that ends.
  */
 import { holders, pools } from '../lore'
-import { TIERS } from './content'
+import { ITEMS, TIERS } from './content'
 import type { Rng } from './rng'
 
 export type Tier = 1 | 2 | 3 | 4
@@ -27,10 +27,30 @@ export interface Claim {
   from: Rival
 }
 
+/**
+ * What the sea gave back of a run that went down and stayed: it stands on the
+ * floor where it fell, holding what it carried, until a later run takes it.
+ */
+export interface Wrack {
+  /** The low water it fell at; one run, one wrack. */
+  id: number
+  name: string
+  depth: number
+  weapon: string | null
+  armour: string | null
+  marks: number
+  level: number
+}
+
 export interface World {
   lowWater: number
   holds: Record<Tier, Claim>
+  /** Newest first. Worlds kept before there was any wrack have none. */
+  wrack?: Wrack[]
 }
+
+/** The sea keeps no more than this many. */
+export const WRACK_SIZE = 5
 
 export const HOLD_TITLES: Record<Tier, string> = {
   1: 'Holder of the Quaysteps',
@@ -170,8 +190,12 @@ export function linelord(world: World): Row {
   return top
 }
 
-/** The chance that a hold this many low waters old is taken back at the next one. */
-const contested = (age: number) => 0.6 / (1 + age)
+/**
+ * The chance that a hold this many low waters old is taken back at the next
+ * one: high while it is fresh, and never quite nothing. Old is stable; it is
+ * not for ever.
+ */
+const contested = (age: number) => Math.max(0.05, 0.6 / (1 + age))
 
 const tierName = (t: Tier) => TIERS[t].name.replace(/^The /, 'the ')
 
@@ -216,6 +240,47 @@ export function tribute(world: World): number {
   )
 }
 
+/** A run's wrack washed up, and what later runs took back taken away. */
+export function washUp(
+  world: World,
+  fell: Wrack | null,
+  cleared: readonly number[],
+): World {
+  const kept = (world.wrack ?? []).filter((w) => !cleared.includes(w.id))
+  return {
+    ...structuredClone(world),
+    wrack: [...(fell ? [fell] : []), ...kept].slice(0, WRACK_SIZE),
+  }
+}
+
+/** Where each wrack stands and what it holds, as the ledger writes it. */
+export function wrackSaid(world: World): string[] {
+  return (world.wrack ?? []).map((w) => {
+    const things = [
+      ...[w.weapon, w.armour].flatMap((k) =>
+        k && ITEMS[k] ? [ITEMS[k].name] : [],
+      ),
+      ...(w.marks > 0 ? [`${w.marks} marks`] : []),
+    ]
+    const held =
+      things.length === 0
+        ? 'nothing'
+        : things.length === 1
+          ? things[0]
+          : `${things.slice(0, -1).join(', ')} and ${things[things.length - 1]}`
+    return `${w.name}, on depth ${w.depth}, holding ${held}.`
+  })
+}
+
+const isWrack = (v: unknown): v is Wrack =>
+  typeof v === 'object' &&
+  v !== null &&
+  typeof (v as Wrack).id === 'number' &&
+  typeof (v as Wrack).name === 'string' &&
+  typeof (v as Wrack).depth === 'number' &&
+  typeof (v as Wrack).marks === 'number' &&
+  typeof (v as Wrack).level === 'number'
+
 const isClaim = (v: unknown): v is Claim =>
   typeof v === 'object' &&
   v !== null &&
@@ -230,4 +295,7 @@ export const isWorld = (v: unknown): v is World =>
   typeof (v as World).lowWater === 'number' &&
   typeof (v as World).holds === 'object' &&
   (v as World).holds !== null &&
-  TIER_LIST.every((t) => isClaim((v as World).holds[t]))
+  TIER_LIST.every((t) => isClaim((v as World).holds[t])) &&
+  ((v as World).wrack === undefined ||
+    (Array.isArray((v as World).wrack) &&
+      ((v as World).wrack ?? []).every(isWrack)))

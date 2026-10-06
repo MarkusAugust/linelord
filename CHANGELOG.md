@@ -30,12 +30,18 @@ because the earlier answer was wrong.
   third and they give way, and the hold is yours, with its title. Grue lets you
   by for a tenth instead, and Sethra lets you be until you raise a hand to her.
   A hold outlasts the run. At the low water after each run, a fresh hold is
-  easily taken back by the one it was taken from and an old one seldom; fresh
+  easily taken back by the one it was taken from and an old one seldom, though
+  never quite never; fresh
   ground pays well at the start of the next run, and old ground little. The
   ledger is a ranking now, of who holds the most ground, the oldest holding
   first among equals, and the one at its head is the Linelord: Jarn, until
   someone holds more than his shingle. Levels still make you stronger, but the
   coast no longer calls you by them. What you are called is what you hold.
+- Your wrack. A run that dies in Kell leaves its wrack on the floor where it
+  fell, holding its weapon, its armour and half its marks, and it comes for the
+  next run that finds it. Put it down and what it carried is yours again. The
+  sea keeps the last five, and the ledger says where each one stands. A run that
+  becomes one of the Unasked still waits in the Lowstreets instead, as before.
 - The page ends in the sea, engraved in steel: the open water of a
   copperplate engraving cut into a dark plate, close under the last line of
   text, a slow warm sheen passing over it and a small swell moving through it,

@@ -3,7 +3,7 @@
  * plain data: a run is written to storage as JSON and read back the same.
  */
 
-import type { Tier, World } from './holds'
+import type { Tier, World, Wrack } from './holds'
 
 export type Background = 'ashborn' | 'wrecker' | 'novice'
 
@@ -45,6 +45,8 @@ export interface Monster {
   spoke?: boolean
   /** A holder who has given way, and the hold with it. */
   yielded?: boolean
+  /** The wrack of an earlier run, and what it holds. */
+  wrack?: Wrack
 }
 
 export interface Level {
@@ -137,6 +139,8 @@ export interface Game {
   world?: World
   /** The holds this run has taken. */
   taken?: Tier[]
+  /** The wrack this run has taken back, by id. */
+  cleared?: number[]
 }
 
 export type Command =

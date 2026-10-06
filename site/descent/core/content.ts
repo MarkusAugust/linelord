@@ -139,6 +139,20 @@ export const MONSTERS: Record<string, MonsterKind> = {
     tiers: [3, 4],
     grabs: true,
   },
+  // What the sea gave back of an earlier run. Never laid down at random:
+  // it stands where that run fell, and is made stronger by how far it got.
+  wrack: {
+    creature: 'wrack',
+    glyph: 'w',
+    unknown: 'something that walks like you',
+    known: 'your wrack',
+    hp: 8,
+    ac: 11,
+    hit: 2,
+    dmg: [1, 6],
+    xp: 12,
+    tiers: [],
+  },
   // The holders. They are never laid down at random (no tiers): each waits
   // on the last floor of the depth it holds.
   hollin: {

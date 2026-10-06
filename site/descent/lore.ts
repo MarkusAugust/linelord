@@ -44,6 +44,7 @@ export type CreatureId =
   | 'notchers'
   | 'the-drawn'
   | 'the-standing'
+  | 'wrack'
 export type HolderId = 'hollin' | 'grue' | 'sethra' | 'corve' | 'jarn'
 
 export const pools: Record<Pool, readonly string[]> = {
@@ -219,6 +220,11 @@ export const creatures: Record<CreatureId, { name: string; summary: string }> =
       name: 'The Standing',
       summary:
         'The grey in the iron hall, standing still like milk in a bowl and rising when the sea goes out; it does not hurt you, it takes things from you.',
+    },
+    wrack: {
+      name: 'Your Wrack',
+      summary:
+        'What the sea gives back of those who went down into Kell and did not come up, yours among them; each holds the ground it fell on and what it carried, and does not remember losing it.',
     },
   }
 

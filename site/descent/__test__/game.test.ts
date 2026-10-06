@@ -579,6 +579,79 @@ describe('the holders', () => {
   })
 })
 
+describe('your wrack', () => {
+  const wracked = (depth: number) => {
+    const g = gameOn(['#####', '#<@>#', '#####'], depth - 1)
+    g.player.x = 3
+    g.world = {
+      ...firstWorld(),
+      wrack: [
+        {
+          id: 4,
+          name: 'Ulf',
+          depth,
+          weapon: 'axe',
+          armour: 'mail',
+          marks: 30,
+          level: 3,
+        },
+      ],
+    }
+    return g
+  }
+
+  it('stands on the floor where it fell, with your old name on it', () => {
+    const g = run(wracked(3), { type: 'stairs' }).game
+    const m = g.level.monsters.find((x) => x.kind === 'wrack')
+    expect(m?.wrack?.id).toBe(4)
+    expect(m && monsterName(g, m)).toBe('the wrack of Ulf')
+    expect(
+      run(wracked(4), { type: 'stairs' }).game.level.monsters.some(
+        (x) => x.kind === 'wrack' && x.wrack?.depth !== 4,
+      ),
+    ).toBe(false)
+  })
+
+  it('is not there once this run has taken it back', () => {
+    const g = wracked(3)
+    g.cleared = [4]
+    expect(
+      run(g, { type: 'stairs' }).game.level.monsters.some(
+        (x) => x.kind === 'wrack',
+      ),
+    ).toBe(false)
+  })
+
+  it('is met with a word from Sarn, and gives back what it carried when it goes down', () => {
+    const g = gameOn(ROOM, 3)
+    g.player.hp = 500
+    g.player.maxHp = 500
+    g.player.might = 40
+    const m = put(g, 'wrack', 6, 1)
+    m.wrack = {
+      id: 4,
+      name: 'Ulf',
+      depth: 3,
+      weapon: 'axe',
+      armour: 'mail',
+      marks: 30,
+      level: 3,
+    }
+    const seen = run(g, wait)
+    expect(seen.lines.some((l) => pools.wrack.some((q) => l.includes(q)))).toBe(
+      true,
+    )
+    const out = fight(seen.game, east, (x) => (x.cleared ?? []).length > 0)
+    expect(out.game.cleared).toEqual([4])
+    const kinds = out.game.level.items.map((i) => i.item.kind)
+    expect(kinds).toContain('axe')
+    expect(kinds).toContain('mail')
+    expect(
+      out.game.level.items.find((i) => i.item.kind === 'marks')?.item.amount,
+    ).toBe(30)
+  })
+})
+
 describe('the vaults', () => {
   it('lets a Drawn take hold and pull you down the stair', () => {
     const g = gameOn(['#########', '#<@....>#', '#########'], 6)

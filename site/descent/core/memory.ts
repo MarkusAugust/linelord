@@ -8,7 +8,15 @@
  * then comes back empty and every write is dropped, and the game plays the
  * same, without a memory.
  */
-import { firstWorld, HOLD_TITLES, isWorld, settle, type World } from './holds'
+import {
+  firstWorld,
+  HOLD_TITLES,
+  isWorld,
+  settle,
+  type World,
+  type Wrack,
+  washUp,
+} from './holds'
 import { makeRng } from './rng'
 import type { Bones, Ending, Game } from './types'
 
@@ -163,8 +171,22 @@ export function endRun(
   const ledger = [line, ...loadLedger(store)].slice(0, LEDGER_SIZE)
   write(store, KEYS.ledger, ledger)
   write(store, KEYS.known, game.known)
+  const before = loadWorld(store)
+  const p = game.player
+  const fell: Wrack | null =
+    game.over?.ending === 'dead' && game.depth > 0
+      ? {
+          id: before.lowWater,
+          name: p.name,
+          depth: game.depth,
+          weapon: p.weapon,
+          armour: p.armour,
+          marks: Math.floor(p.marks / 2),
+          level: p.level,
+        }
+      : null
   const { world, news } = settle(
-    loadWorld(store),
+    washUp(before, fell, game.cleared ?? []),
     game.taken ?? [],
     game.player.name,
     makeRng(game.seed),
