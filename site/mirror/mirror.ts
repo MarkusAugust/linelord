@@ -193,8 +193,10 @@ function reflectSheet(w: number, h: number, line: number): HTMLCanvasElement {
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
   ctx.save()
+  // Soft and drawn out downward, as a reflection in moving water is.
+  ctx.filter = `blur(${Math.max(1, size * 0.06)}px)`
   ctx.translate(w / 2, h - line * 0.55 + size * 0.15)
-  ctx.scale(1, -1)
+  ctx.scale(1, -1.5)
   ctx.fillText('LINELORD', 0, -size * 1.05)
   ctx.restore()
   return sheet
