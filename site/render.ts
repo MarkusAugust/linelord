@@ -62,7 +62,7 @@ const DATASTAR =
  * paint. Until it has come, a press on the O opens the game directly.
  */
 const WATER =
-  "(document.readyState === 'complete' ? Promise.resolve() : new Promise((done) => addEventListener('load', done, { once: true }))).then(() => (window.requestIdleCallback ?? setTimeout)(() => import(new URL('drain.js', document.baseURI).href), 2000))"
+  "(document.readyState === 'complete' ? Promise.resolve() : new Promise((done) => addEventListener('load', done, { once: true }))).then(() => ('requestIdleCallback' in window ? requestIdleCallback((() => import(new URL('drain.js', document.baseURI).href)), { timeout: 2000 }) : setTimeout(() => import(new URL('drain.js', document.baseURI).href), 200)))"
 
 const DESCEND =
   "(import(new URL('descent.js', document.baseURI).href), document.getElementById('descent').open || document.getElementById('descent').showModal())"

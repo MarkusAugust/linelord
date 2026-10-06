@@ -404,7 +404,7 @@ describe('renderSite', () => {
     expect(html).toContain(
       'class="drain" aria-label="Go down into drowned Kell" data-init=',
     )
-    expect(html).toContain('requestIdleCallback')
+    expect(html).toContain('{ timeout: 2000 }')
     expect(html).toContain("addEventListener('load'")
     expect(html).toContain("import(new URL('drain.js', document.baseURI).href)")
     expect(html).toContain(
