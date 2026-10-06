@@ -244,13 +244,9 @@ void main() {
   float sea = u_shore > 0.5 ? smoothstep(${(SHORE_ROW - 0.03).toFixed(3)}, ${(SHORE_ROW + 0.04).toFixed(3)}, row) : 1.0;
   vec2 uv = vec2(p.x / (h * u_aspect), row);
 
-  // Only the sea moves: its lines drift along and rise and fall, more near
-  // the eye than out toward the shore.
-  float near = clamp((row - ${SHORE_ROW.toFixed(3)}) / 0.6, 0.0, 1.0);
-  vec2 drift = vec2(
-    u_t * 0.004 + sin(row * 40.0 + u_t * 0.7) * 0.004 * near,
-    sin(uv.x * 18.0 + u_t * 0.9) * 0.006 * (0.3 + near)
-  ) * sea;
+  // Only the sea moves, and only as the engraving drew it: its own waves
+  // drift slowly along the shore. Nothing is laid over them.
+  vec2 drift = vec2(u_t * 0.004, 0.0) * sea;
 
   // Rings and the whirlpool bend the cut lines where the water is touched.
   vec2 bend = vec2(0.0);

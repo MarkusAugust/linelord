@@ -25,7 +25,7 @@ because the earlier answer was wrong.
   Datastar, so it is still one script.
 - The page ends in the sea, engraved in steel: a copperplate engraving of a
   shore cut into a dark plate, its grooves catching a slow light in the page's
-  gold, the sea's lines drifting while the sand stands still, at a height that
+  gold, the sea's own waves drifting along the shore while the sand stands still, at a height that
   follows a real tide on the clock. Between the page and the water lies a strip of wet
   sand with a line drawn across it: Jarn's, the Linelord of the Gallowmark
   canon. The flood covers it and the ebb gives it back, drawn again along the
