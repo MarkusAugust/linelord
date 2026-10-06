@@ -1417,7 +1417,7 @@ function endTurn(game: Game, rng: Rng, lines: string[]): void {
   holdersSpeak(game, rng, lines)
 
   const water = waterAt(game.level, game.tide, p.x, p.y)
-  if (water >= 2 && game.turn % (p.bg === 'wrecker' ? 3 : 2) === 0) {
+  if (water >= 2 && game.turn % (p.bg === 'wrecker' ? 4 : 3) === 0) {
     p.hp--
     if (game.turn % 4 === 0)
       lines.push('You are under. Find the stair, or air.')

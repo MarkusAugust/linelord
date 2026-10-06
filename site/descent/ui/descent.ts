@@ -51,7 +51,7 @@ import {
   saveRun,
   takeBones,
 } from '../core/memory'
-import { greyAt, phase, waterAt } from '../core/tide'
+import { greyAt, phase, tideSays, waterAt } from '../core/tide'
 import type { Background, Command, Dir, Game } from '../core/types'
 import { opening } from '../lore'
 
@@ -289,16 +289,13 @@ rocket('descent-run', {
         ...titles,
       ].join(', ')
       const ph = phase(g.tide)
-      $$.tide =
-        g.held > 0
-          ? 'Held still'
-          : {
-              low: 'Low water',
-              turning: 'The flood is turning',
-              flood: 'Flood',
-              ebb: 'Going out',
-            }[ph]
-      $$.wet = ph === 'flood' || ph === 'turning'
+      $$.tide = g.held > 0 ? 'Held still' : tideSays(g.tide)
+      // Hot while the flood is near, or the water is at your feet.
+      $$.wet =
+        ph === 'flood' ||
+        ph === 'turning' ||
+        waterAt(g.level, g.tide, p.x, p.y) > 0 ||
+        tideSays(g.tide).includes('turns in')
       $$.meaning = p.meaning
       $$.pending = pending ?? ''
       $$.pack = p.pack.map((item) => {

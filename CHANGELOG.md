@@ -60,6 +60,12 @@ because the earlier answer was wrong.
   hard as that depth asks and no harder, whoever they are, and keeps their own
   ways. And the holder of the ground your wrack lies on may go through it
   before you come back, leaving it holding nothing.
+- The sea is slower. A tide is a hundred and forty turns now, eighty of them
+  at low water; the flood rises a step every twelve turns instead of eight,
+  stands at its highest for six turns instead of fourteen, and takes twenty to
+  go out. Under water you lose a breath every third turn, a Wrecker every
+  fourth. The readout counts down to the flood for the last twenty turns of
+  low water.
 - The page ends in the sea, engraved in steel: the open water of a
   copperplate engraving cut into a dark plate, close under the last line of
   text, a slow warm sheen passing over it and a small swell moving through it,

@@ -9,6 +9,7 @@ import {
   greyAt,
   greyReach,
   phase,
+  tideSays,
   waterAt,
 } from '../core/tide'
 import { creatures, holders, opening, pools } from '../lore'
@@ -80,45 +81,61 @@ describe('the tiers and the titles', () => {
 })
 
 describe('the tide', () => {
-  it('runs low, turning, flood and ebb, a hundred turns to the cycle', () => {
+  it('runs low, turning, flood and ebb, a hundred and forty turns to the cycle', () => {
+    expect(CYCLE).toBe(140)
     expect(phase(0)).toBe('low')
-    expect(phase(55)).toBe('turning')
-    expect(phase(70)).toBe('flood')
-    expect(phase(95)).toBe('ebb')
+    expect(phase(79)).toBe('low')
+    expect(phase(85)).toBe('turning')
+    expect(phase(100)).toBe('flood')
+    expect(phase(125)).toBe('ebb')
     expect(phase(CYCLE)).toBe('low')
   })
 
-  it('raises the water over the lowest ground first, and lets it down again', () => {
-    expect(floodLevel(10)).toBe(0)
-    expect(floodLevel(60)).toBe(1)
-    expect(floodLevel(80)).toBe(3)
-    expect(floodLevel(92)).toBe(2)
-    expect(floodLevel(97)).toBe(1)
+  it('raises the water over the lowest ground first, slowly, and lets it down again', () => {
+    expect(
+      [10, 85, 90, 101, 102, 114, 119, 120, 129, 130, 139].map(floodLevel),
+    ).toEqual([0, 0, 1, 1, 2, 3, 3, 2, 2, 1, 1])
+  })
+
+  it('stands at its highest only a short while', () => {
+    const peak = Array.from({ length: CYCLE }, (_, t) => floodLevel(t)).filter(
+      (l) => l === 3,
+    )
+    expect(peak).toHaveLength(6)
+  })
+
+  it('says how long until the flood, and what it is doing', () => {
+    expect(tideSays(10)).toBe('Low water')
+    expect(tideSays(65)).toBe('Low water. The flood turns in 15.')
+    expect(tideSays(85)).toBe('The flood is turning. It rises in 5.')
+    expect(tideSays(100)).toBe('Flood, rising')
+    expect(tideSays(116)).toBe('High water')
+    expect(tideSays(125)).toBe('Going out')
   })
 
   it('lets the grey rise at low water in the deep, and nowhere above it', () => {
     expect(greyReach(40, 2)).toBe(0)
     expect(greyReach(0, 0)).toBe(0)
     expect(greyReach(0, 7)).toBe(0)
-    expect(greyReach(49, 7)).toBe(6)
-    expect(greyReach(55, 7)).toBe(6)
-    expect(greyReach(55, 10)).toBe(8)
-    expect(greyReach(65, 10)).toBe(7)
-    expect(greyReach(80, 7)).toBe(0)
-    expect(greyReach(95, 7)).toBe(0)
+    expect(greyReach(79, 7)).toBe(6)
+    expect(greyReach(85, 7)).toBe(6)
+    expect(greyReach(85, 10)).toBe(8)
+    expect(greyReach(95, 10)).toBe(7)
+    expect(greyReach(115, 7)).toBe(0)
+    expect(greyReach(125, 7)).toBe(0)
   })
 
   it('says how deep the water is over a cell, and where the grey stands', () => {
     const { level } = levelFrom(['#####', '#...#', '#####'], 7)
     level.elev[index(level, 1, 1)] = 0
-    expect(waterAt(level, 80, 1, 1)).toBe(3)
-    expect(waterAt(level, 80, 2, 1)).toBe(0)
-    expect(waterAt(level, 80, 0, 0)).toBe(0)
-    expect(waterAt(town(), 80, 5, 5)).toBe(0)
+    expect(waterAt(level, 116, 1, 1)).toBe(3)
+    expect(waterAt(level, 116, 2, 1)).toBe(0)
+    expect(waterAt(level, 116, 0, 0)).toBe(0)
+    expect(waterAt(town(), 116, 5, 5)).toBe(0)
     level.grey.push({ x: 1, y: 1 })
     expect(greyAt(level, 30, 3, 1)).toBe(true)
     expect(greyAt(level, 30, 0, 0)).toBe(false)
-    expect(greyAt(level, 80, 1, 1)).toBe(false)
+    expect(greyAt(level, 125, 1, 1)).toBe(false)
   })
 })
 
