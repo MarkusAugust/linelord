@@ -37,6 +37,7 @@ function start(button: HTMLElement): void {
   gl.attachShader(program, fs)
   gl.linkProgram(program)
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return
+  // biome-ignore lint/correctness/useHookAtTopLevel: WebGL's useProgram, not a React hook; the rule goes by the name.
   gl.useProgram(program)
 
   const quad = gl.createBuffer()
