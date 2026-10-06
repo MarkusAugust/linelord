@@ -51,6 +51,10 @@ export interface Monster {
   yielded?: boolean
   /** The wrack of an earlier run, and what it holds. */
   wrack?: Wrack
+  /** The hold a holder holds here, which may not be the one they began with. */
+  holds?: Tier
+  /** The kind whose numbers it fights with, when not its own: a holder fights as hard as the depth it holds. */
+  as?: string
 }
 
 export interface Level {

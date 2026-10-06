@@ -311,12 +311,23 @@ function placeHolder(game: Game, rng: Rng, tier: Tier): void {
     Object.values(DIRS)
       .map(([dx, dy]) => ({ x: by.x + dx, y: by.y + dy }))
       .find((c) => free(c.x, c.y)) ?? freeCell(level, rng)
-  level.monsters.push(
-    spawn(claim.holder, cell.x, cell.y, game.depth, game.nextId++),
-  )
+  const m = spawn(claim.holder, cell.x, cell.y, game.depth, game.nextId++)
+  // Who they are goes with them; how hard they fight is the depth's.
+  const as = TIER_RIVAL[tier]
+  const numbers = spawn(as, cell.x, cell.y, game.depth, m.id)
+  m.holds = tier
+  m.as = as
+  m.hp = numbers.hp
+  m.maxHp = numbers.maxHp
+  level.monsters.push(m)
 }
 
 const tierHeld = (t: Tier) => TIERS[t].name.replace(/^The /, 'the ')
+
+/** The old holder of each depth, whose numbers whoever holds it fights with. */
+const TIER_RIVAL = Object.fromEntries(
+  Object.entries(RIVAL_TIER).map(([rival, tier]) => [tier, rival]),
+) as Record<Tier, string>
 
 /** A hold goes to this run: the ledger says so, and so may Jarn. */
 function takeHold(game: Game, rng: Rng, tier: Tier, lines: string[]): void {
@@ -345,7 +356,7 @@ function giveWay(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   m.peaceful = true
   m.refused = true
   lines.push(`${holders[rival].name}: "${say(rng, `${rival}-yields` as Pool)}"`)
-  takeHold(game, rng, RIVAL_TIER[rival], lines)
+  takeHold(game, rng, m.holds ?? RIVAL_TIER[rival], lines)
 }
 
 // ---------------------------------------------------------------------------
@@ -370,9 +381,11 @@ function kill(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   const kind = MONSTERS[m.kind]
   m.hp = 0
   lines.push(`${cap(monsterName(game, m))} goes down.`)
-  if (kind?.holder) takeHold(game, rng, RIVAL_TIER[kind.holder], lines)
+  if (kind?.holder)
+    takeHold(game, rng, m.holds ?? RIVAL_TIER[kind.holder], lines)
   if (!game.player.slain.includes(m.kind)) game.player.slain.push(m.kind)
-  gainXp(game, (kind?.xp ?? 1) * (1 + Math.floor(game.depth / 2)), lines, rng)
+  const xp = MONSTERS[m.as ?? m.kind]?.xp ?? 1
+  gainXp(game, xp * (1 + Math.floor(game.depth / 2)), lines, rng)
   const drop = (item: Item) => game.level.items.push({ x: m.x, y: m.y, item })
   if (m.bones?.weapon) drop({ kind: m.bones.weapon })
   if (m.wrack) {
@@ -420,7 +433,7 @@ function playerAttack(game: Game, rng: Rng, m: Monster, lines: string[]): void {
       'You mean it. Something grey goes into the blow, and stays in you.',
     )
   }
-  if (roll + bonus < (kind?.ac ?? 10)) {
+  if (roll + bonus < (MONSTERS[m.as ?? m.kind]?.ac ?? 10)) {
     lines.push(`You miss ${monsterName(game, m)}.`)
     return
   }
@@ -458,13 +471,14 @@ function monsterAttack(
   const kind = MONSTERS[m.kind]
   if (!kind || kind.counts) return
   const p = game.player
-  const hit = kind.hit + Math.floor(game.depth / 3)
+  const numbers = MONSTERS[m.as ?? m.kind] ?? kind
+  const hit = numbers.hit + Math.floor(game.depth / 3)
   const name = cap(monsterName(game, m))
   if (rng.roll(20) + hit < armourClass(game)) {
     lines.push(`${name} misses.`)
     return
   }
-  const [count, sides] = ITEMS[m.wrack?.weapon ?? '']?.dmg ?? kind.dmg
+  const [count, sides] = ITEMS[m.wrack?.weapon ?? '']?.dmg ?? numbers.dmg
   const dmg = rng.dice(count, sides)
   p.hp -= dmg
   lines.push(`${name} hits you.`)

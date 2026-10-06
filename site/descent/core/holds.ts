@@ -10,12 +10,13 @@
  * The clock is the low water: one for every run that ends.
  */
 import { holders, pools } from '../lore'
-import { ITEMS, TIERS } from './content'
+import { ITEMS, TIERS, tierOf } from './content'
 import type { Rng } from './rng'
 
 export type Tier = 1 | 2 | 3 | 4
 export type Rival = 'hollin' | 'grue' | 'sethra' | 'corve'
 export const TIER_LIST: readonly Tier[] = [1, 2, 3, 4]
+const RIVALS: readonly Rival[] = ['hollin', 'grue', 'sethra', 'corve']
 
 export interface Claim {
   holder: Rival | 'you'
@@ -199,6 +200,11 @@ const contested = (age: number) => Math.max(0.05, 0.6 / (1 + age))
 
 const tierName = (t: Tier) => TIERS[t].name.replace(/^The /, 'the ')
 
+/** How likely one who holds nothing is to go after someone at a low water. */
+const WANDER = 0.35
+/** How likely the holder of a depth is to go through a wrack lying in it. */
+const ROB = 0.3
+
 /**
  * The low water after a run: what it took is written in, every other hold of
  * yours may be taken back by the one it was taken from, and the clock moves.
@@ -226,6 +232,32 @@ export function settle(
     news.push(`${holders[back].name} has ${tierName(t)} back.`)
     news.push(rng.pick(pools['title-lost']))
   }
+  // One who holds nothing goes after someone who does: anyone, you too, but
+  // not a hold taken in the run just ended.
+  for (const r of RIVALS) {
+    if (TIER_LIST.some((t) => next.holds[t].holder === r)) continue
+    if (!rng.chance(WANDER)) continue
+    const t = rng.pick(
+      TIER_LIST.filter((t) => next.holds[t].holder !== r && !taken.includes(t)),
+    )
+    const claim = next.holds[t]
+    if (!rng.chance(contested(next.lowWater - claim.since))) continue
+    next.holds[t] = { holder: r, name: holders[r].name, since: tide, from: r }
+    const loser =
+      claim.holder === 'you' ? claim.name : holders[claim.holder].name
+    news.push(`${holders[r].name} takes ${tierName(t)} from ${loser}.`)
+    if (claim.holder === 'you') news.push(rng.pick(pools['title-lost']))
+  }
+  // Whoever holds the ground a wrack lies on may go through it first.
+  next.wrack = (next.wrack ?? []).map((w) => {
+    const holder = next.holds[tierOf(w.depth)].holder
+    const has = w.weapon !== null || w.armour !== null || w.marks > 0
+    if (holder === 'you' || !has || !rng.chance(ROB)) return w
+    news.push(
+      `${holders[holder].name} has been through what ${w.name} left on depth ${w.depth}.`,
+    )
+    return { ...w, weapon: null, armour: null, marks: 0 }
+  })
   next.lowWater = tide
   return { world: next, news }
 }

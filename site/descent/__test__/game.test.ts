@@ -15,7 +15,7 @@ import {
   verbOf,
 } from '../core/game'
 import { firstWorld, HOLD_TITLES, withTaken } from '../core/holds'
-import { at, generate, index } from '../core/level'
+import { at, generate, index, spawn } from '../core/level'
 import { makeRng } from '../core/rng'
 import type { Command, Game } from '../core/types'
 import { holders, pools } from '../lore'
@@ -458,6 +458,42 @@ describe('the holders', () => {
         (m) => m.kind === 'grue',
       ),
     ).toBe(false)
+  })
+
+  it('wait wherever they hold now, and give up that hold', () => {
+    const world = firstWorld()
+    world.holds[2] = {
+      holder: 'hollin',
+      name: 'Hollin',
+      since: 0,
+      from: 'hollin',
+    }
+    const g = run(above(5, world), { type: 'stairs' }).game
+    const her = holderOf(g, 'hollin')
+    expect(her?.holds).toBe(2)
+    g.player.hp = 500
+    g.player.maxHp = 500
+    g.player.might = 40
+    g.player.x = (her?.x ?? 0) - 1
+    g.player.y = her?.y ?? 0
+    g.level.tiles[g.player.y] =
+      g.level.tiles[g.player.y]?.replace(/./g, (c, i) =>
+        i === g.player.x ? '.' : c,
+      ) ?? ''
+    const out = fight(g, east, (x) => (x.taken ?? []).length > 0)
+    expect(out.game.taken).toEqual([2])
+    expect(out.lines.some((l) => l.includes(HOLD_TITLES[2]))).toBe(true)
+  })
+
+  it('fight as hard as the depth they hold, and no harder: Corve on the Quaysteps is no Corve of the hall', () => {
+    const world = firstWorld()
+    world.holds[1] = { holder: 'corve', name: 'Corve', since: 0, from: 'corve' }
+    const g = run(above(2, world), { type: 'stairs' }).game
+    const corve = holderOf(g, 'corve')
+    expect(corve?.as).toBe('hollin')
+    expect(corve?.maxHp).toBe(spawn('hollin', 0, 0, 2, 99).maxHp)
+    const home = run(above(10), { type: 'stairs' }).game
+    expect(holderOf(home, 'corve')?.as).toBe('corve')
   })
 
   it('are known by name from the first, as the canon names them', () => {
