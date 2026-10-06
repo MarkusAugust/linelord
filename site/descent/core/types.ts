@@ -72,6 +72,16 @@ export interface Level {
   monsters: Monster[]
   /** Where the grey stands; it spreads from these at low water. */
   grey: Pos[]
+  /** The room the packing shut, if this floor has one. */
+  vault?: { x: number; y: number; w: number; h: number }
+  /** Things packed into the walls themselves, found by digging. */
+  hidden?: { x: number; y: number; item: Item }[]
+  /** In the hall: the top of the king's way, a way out whatever the tide. */
+  kingsWay?: Pos
+  /** Strokes struck so far into the packing, by cell. */
+  dug?: Record<number, number>
+  /** The shut room has been broken into. */
+  opened?: boolean
 }
 
 export interface Player {
@@ -168,6 +178,7 @@ export type Command =
   | { type: 'drop'; index: number }
   | { type: 'mean' }
   | { type: 'name'; dir: Dir }
+  | { type: 'dig'; dir: Dir }
   | { type: 'stop' }
   | { type: 'rope' }
   | { type: 'answer'; yes: boolean }

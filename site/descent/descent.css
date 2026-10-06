@@ -262,6 +262,10 @@
 .d-wall {
   color: #6e655a;
 }
+/* The packing: softer than the stone round it, and paler. */
+.d-packing {
+  color: #b39b74;
+}
 .d-floor {
   color: #4f493f;
 }

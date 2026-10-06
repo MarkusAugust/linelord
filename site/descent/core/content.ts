@@ -221,6 +221,7 @@ export type ItemUse =
   | 'trinket'
   | 'page'
   | 'ledger'
+  | 'pick'
 
 export interface ItemKind {
   glyph: string
@@ -442,15 +443,26 @@ export const ITEMS: Record<string, ItemKind> = {
     tiers: [3],
   },
   ledger: { glyph: '=', name: 'the ledger', use: 'ledger', price: 0 },
+  pick: {
+    glyph: '(',
+    name: 'a silt-pick',
+    use: 'pick',
+    price: 25,
+    tiers: [1, 2, 3],
+  },
 }
 
 /**
  * Whether a kind of thing is iron that can be old or new: every weapon and
- * armour but Sarn's, which is neither.
+ * armour but Sarn's, which is neither, and the pick.
  */
 export const isIron = (kind: string): boolean => {
   const k = ITEMS[kind]
-  return !!k && !k.sarn && (k.use === 'weapon' || k.use === 'armour')
+  return (
+    !!k &&
+    !k.sarn &&
+    (k.use === 'weapon' || k.use === 'armour' || k.use === 'pick')
+  )
 }
 
 /** Whether a kind of thing has to be named before it is known. */

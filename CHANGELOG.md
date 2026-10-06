@@ -66,6 +66,17 @@ because the earlier answer was wrong.
   go out. Under water you lose a breath every third turn, a Wrecker every
   fourth. The readout counts down to the flood for the last twenty turns of
   low water.
+- Kell's walls are not all stone. Where the water packed ash into old doorways
+  and cracks there is packing (`%`), and a silt-pick goes through it in three
+  strokes (`D` and a direction): Barr sells new ones, which wear like any new
+  iron and he puts the edge back on, and the ones found in Kell never wear but
+  take a stroke more. Behind the packing are shortcuts between rooms, things
+  packed into the walls themselves, and on every floor a room the packing shut,
+  with what was left in it: the bonded stores of the Quaysteps, the bricked
+  rooms of the Lowstreets, the strongrooms of the Brinevaults. In the Iron Hall,
+  behind the throne, is the king's way, a stair that goes up above the water and
+  lets you out with the ledger whatever the tide. All of it from the Gallowmark
+  canon, which now says what the packing is.
 - The page ends in the sea, engraved in steel: the open water of a
   copperplate engraving cut into a dark plate, close under the last line of
   text, a slow warm sheen passing over it and a small swell moving through it,
