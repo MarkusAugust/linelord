@@ -2,8 +2,8 @@
 /**
  * Puts the water in the O. Loaded the first time the pointer or the focus
  * finds the O, so the page carries none of this until then. Without WebGL,
- * or for someone who asked for less motion, it does nothing and the
- * stylesheet's own ring stays.
+ * or for someone who asked for less motion, it marks the O `no-water` and the
+ * stylesheet's own ring is shown instead.
  */
 import { approach, FRAGMENT, VERTEX } from './water'
 
@@ -19,7 +19,8 @@ function shader(
   return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null
 }
 
-function start(button: HTMLElement): void {
+/** Draws the water in the O, and says whether it could. */
+function start(button: HTMLElement): boolean {
   const canvas = document.createElement('canvas')
   canvas.className = 'drain__water'
   canvas.setAttribute('aria-hidden', 'true')
@@ -28,15 +29,15 @@ function start(button: HTMLElement): void {
     premultipliedAlpha: true,
     antialias: false,
   })
-  if (!gl) return
+  if (!gl) return false
   const vs = shader(gl, gl.VERTEX_SHADER, VERTEX)
   const fs = shader(gl, gl.FRAGMENT_SHADER, FRAGMENT)
   const program = gl.createProgram()
-  if (!vs || !fs || !program) return
+  if (!vs || !fs || !program) return false
   gl.attachShader(program, vs)
   gl.attachShader(program, fs)
   gl.linkProgram(program)
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return false
   // biome-ignore lint/correctness/useHookAtTopLevel: WebGL's useProgram, not a React hook; the rule goes by the name.
   gl.useProgram(program)
 
@@ -55,7 +56,6 @@ function start(button: HTMLElement): void {
   const strength = gl.getUniformLocation(program, 'u_k')
 
   button.prepend(canvas)
-  button.classList.add('has-water')
 
   const fit = () => {
     const box = canvas.getBoundingClientRect()
@@ -103,12 +103,15 @@ function start(button: HTMLElement): void {
   button.addEventListener('focus', () => wake(1))
   button.addEventListener('blur', () => wake(button.matches(':hover') ? 1 : 0))
   if (target === 1) wake(1)
+  return true
 }
 
 const button = document.querySelector<HTMLElement>('.drain')
 if (
   button &&
-  !matchMedia('(prefers-reduced-motion: reduce)').matches &&
-  !button.classList.contains('has-water')
-)
-  start(button)
+  !button.classList.contains('has-water') &&
+  !button.classList.contains('no-water')
+) {
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches
+  button.classList.add(!still && start(button) ? 'has-water' : 'no-water')
+}

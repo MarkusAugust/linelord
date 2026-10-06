@@ -499,7 +499,12 @@ a {
   isolation: isolate;
 }
 
-/* The water, once drain.js has put it there; the ring below is what is shown without it. */
+/*
+ * drain.js decides what the O does, and says so with a class: has-water when
+ * the whirlpool is drawn, no-water when it cannot be (no WebGL, or less motion
+ * asked for), and then the ring below is shown instead. Until it has decided,
+ * the O shows nothing, so the ring never flashes before the water comes.
+ */
 .drain__water {
   position: absolute;
   left: 50%;
@@ -509,10 +514,6 @@ a {
   transform: translate(-50%, -50%);
   z-index: -1;
   pointer-events: none;
-}
-
-.drain.has-water::after {
-  display: none;
 }
 
 .drain.has-water:hover,
@@ -531,8 +532,8 @@ a {
   pointer-events: none;
 }
 
-.drain:hover,
-.drain:focus-visible {
+.drain.no-water:hover,
+.drain.no-water:focus-visible {
   color: #4f9cc0;
 }
 
@@ -541,8 +542,8 @@ a {
   outline-offset: 4px;
 }
 
-.drain:hover::after,
-.drain:focus-visible::after {
+.drain.no-water:hover::after,
+.drain.no-water:focus-visible::after {
   animation: drain 1.8s ease-in infinite;
 }
 
@@ -558,8 +559,8 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .drain:hover::after,
-  .drain:focus-visible::after {
+  .drain.no-water:hover::after,
+  .drain.no-water:focus-visible::after {
     animation: none;
   }
 }
