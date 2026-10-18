@@ -52,6 +52,7 @@ import type {
   Dir,
   Game,
   Item,
+  Level,
   Monster,
   Outcome,
   Pos,
@@ -612,23 +613,56 @@ function checkGrey(game: Game, rng: Rng, lines: string[]): void {
 // Moving
 // ---------------------------------------------------------------------------
 
-function step(
-  m: Pos,
-  to: Pos,
-  game: Game,
-  through: (tile: string) => boolean,
-): Pos | null {
+/**
+ * How many steps every cell is from `to`, over ground a body can stand on:
+ * what a thing that knows the floor uses to find its way round a wall.
+ * Cells with no way there are left at Infinity.
+ */
+export function paths(level: Level, to: Pos): number[] {
+  const dist: number[] = Array.from(
+    { length: level.w * level.h },
+    () => Infinity,
+  )
+  dist[index(level, to.x, to.y)] = 0
+  const queue: Pos[] = [to]
+  for (let i = 0; i < queue.length; i++) {
+    const c = queue[i] as Pos
+    const d = (dist[index(level, c.x, c.y)] ?? 0) + 1
+    for (const [dx, dy] of Object.values(DIRS)) {
+      const x = c.x + dx
+      const y = c.y + dy
+      if (!walkable(at(level, x, y))) continue
+      const j = index(level, x, y)
+      if ((dist[j] ?? 0) <= d) continue
+      dist[j] = d
+      queue.push({ x, y })
+    }
+  }
+  return dist
+}
+
+/**
+ * One step for `m` toward `to`: down the way `paths` found, onto a cell
+ * nothing stands on. When there is no way, as behind a barred door, it
+ * presses as near as the crow flies instead.
+ */
+function step(m: Pos, to: Pos, game: Game, way: number[]): Pos | null {
+  const level = game.level
+  const known = Number.isFinite(way[index(level, m.x, m.y)] ?? Infinity)
+  const crow = (x: number, y: number) => (x - to.x) ** 2 + (y - to.y) ** 2
+  const cost = (x: number, y: number): [number, number] =>
+    known ? [way[index(level, x, y)] ?? Infinity, crow(x, y)] : [0, crow(x, y)]
   let best: Pos | null = null
-  let bestD = (m.x - to.x) ** 2 + (m.y - to.y) ** 2
+  let bestCost = cost(m.x, m.y)
   for (const [dx, dy] of Object.values(DIRS)) {
     const x = m.x + dx
     const y = m.y + dy
-    if (!through(at(game.level, x, y))) continue
-    if (monsterAt(game.level, x, y)) continue
+    if (!walkable(at(level, x, y))) continue
+    if (monsterAt(level, x, y)) continue
     if (game.player.x === x && game.player.y === y) continue
-    const d = (x - to.x) ** 2 + (y - to.y) ** 2
-    if (d < bestD) {
-      bestD = d
+    const c = cost(x, y)
+    if (c[0] < bestCost[0] || (c[0] === bestCost[0] && c[1] < bestCost[1])) {
+      bestCost = c
       best = { x, y }
     }
   }
@@ -668,6 +702,8 @@ function openDoor(
   lines.push('You put your shoulder to the door. Whatever held it lets go.')
   const roll = rng.int(10)
   if (roll < 3) {
+    // Above where the Unasked are met, nothing waits behind a door.
+    if (game.depth < (MONSTERS.unasked?.from ?? 0)) return
     const cell = [
       { x: x + 1, y },
       { x: x - 1, y },
@@ -1292,6 +1328,13 @@ const TIDE_LINE: Record<string, Pool> = {
 function monstersAct(game: Game, rng: Rng, lines: string[]): void {
   const p = game.player
   const radius = lightRadius(game)
+  // Worked out once a turn, and again only if the rope has moved you.
+  let way: { x: number; y: number; level: Level; dist: number[] } | null = null
+  const wayToYou = () => {
+    if (!way || way.x !== p.x || way.y !== p.y || way.level !== game.level)
+      way = { x: p.x, y: p.y, level: game.level, dist: paths(game.level, p) }
+    return way.dist
+  }
   for (const m of game.level.monsters) {
     if (m.hp <= 0 || game.over) continue
     const kind = MONSTERS[m.kind]
@@ -1331,7 +1374,7 @@ function monstersAct(game: Game, rng: Rng, lines: string[]): void {
         break
       }
       if (kind.stays) break
-      const next = step(m, p, game, (t) => walkable(t))
+      const next = step(m, p, game, wayToYou())
       if (!next) break
       m.x = next.x
       m.y = next.y
@@ -1365,7 +1408,7 @@ function drag(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   const p = game.player
   const target = game.level.down ?? game.level.up
   const from = { x: m.x, y: m.y }
-  const next = step(m, target, game, (t) => walkable(t))
+  const next = step(m, target, game, paths(game.level, target))
   if (!next) return
   m.x = next.x
   m.y = next.y

@@ -150,6 +150,15 @@ describe('moving', () => {
     expect(lines.some((l) => l.includes('Grey comes out'))).toBe(true)
   })
 
+  it('lets nothing through a door above the depth the Unasked are met at', () => {
+    for (let seed = 1; seed < 40; seed++) {
+      const g = gameOn(['#######', '#.@+..#', '#######'], 3, { seed })
+      const out = run(g, east)
+      expect(out.lines.some((l) => l.includes('comes through'))).toBe(false)
+      expect(out.game.level.monsters).toHaveLength(0)
+    }
+  })
+
   it('speaks to the king, the drain and the man standing in it, without moving', () => {
     const g = gameOn(['#####', '#K@&#', '##O##', '#####'], 10)
     const k = run(g, west)
@@ -331,6 +340,29 @@ describe('fighting', () => {
     expect(out.game.player.xp).toBeGreaterThan(0)
     expect(out.game.player.slain).toContain('picker')
     expect(out.game.level.items.some((i) => i.item.kind === 'marks')).toBe(true)
+  })
+
+  it('is found by what hunts it, the long way round a wall', () => {
+    const g = gameOn(
+      ['#########', '#@......#', '#######.#', '#.......#', '#########'],
+      1,
+    )
+    put(g, 'picker', 1, 3).awake = true
+    const out = fight(g, wait, (x) => x.player.hp < x.player.maxHp, 40)
+    const m = out.game.level.monsters[0]
+    expect(m && Math.max(Math.abs(m.x - 1), Math.abs(m.y - 1))).toBe(1)
+  })
+
+  it('is drawn by the rope round a wall to the stair down', () => {
+    const g = gameOn(
+      ['#########', '#<@.....#', '#######.#', '#>......#', '#########'],
+      3,
+    )
+    const m = put(g, 'drawn', 3, 1)
+    g.player.held = m.id
+    m.awake = true
+    const out = fight(g, wait, (x) => x.depth === 4, 40)
+    expect(out.game.depth).toBe(4)
   })
 
   it('rises a level with enough blood', () => {

@@ -44,6 +44,8 @@ export interface MonsterKind {
   dmg: [number, number]
   xp: number
   tiers: (1 | 2 | 3 | 4)[]
+  /** Not met above this depth, though its tier begins higher up. */
+  from?: number
   /** Comes for you twice as fast when you are parched or bleeding. */
   hunts?: boolean
   /** Never leaves its door. */
@@ -108,9 +110,10 @@ export const MONSTERS: Record<string, MonsterKind> = {
     hp: 10,
     ac: 12,
     hit: 4,
-    dmg: [1, 6],
+    dmg: [1, 4],
     xp: 7,
     tiers: [2, 3, 4],
+    from: 4,
     hunts: true,
   },
   notcher: {
