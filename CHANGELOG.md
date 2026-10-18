@@ -92,6 +92,48 @@ because the earlier answer was wrong.
   the sea is a plain gradient that still takes you down, and with reduced
   motion asked for it lies still, the hold is a line that fills, and the way
   down is a fade.
+- What hunts you in Kell finds its way to you. A thing that is awake no longer
+  stops at the first wall between you; it goes round, the shortest way over
+  the floor, and the Drawn drags you round walls to the stair the same way.
+  Behind a barred door it still presses as close as it can.
+- The Lowstreets are entered more gently. The Unasked are not met above depth
+  4, neither on the floor nor through a door, and their blow is 1d4 instead of
+  1d6. A warrior of an earlier run who became one of them still waits on the
+  first floor of the Lowstreets. Before this, four runs in five by a Wrecker or
+  a Novice ended at depth 3.
+- The Unasked come for you twice as fast only when you are parched, as the
+  canon has it: they smell hunger. Being hurt no longer makes them faster, so
+  a wounded warrior can still get away from one and rest.
+- Putting down what was on the rope lets you go. A Drawn beaten to death,
+  rather than cut loose, used to leave you held by a rope with nothing on it:
+  you could neither move nor hit anything else, and died where you stood. It
+  was most of what ended runs at depth 6 and 7.
+- The net-loft packs what it cannot pour. Lamp oil, a skin of water or a coil
+  of rope bought while the lamp, the water or the rope is full goes into the
+  pack instead of costing marks for nothing, and the offer is closed only when
+  neither the die nor the pack has room. The net-loft no longer answers in
+  Barr's voice when it sells salt.
+- Putting something down on the shingle at Wrackhead says why it cannot be
+  done, instead of nothing.
+- The Wrecker hits harder (might 2, as the Ashborn) and the Novice gains more
+  blood at each level (a d6, as the Wrecker). The Ashborn is still the
+  strongest of the three, and the Novice the weakest.
+- Sarn says what is offered and what it may cost. Before you answer, Sarn
+  names the gift (the blade, the lamp or the purse, with words that fit it)
+  and the five prices it may take: some strength, the map of the floor, the
+  dearest thing in the pack, the names learned on this run, or two marks of
+  grey. Which one is still only known once the gift is taken, and then Sarn
+  says plainly what was taken, with the grey counted against the six that make
+  you one of the Unasked.
+- Sarn takes only the names learned on the run. It used to take every name
+  you knew, the ones kept from earlier runs as well, so one gift could undo
+  many runs of naming. With no name of the run to take, Sarn takes a mark of
+  grey instead.
+- `bun run descent-balance [runs]` lets a bot play the descent, 200 runs of
+  each background by default, and prints how many reached each depth and what
+  ended them. The bot sees the whole floor, so it measures how hard the rules
+  are to survive rather than how hard Kell is to find your way through. Run it
+  before and after changing a number in `site/descent/core`.
 
 ## [1.0.0-rc.3] — 2026-10-04
 

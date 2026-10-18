@@ -52,6 +52,7 @@ import type {
   Dir,
   Game,
   Item,
+  Level,
   Monster,
   Outcome,
   Pos,
@@ -119,6 +120,7 @@ export function newGame(run: NewRun): Game {
       slain: [],
     },
     known: [...(run.known ?? [])],
+    inherited: [...(run.known ?? [])],
     held: 0,
     prompt: null,
     shop: null,
@@ -449,6 +451,8 @@ function gainXp(game: Game, amount: number, lines: string[], rng: Rng): void {
 function kill(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   const kind = MONSTERS[m.kind]
   m.hp = 0
+  // Whatever was on the rope is down, and the rope with it.
+  if (game.player.held === m.id) game.player.held = null
   lines.push(`${cap(monsterName(game, m))} goes down.`)
   if (kind?.holder)
     takeHold(game, rng, m.holds ?? RIVAL_TIER[kind.holder], lines)
@@ -599,6 +603,22 @@ function dying(game: Game, rng: Rng, cause: string, lines: string[]): void {
   lines.push(say(rng, 'death'))
 }
 
+const GIFT_NAMES: Record<(typeof GIFTS)[number], string> = {
+  'sarn-blade': ITEMS['sarn-blade']?.name ?? 'a blade',
+  'sarn-lamp': ITEMS['sarn-lamp']?.name ?? 'a lamp',
+  purse: 'a purse of a hundred and fifty marks',
+}
+
+/** What Sarn says when offering a gift: of that gift, or of none in particular. */
+function giftSaid(gift: string): string[] {
+  const spoken = pools.gift.filter((g) => !g.startsWith('Refuse'))
+  const word = { 'sarn-blade': 'blade', 'sarn-lamp': 'lamp' }[gift]
+  const own = spoken.filter((g) =>
+    word ? g.includes(word) : !/blade|lamp/.test(g),
+  )
+  return own.length > 0 ? own : spoken
+}
+
 function checkGrey(game: Game, rng: Rng, lines: string[]): void {
   if (game.over || game.player.grey < GREY_LIMIT) return
   game.over = {
@@ -612,23 +632,56 @@ function checkGrey(game: Game, rng: Rng, lines: string[]): void {
 // Moving
 // ---------------------------------------------------------------------------
 
-function step(
-  m: Pos,
-  to: Pos,
-  game: Game,
-  through: (tile: string) => boolean,
-): Pos | null {
+/**
+ * How many steps every cell is from `to`, over ground a body can stand on:
+ * what a thing that knows the floor uses to find its way round a wall.
+ * Cells with no way there are left at Infinity.
+ */
+export function paths(level: Level, to: Pos): number[] {
+  const dist: number[] = Array.from(
+    { length: level.w * level.h },
+    () => Infinity,
+  )
+  dist[index(level, to.x, to.y)] = 0
+  const queue: Pos[] = [to]
+  for (let i = 0; i < queue.length; i++) {
+    const c = queue[i] as Pos
+    const d = (dist[index(level, c.x, c.y)] ?? 0) + 1
+    for (const [dx, dy] of Object.values(DIRS)) {
+      const x = c.x + dx
+      const y = c.y + dy
+      if (!walkable(at(level, x, y))) continue
+      const j = index(level, x, y)
+      if ((dist[j] ?? 0) <= d) continue
+      dist[j] = d
+      queue.push({ x, y })
+    }
+  }
+  return dist
+}
+
+/**
+ * One step for `m` toward `to`: down the way `paths` found, onto a cell
+ * nothing stands on. When there is no way, as behind a barred door, it
+ * presses as near as the crow flies instead.
+ */
+function step(m: Pos, to: Pos, game: Game, way: number[]): Pos | null {
+  const level = game.level
+  const known = Number.isFinite(way[index(level, m.x, m.y)] ?? Infinity)
+  const crow = (x: number, y: number) => (x - to.x) ** 2 + (y - to.y) ** 2
+  const cost = (x: number, y: number): [number, number] =>
+    known ? [way[index(level, x, y)] ?? Infinity, crow(x, y)] : [0, crow(x, y)]
   let best: Pos | null = null
-  let bestD = (m.x - to.x) ** 2 + (m.y - to.y) ** 2
+  let bestCost = cost(m.x, m.y)
   for (const [dx, dy] of Object.values(DIRS)) {
     const x = m.x + dx
     const y = m.y + dy
-    if (!through(at(game.level, x, y))) continue
-    if (monsterAt(game.level, x, y)) continue
+    if (!walkable(at(level, x, y))) continue
+    if (monsterAt(level, x, y)) continue
     if (game.player.x === x && game.player.y === y) continue
-    const d = (x - to.x) ** 2 + (y - to.y) ** 2
-    if (d < bestD) {
-      bestD = d
+    const c = cost(x, y)
+    if (c[0] < bestCost[0] || (c[0] === bestCost[0] && c[1] < bestCost[1])) {
+      bestCost = c
       best = { x, y }
     }
   }
@@ -668,6 +721,8 @@ function openDoor(
   lines.push('You put your shoulder to the door. Whatever held it lets go.')
   const roll = rng.int(10)
   if (roll < 3) {
+    // Above where the Unasked are met, nothing waits behind a door.
+    if (game.depth < (MONSTERS.unasked?.from ?? 0)) return
     const cell = [
       { x: x + 1, y },
       { x: x - 1, y },
@@ -764,7 +819,8 @@ function move(game: Game, rng: Rng, dir: Dir, lines: string[]): boolean {
     const gift = rng.pick(GIFTS)
     game.prompt = { kind: 'gift', gift }
     lines.push(
-      `Yellow eyes. "${rng.pick(pools.gift.filter((g) => !g.startsWith('Refuse')))}" Take it? (y/n)`,
+      `Yellow eyes. "${rng.pick(giftSaid(gift))}" Sarn offers ${GIFT_NAMES[gift]}.`,
+      `Every gift has a price, and Sarn does not say which until you have taken it: some of your strength, the map of this floor, the dearest thing you carry, the names you learned on this run, or two marks of grey. Take it? (y/n)`,
     )
     return false
   }
@@ -969,6 +1025,13 @@ export function offerFor(game: Game, key: string): Offer | undefined {
   return offers(game).find((o) => o.hotkey === key)
 }
 
+/** What the net-loft's lamp oil, water and rope fill, before they go in the pack. */
+const FILLS: Partial<Record<string, 'lamp' | 'water' | 'rope'>> = {
+  oil: 'lamp',
+  skin: 'water',
+  coil: 'rope',
+}
+
 const BARR_STOCK = ['knife', 'hook', 'spear', 'axe', 'leather', 'mail', 'pick']
 const LOFT_STOCK = ['oil', 'skin', 'coil', 'salt']
 
@@ -1026,11 +1089,14 @@ function stock(game: Game): Stock[] {
     case 'loft':
       return LOFT_STOCK.map((kind) => {
         const price = ITEMS[kind]?.price ?? 0
+        const die = FILLS[kind]
         return {
           key: `buy:${kind}`,
           label: `Buy ${ITEMS[kind]?.name}`,
           price,
-          enabled: afford(price) && p.pack.length < PACK,
+          enabled:
+            afford(price) &&
+            ((die !== undefined && p[die] < 8) || p.pack.length < PACK),
         }
       })
     case 'ruun': {
@@ -1152,11 +1218,16 @@ function shopCommand(game: Game, rng: Rng, key: string, lines: string[]): void {
   const [verb, arg = ''] = key.split(':')
   if (verb === 'buy') {
     p.marks -= offer.price
-    if (game.shop === 'loft' && arg !== 'salt') {
-      if (arg === 'oil') p.lamp = 8
-      if (arg === 'skin') p.water = 8
-      if (arg === 'coil') p.rope = 8
-      lines.push(`${cap(ITEMS[arg]?.name ?? arg)}. Done.`)
+    if (game.shop === 'loft') {
+      // It fills what is running low, and what is full already goes in the pack.
+      const die = FILLS[arg]
+      if (die !== undefined && p[die] < 8) {
+        p[die] = 8
+        lines.push(`${cap(ITEMS[arg]?.name ?? arg)}. Done.`)
+        return
+      }
+      p.pack.push({ kind: arg })
+      lines.push(`You have ${ITEMS[arg]?.name}. It goes in the pack.`)
       return
     }
     p.pack.push({ kind: arg })
@@ -1258,23 +1329,59 @@ function answer(game: Game, rng: Rng, yes: boolean, lines: string[]): void {
     p.pack.push({ kind: prompt.gift })
     lines.push(`You have ${ITEMS[prompt.gift]?.name}.`)
   }
+  lines.push('The eyes are gone.')
   const theft = rng.pick(THEFTS)
   if (theft === 'maxhp') {
     p.maxHp = Math.max(1, p.maxHp - 3)
     p.hp = Math.min(p.hp, p.maxHp)
-  } else if (theft === 'names') game.known = []
-  else if (theft === 'map') game.level.seen = game.level.seen.map(() => false)
-  else if (theft === 'item') {
+    lines.push(
+      `Sarn took some of your strength. Your health will not go above ${p.maxHp} again.`,
+    )
+  } else if (theft === 'names') {
+    // The names of the runs before are kept; only this run's are Sarn's.
+    const before = game.inherited ?? game.known
+    const learned = game.known.filter((k) => !before.includes(k))
+    if (learned.length > 0) {
+      game.known = game.known.filter((k) => before.includes(k))
+      lines.push(
+        `Sarn took the names you learned on this run: ${learned.map((k) => ITEMS[k]?.name ?? MONSTERS[k]?.known ?? k).join(', ')}. The names from before are still yours.`,
+      )
+    } else {
+      p.grey++
+      lines.push(
+        `Sarn took a mark of grey, for there was no name of this run to take. The grey in you: ${p.grey} of ${GREY_LIMIT}.`,
+      )
+    }
+  } else if (theft === 'map') {
+    game.level.seen = game.level.seen.map(() => false)
+    lines.push(
+      'Sarn took the map of this floor. You will have to find the way again.',
+    )
+  } else if (theft === 'item') {
     const dearest = p.pack
       .map((item, i) => ({
         i,
         price: ITEMS[item.kind]?.sarn ? -1 : (ITEMS[item.kind]?.price ?? 0),
       }))
       .sort((a, b) => b.price - a.price)[0]
-    if (dearest && dearest.price >= 0) p.pack.splice(dearest.i, 1)
-    else p.grey++
-  } else p.grey += 2
-  lines.push('The eyes are gone. You feel lighter, somewhere you cannot find.')
+    const item = dearest && dearest.price >= 0 ? p.pack[dearest.i] : undefined
+    if (item && dearest) {
+      lines.push(
+        `Sarn took the dearest thing you carried: ${itemName(game, item)}.`,
+      )
+      p.pack.splice(dearest.i, 1)
+    } else {
+      p.grey++
+      lines.push(
+        `Sarn took a mark of grey, for there was nothing in the pack worth taking. The grey in you: ${p.grey} of ${GREY_LIMIT}.`,
+      )
+    }
+  } else {
+    p.grey += 2
+    lines.push(
+      `Sarn took two marks of grey. The grey in you: ${p.grey} of ${GREY_LIMIT}. At ${GREY_LIMIT} you are one of the Unasked.`,
+    )
+  }
   checkGrey(game, rng, lines)
 }
 
@@ -1292,6 +1399,13 @@ const TIDE_LINE: Record<string, Pool> = {
 function monstersAct(game: Game, rng: Rng, lines: string[]): void {
   const p = game.player
   const radius = lightRadius(game)
+  // Worked out once a turn, and again only if the rope has moved you.
+  let way: { x: number; y: number; level: Level; dist: number[] } | null = null
+  const wayToYou = () => {
+    if (!way || way.x !== p.x || way.y !== p.y || way.level !== game.level)
+      way = { x: p.x, y: p.y, level: game.level, dist: paths(game.level, p) }
+    return way.dist
+  }
   for (const m of game.level.monsters) {
     if (m.hp <= 0 || game.over) continue
     const kind = MONSTERS[m.kind]
@@ -1313,7 +1427,7 @@ function monstersAct(game: Game, rng: Rng, lines: string[]): void {
       drag(game, rng, m, lines)
       continue
     }
-    const moves = kind.hunts && (p.water === 0 || p.hp * 2 < p.maxHp) ? 2 : 1
+    const moves = kind.hunts && p.water === 0 ? 2 : 1
     for (let i = 0; i < moves && !game.over; i++) {
       if (adjacent(m, p)) {
         if (kind.tithes && !m.refused) {
@@ -1331,7 +1445,7 @@ function monstersAct(game: Game, rng: Rng, lines: string[]): void {
         break
       }
       if (kind.stays) break
-      const next = step(m, p, game, (t) => walkable(t))
+      const next = step(m, p, game, wayToYou())
       if (!next) break
       m.x = next.x
       m.y = next.y
@@ -1365,7 +1479,7 @@ function drag(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   const p = game.player
   const target = game.level.down ?? game.level.up
   const from = { x: m.x, y: m.y }
-  const next = step(m, target, game, (t) => walkable(t))
+  const next = step(m, target, game, paths(game.level, target))
   if (!next) return
   m.x = next.x
   m.y = next.y
@@ -1640,7 +1754,13 @@ function command(game: Game, rng: Rng, cmd: Command, lines: string[]): boolean {
       return use(game, rng, cmd.index, lines)
     case 'drop': {
       const item = p.pack[cmd.index]
-      if (!item || game.depth === 0) return false
+      if (!item) return false
+      if (game.depth === 0) {
+        lines.push(
+          'Not on the shingle. The tide would have it, or the Pickers.',
+        )
+        return false
+      }
       p.pack.splice(cmd.index, 1)
       game.level.items.push({ x: p.x, y: p.y, item })
       lines.push(`You put down ${itemName(game, item)}.`)

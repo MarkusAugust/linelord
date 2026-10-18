@@ -102,6 +102,10 @@ which also brings the names and epithets of the holders of Kell's depths.
 Its rules are in `site/descent/core` as plain functions over a run, tested like
 the rest; who holds what between runs is `holds.ts`, kept behind the same store
 port as the ledger. `site/descent/ui` is the page's side of it and only draws.
+`site/descent/bot` plays the rules by itself: `bun run descent-balance` lets it
+go down a few hundred times and prints how far each background gets and what
+kills it. Run it before and after you change a number in `site/descent/core`,
+and say in the pull request how the table moved.
 
 ## Before you push: the self-review
 

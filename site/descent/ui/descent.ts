@@ -324,7 +324,7 @@ rocket('descent-run', {
       $$.prompt = g.prompt
         ? g.prompt.kind === 'tithe'
           ? 'Pay a tenth?'
-          : 'Take what Sarn offers?'
+          : 'Take the gift, and pay what Sarn takes?'
         : ''
       const shop = Object.values(SHOPS).find((s) => s.id === g.shop)
       $$.shop = shop?.name ?? ''

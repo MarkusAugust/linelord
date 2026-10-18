@@ -248,7 +248,9 @@ function populate(
     level.items.push({ ...p, item: { kind: 'page' } })
   }
   const kinds = Object.entries(MONSTERS)
-    .filter(([, m]) => m.tiers.includes(tier) && !m.stays)
+    .filter(
+      ([, m]) => m.tiers.includes(tier) && !m.stays && (m.from ?? 0) <= depth,
+    )
     .map(([kind]) => kind)
   const count = Math.min(9, 2 + depth)
   for (let i = 0; i < count; i++) {

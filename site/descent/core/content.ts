@@ -44,7 +44,9 @@ export interface MonsterKind {
   dmg: [number, number]
   xp: number
   tiers: (1 | 2 | 3 | 4)[]
-  /** Comes for you twice as fast when you are parched or bleeding. */
+  /** Not met above this depth, though its tier begins higher up. */
+  from?: number
+  /** Comes for you twice as fast when you are parched: it smells the hunger. */
   hunts?: boolean
   /** Never leaves its door. */
   stays?: boolean
@@ -108,9 +110,10 @@ export const MONSTERS: Record<string, MonsterKind> = {
     hp: 10,
     ac: 12,
     hit: 4,
-    dmg: [1, 6],
+    dmg: [1, 4],
     xp: 7,
     tiers: [2, 3, 4],
+    from: 4,
     hunts: true,
   },
   notcher: {
@@ -495,7 +498,7 @@ export const BACKGROUNDS: Record<Background, BackgroundKind> = {
     what: 'Born on the shingle. The flood drowns you slower, and your lamp keeps in the wet.',
     hp: 13,
     grit: 6,
-    might: 1,
+    might: 2,
     will: 1,
     rope: 8,
   },
@@ -503,7 +506,7 @@ export const BACKGROUNDS: Record<Background, BackgroundKind> = {
     name: 'Novice',
     what: 'Left Hookford without asking. Weak, but names come to you cheap.',
     hp: 11,
-    grit: 4,
+    grit: 6,
     might: 0,
     will: 4,
     rope: 6,
@@ -518,6 +521,6 @@ export const LEVELS: readonly number[] = [
   0, 10, 25, 45, 70, 100, 140, 190, 250, 320,
 ]
 
-/** What Sarn offers, and what Sarn takes. Neither is said in advance. */
+/** What Sarn offers, and what Sarn may take for it. Sarn names the gift and every price, but not which price until the gift is taken. */
 export const GIFTS = ['sarn-blade', 'sarn-lamp', 'purse'] as const
 export const THEFTS = ['maxhp', 'names', 'map', 'item', 'grey'] as const

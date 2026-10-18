@@ -150,6 +150,15 @@ describe('moving', () => {
     expect(lines.some((l) => l.includes('Grey comes out'))).toBe(true)
   })
 
+  it('lets nothing through a door above the depth the Unasked are met at', () => {
+    for (let seed = 1; seed < 40; seed++) {
+      const g = gameOn(['#######', '#.@+..#', '#######'], 3, { seed })
+      const out = run(g, east)
+      expect(out.lines.some((l) => l.includes('comes through'))).toBe(false)
+      expect(out.game.level.monsters).toHaveLength(0)
+    }
+  })
+
   it('speaks to the king, the drain and the man standing in it, without moving', () => {
     const g = gameOn(['#####', '#K@&#', '##O##', '#####'], 10)
     const k = run(g, west)
@@ -229,6 +238,15 @@ describe('the pack', () => {
     g.player.pack = Array.from({ length: 12 }, () => ({ kind: 'salt' }))
     expect(run(g, { type: 'get' }).lines).toEqual(['Your pack is full.'])
     expect(run(g, { type: 'drop', index: 99 }).game.turn).toBe(0)
+  })
+
+  it('says why nothing is put down on the shingle', () => {
+    const g = newGame({ name: 'Hild', bg: 'ashborn', seed: 1 })
+    const out = run(g, { type: 'drop', index: 0 })
+    expect(out.game.player.pack).toHaveLength(2)
+    expect(out.lines).toEqual([
+      'Not on the shingle. The tide would have it, or the Pickers.',
+    ])
   })
 
   it('takes up weapons and armour, and puts the old ones in the pack', () => {
@@ -331,6 +349,64 @@ describe('fighting', () => {
     expect(out.game.player.xp).toBeGreaterThan(0)
     expect(out.game.player.slain).toContain('picker')
     expect(out.game.level.items.some((i) => i.item.kind === 'marks')).toBe(true)
+  })
+
+  it('is found by what hunts it, the long way round a wall', () => {
+    const g = gameOn(
+      ['#########', '#@......#', '#######.#', '#.......#', '#########'],
+      1,
+    )
+    put(g, 'picker', 1, 3).awake = true
+    const out = fight(g, wait, (x) => x.player.hp < x.player.maxHp, 40)
+    const m = out.game.level.monsters[0]
+    expect(m && Math.max(Math.abs(m.x - 1), Math.abs(m.y - 1))).toBe(1)
+  })
+
+  it('is hunted twice as fast by the Unasked when parched, and not for bleeding', () => {
+    const lane = ['############', '#<@.......>#', '############']
+    const after = (setup: (g: Game) => void) => {
+      const g = gameOn(lane, 4)
+      setup(g)
+      put(g, 'unasked', 9, 1).awake = true
+      return run(g, wait).game.level.monsters[0]?.x
+    }
+    expect(after(() => {})).toBe(8)
+    expect(
+      after((g) => {
+        g.player.hp = 2
+      }),
+    ).toBe(8)
+    expect(
+      after((g) => {
+        g.player.water = 0
+      }),
+    ).toBe(7)
+  })
+
+  it('is let go when what was on the rope is put down, and can move again', () => {
+    const g = gameOn(['#########', '#<.@...>#', '#########'], 7)
+    g.player.might = 40
+    const m = put(g, 'drawn', 4, 1)
+    g.player.held = m.id
+    const hit = fight(g, east, (x) => (x.level.monsters[0]?.hp ?? 0) <= 0)
+    expect(hit.game.level.monsters[0]?.hp).toBeLessThanOrEqual(0)
+    expect(hit.game.over).toBeNull()
+    expect(hit.game.player.held).toBeNull()
+    // The rope may have drawn you along before it went slack.
+    const from = hit.game.player.x
+    expect(run(hit.game, west).game.player.x).toBe(from - 1)
+  })
+
+  it('is drawn by the rope round a wall to the stair down', () => {
+    const g = gameOn(
+      ['#########', '#<@.....#', '#######.#', '#>......#', '#########'],
+      3,
+    )
+    const m = put(g, 'drawn', 3, 1)
+    g.player.held = m.id
+    m.awake = true
+    const out = fight(g, wait, (x) => x.depth === 4, 40)
+    expect(out.game.depth).toBe(4)
   })
 
   it('rises a level with enough blood', () => {
@@ -1211,6 +1287,76 @@ describe('Sarn', () => {
     expect(found).toBe(true)
   })
 
+  /** Take Sarn's gift on each seed until Sarn takes `theft`. */
+  function takenBy(theft: string, setup: (g: Game) => void) {
+    for (let seed = 1; seed < 200; seed++) {
+      const g = gameOn(['#######', '#<@S.>#', '#######'], 3, { seed })
+      setup(g)
+      const out = run(g, east, { type: 'answer', yes: true })
+      if (out.lines.some((l) => l.includes(theft))) return out
+    }
+    throw new Error(`Sarn never took ${theft}`)
+  }
+
+  it('takes only the names learned on this run', () => {
+    const out = takenBy('Sarn took the names', (g) => {
+      g.inherited = ['picker']
+      g.known = ['picker', 'drawn']
+    })
+    expect(out.game.known).toEqual(['picker'])
+  })
+
+  it('takes grey instead when no name was learned on this run', () => {
+    const out = takenBy('no name of this run', (g) => {
+      g.inherited = ['picker']
+      g.known = ['picker']
+    })
+    expect(out.game.known).toEqual(['picker'])
+    expect(out.game.player.grey).toBe(1)
+  })
+
+  it('keeps every name in a run saved before it knew which were old', () => {
+    const out = takenBy('no name of this run', (g) => {
+      delete g.inherited
+      g.known = ['picker', 'drawn']
+    })
+    expect(out.game.known).toEqual(['picker', 'drawn'])
+  })
+
+  it('says what the gift is and what the price may be before you answer', () => {
+    const g = gameOn(['#######', '#<@S.>#', '#######'], 3)
+    const line = run(g, east).lines.join(' ')
+    expect(line).toMatch(/Sarn offers (a blade|a lamp|a purse)/)
+    for (const price of [
+      'strength',
+      'map',
+      'dearest',
+      'names you learned on this run',
+      'grey',
+    ])
+      expect(line).toContain(price)
+  })
+
+  it('speaks of the gift it gives', () => {
+    for (let seed = 1; seed < 30; seed++) {
+      const g = gameOn(['#######', '#<@S.>#', '#######'], 3, { seed })
+      const out = run(g, east)
+      const gift = out.game.prompt?.kind === 'gift' && out.game.prompt.gift
+      const line = out.lines.join(' ')
+      if (gift === 'sarn-lamp') expect(line).not.toContain('blade')
+      if (gift === 'sarn-blade') expect(line).not.toContain('lamp')
+    }
+  })
+
+  it('says afterwards what it took', () => {
+    for (let seed = 1; seed < 40; seed++) {
+      const g = gameOn(['#######', '#<@S.>#', '#######'], 3, { seed })
+      g.player.pack = [{ kind: 'axe' }]
+      const out = run(g, east, { type: 'answer', yes: true })
+      expect(out.lines.join(' ')).toContain('Sarn took ')
+    }
+  })
+
   it('lets you refuse', () => {
     const g = gameOn(['#######', '#<@S.>#', '#######'], 3)
     const out = run(g, east, { type: 'answer', yes: false })
@@ -1311,6 +1457,25 @@ describe('Wrackhead', () => {
       2,
     )
     expect(out.game.player.marks).toBe(30 - 6 - 4 - 8 - 5)
+    expect(out.lines.some((l) => l.startsWith('Barr'))).toBe(false)
+  })
+
+  it('packs what the net-loft sells once the lamp, the skin or the rope is full, and only while there is room', () => {
+    const loft = atShop('2', (g) => {
+      g.player.rope = 8
+    })
+    const out = run(loft.game, { type: 'shop', key: 'buy:skin' })
+    expect(out.game.player.water).toBe(8)
+    expect(out.game.player.pack.at(-1)?.kind).toBe('skin')
+    expect(out.game.player.marks).toBe(30 - 4)
+    loft.game.player.pack = Array.from({ length: 12 }, () => ({ kind: 'salt' }))
+    const full = offers(loft.game).filter((o) => o.enabled)
+    expect(full).toHaveLength(0)
+    loft.game.player.water = 4
+    expect(offerFor(loft.game, '2')).toMatchObject({
+      key: 'buy:skin',
+      enabled: true,
+    })
   })
 
   it('has Ruun name what you carry and what you have killed', () => {

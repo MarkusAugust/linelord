@@ -219,6 +219,15 @@ describe('the ground', () => {
     expect(hall.grey.length).toBeGreaterThan(4)
   })
 
+  it('keeps the Unasked off the first floor of the Lowstreets, and lets them in below it', () => {
+    const on = (depth: number) =>
+      Array.from({ length: 30 }, (_, seed) =>
+        generate(depth, makeRng(seed + 1), ids()),
+      ).flatMap((l) => l.monsters.map((m) => m.kind))
+    expect(on(3)).not.toContain('unasked')
+    expect(on(4)).toContain('unasked')
+  })
+
   it('only lays things down that exist', () => {
     const level = generate(5, makeRng(5), ids())
     for (const { item } of level.items) {

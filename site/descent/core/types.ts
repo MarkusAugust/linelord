@@ -146,6 +146,8 @@ export interface Game {
   player: Player
   /** Names learned, in this run and the ones before it. */
   known: string[]
+  /** The names known when the run began. A run saved before this was kept has none. */
+  inherited?: string[]
   /** Turns left that the tide is held still. */
   held: number
   prompt: Prompt | null
