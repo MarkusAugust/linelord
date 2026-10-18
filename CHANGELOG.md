@@ -118,6 +118,17 @@ because the earlier answer was wrong.
 - The Wrecker hits harder (might 2, as the Ashborn) and the Novice gains more
   blood at each level (a d6, as the Wrecker). The Ashborn is still the
   strongest of the three, and the Novice the weakest.
+- Sarn says what is offered and what it may cost. Before you answer, Sarn
+  names the gift (the blade, the lamp or the purse, with words that fit it)
+  and the five prices it may take: some strength, the map of the floor, the
+  dearest thing in the pack, the names learned on this run, or two marks of
+  grey. Which one is still only known once the gift is taken, and then Sarn
+  says plainly what was taken, with the grey counted against the six that make
+  you one of the Unasked.
+- Sarn takes only the names learned on the run. It used to take every name
+  you knew, the ones kept from earlier runs as well, so one gift could undo
+  many runs of naming. With no name of the run to take, Sarn takes a mark of
+  grey instead.
 - `bun run descent-balance [runs]` lets a bot play the descent, 200 runs of
   each background by default, and prints how many reached each depth and what
   ended them. The bot sees the whole floor, so it measures how hard the rules

@@ -521,6 +521,6 @@ export const LEVELS: readonly number[] = [
   0, 10, 25, 45, 70, 100, 140, 190, 250, 320,
 ]
 
-/** What Sarn offers, and what Sarn takes. Neither is said in advance. */
+/** What Sarn offers, and what Sarn may take for it. Sarn names the gift and every price, but not which price until the gift is taken. */
 export const GIFTS = ['sarn-blade', 'sarn-lamp', 'purse'] as const
 export const THEFTS = ['maxhp', 'names', 'map', 'item', 'grey'] as const

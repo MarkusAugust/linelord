@@ -1287,6 +1287,76 @@ describe('Sarn', () => {
     expect(found).toBe(true)
   })
 
+  /** Take Sarn's gift on each seed until Sarn takes `theft`. */
+  function takenBy(theft: string, setup: (g: Game) => void) {
+    for (let seed = 1; seed < 200; seed++) {
+      const g = gameOn(['#######', '#<@S.>#', '#######'], 3, { seed })
+      setup(g)
+      const out = run(g, east, { type: 'answer', yes: true })
+      if (out.lines.some((l) => l.includes(theft))) return out
+    }
+    throw new Error(`Sarn never took ${theft}`)
+  }
+
+  it('takes only the names learned on this run', () => {
+    const out = takenBy('Sarn took the names', (g) => {
+      g.inherited = ['picker']
+      g.known = ['picker', 'drawn']
+    })
+    expect(out.game.known).toEqual(['picker'])
+  })
+
+  it('takes grey instead when no name was learned on this run', () => {
+    const out = takenBy('no name of this run', (g) => {
+      g.inherited = ['picker']
+      g.known = ['picker']
+    })
+    expect(out.game.known).toEqual(['picker'])
+    expect(out.game.player.grey).toBe(1)
+  })
+
+  it('keeps every name in a run saved before it knew which were old', () => {
+    const out = takenBy('no name of this run', (g) => {
+      delete g.inherited
+      g.known = ['picker', 'drawn']
+    })
+    expect(out.game.known).toEqual(['picker', 'drawn'])
+  })
+
+  it('says what the gift is and what the price may be before you answer', () => {
+    const g = gameOn(['#######', '#<@S.>#', '#######'], 3)
+    const line = run(g, east).lines.join(' ')
+    expect(line).toMatch(/Sarn offers (a blade|a lamp|a purse)/)
+    for (const price of [
+      'strength',
+      'map',
+      'dearest',
+      'names you learned on this run',
+      'grey',
+    ])
+      expect(line).toContain(price)
+  })
+
+  it('speaks of the gift it gives', () => {
+    for (let seed = 1; seed < 30; seed++) {
+      const g = gameOn(['#######', '#<@S.>#', '#######'], 3, { seed })
+      const out = run(g, east)
+      const gift = out.game.prompt?.kind === 'gift' && out.game.prompt.gift
+      const line = out.lines.join(' ')
+      if (gift === 'sarn-lamp') expect(line).not.toContain('blade')
+      if (gift === 'sarn-blade') expect(line).not.toContain('lamp')
+    }
+  })
+
+  it('says afterwards what it took', () => {
+    for (let seed = 1; seed < 40; seed++) {
+      const g = gameOn(['#######', '#<@S.>#', '#######'], 3, { seed })
+      g.player.pack = [{ kind: 'axe' }]
+      const out = run(g, east, { type: 'answer', yes: true })
+      expect(out.lines.join(' ')).toContain('Sarn took ')
+    }
+  })
+
   it('lets you refuse', () => {
     const g = gameOn(['#######', '#<@S.>#', '#######'], 3)
     const out = run(g, east, { type: 'answer', yes: false })
