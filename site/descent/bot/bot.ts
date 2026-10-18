@@ -1,10 +1,12 @@
 /**
  * A warrior who plays the descent by rule, so that the numbers can be weighed
  * without anyone going down by hand. It plays the way a careful player does:
- * it buys salt and keeps its lamp and water full in Wrackhead, rests when
+ * it buys salt and spare water and keeps its lamp full in Wrackhead, rests when
  * nothing is near, fights what stands next to it, pays the order, refuses
- * Sarn, and climbs back to the shingle when the salt is gone and the blood is
- * low. It does not name things, dig, or mean a blow.
+ * Sarn, names what it fights while it has the will, and climbs back to the
+ * shingle when the salt or the water is gone and the blood is low. It does
+ * not dig or mean a blow, and every run starts knowing no names, where a
+ * player keeps the names of the runs before.
  *
  * It sees the whole floor, lit or not, so what it measures is how hard the
  * rules are to survive, not how hard Kell is to find your way through. Like
@@ -18,6 +20,8 @@ import type { Background, Command, Dir, Game, Item, Pos } from '../core/types'
 
 /** Salt to carry down. */
 const SALT = 4
+/** Skins of water to carry down, over the one it drinks from. */
+const SKINS = 2
 /** Below this share of blood, the bot reaches for salt. */
 const WASH = 0.4
 /** Below this share, with no salt left, it goes back up. */
@@ -27,8 +31,9 @@ const steps = Object.entries(DIRS) as [Dir, [number, number]][]
 
 /**
  * The first step of the shortest way to a cell `goal` accepts, over ground a
- * body can stand on and through barred doors, around the shops' doors. Null
- * when there is no way.
+ * body can stand on, through barred doors and past Sarn (walking into Sarn is
+ * how Sarn is answered, and refused Sarn is gone), around the shops' doors.
+ * Null when there is no way.
  */
 export function wayTo(
   game: Game,
@@ -47,7 +52,11 @@ export function wayTo(
       if (first.has(key(x, y))) continue
       const tile = at(level, x, y)
       const target = goal(x, y)
-      if (!target && (!(walkable(tile) || tile === '+') || /[1-7]/.test(tile)))
+      if (
+        !target &&
+        (!(walkable(tile) || tile === '+' || tile === 'S') ||
+          /[1-7]/.test(tile))
+      )
         continue
       const how = first.get(key(c.x, c.y)) ?? dir
       if (target) return how
@@ -101,6 +110,8 @@ function errand(game: Game): { shop: string; key: string } | null {
     return { shop: 'barr', key: 'buy:spear' }
   if (count(game, 'salt') < SALT && reserve(5) && p.pack.length < PACK)
     return { shop: 'loft', key: 'buy:salt' }
+  if (count(game, 'skin') < SKINS && reserve(4) && p.pack.length < PACK)
+    return { shop: 'loft', key: 'buy:skin' }
   return null
 }
 
@@ -164,7 +175,14 @@ function below(game: Game): Command {
   const oil = packIndex(game, 'oil')
   if (p.lamp <= 4 && oil >= 0) return { type: 'use', index: oil }
   const foe = foeBeside(game)
-  if (foe) return { type: 'move', dir: foe }
+  if (foe) {
+    const [dx, dy] = DIRS[foe]
+    const m = monsterAt(level, p.x + dx, p.y + dy)
+    const cost = p.bg === 'novice' ? 1 : 2
+    if (m && !game.known.includes(m.kind) && p.will >= cost)
+      return { type: 'name', dir: foe }
+    return { type: 'move', dir: foe }
+  }
   const gear = better(game)
   if (gear >= 0) return { type: 'use', index: gear }
   const dry = waterAt(level, game.tide, p.x, p.y) < 2
@@ -196,6 +214,13 @@ export function choose(game: Game): Command {
   return game.depth === 0 ? inTown(game) : below(game)
 }
 
+/** A cause with every creature called by its name, known or not, so that causes can be counted together. */
+const known = (cause: string) =>
+  Object.values(MONSTERS).reduce(
+    (c, k) => c.replace(` by ${k.unknown}`, ` by ${k.known}`),
+    cause,
+  )
+
 export interface RunResult {
   bg: Background
   seed: number
@@ -219,7 +244,7 @@ export function playRun(bg: Background, seed: number, limit = 6000): RunResult {
     seed,
     ending: over?.ending ?? 'stuck',
     cause: over
-      ? over.cause
+      ? known(over.cause)
           .replace(/ (at depth|on turn) \d+$/, '')
           .replace(/ with the ledger$/, '')
       : 'stuck',

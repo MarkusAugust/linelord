@@ -450,6 +450,8 @@ function gainXp(game: Game, amount: number, lines: string[], rng: Rng): void {
 function kill(game: Game, rng: Rng, m: Monster, lines: string[]): void {
   const kind = MONSTERS[m.kind]
   m.hp = 0
+  // Whatever was on the rope is down, and the rope with it.
+  if (game.player.held === m.id) game.player.held = null
   lines.push(`${cap(monsterName(game, m))} goes down.`)
   if (kind?.holder)
     takeHold(game, rng, m.holds ?? RIVAL_TIER[kind.holder], lines)
@@ -1005,6 +1007,13 @@ export function offerFor(game: Game, key: string): Offer | undefined {
   return offers(game).find((o) => o.hotkey === key)
 }
 
+/** What the net-loft's lamp oil, water and rope fill, before they go in the pack. */
+const FILLS: Partial<Record<string, 'lamp' | 'water' | 'rope'>> = {
+  oil: 'lamp',
+  skin: 'water',
+  coil: 'rope',
+}
+
 const BARR_STOCK = ['knife', 'hook', 'spear', 'axe', 'leather', 'mail', 'pick']
 const LOFT_STOCK = ['oil', 'skin', 'coil', 'salt']
 
@@ -1062,11 +1071,14 @@ function stock(game: Game): Stock[] {
     case 'loft':
       return LOFT_STOCK.map((kind) => {
         const price = ITEMS[kind]?.price ?? 0
+        const die = FILLS[kind]
         return {
           key: `buy:${kind}`,
           label: `Buy ${ITEMS[kind]?.name}`,
           price,
-          enabled: afford(price) && p.pack.length < PACK,
+          enabled:
+            afford(price) &&
+            ((die !== undefined && p[die] < 8) || p.pack.length < PACK),
         }
       })
     case 'ruun': {
@@ -1188,11 +1200,16 @@ function shopCommand(game: Game, rng: Rng, key: string, lines: string[]): void {
   const [verb, arg = ''] = key.split(':')
   if (verb === 'buy') {
     p.marks -= offer.price
-    if (game.shop === 'loft' && arg !== 'salt') {
-      if (arg === 'oil') p.lamp = 8
-      if (arg === 'skin') p.water = 8
-      if (arg === 'coil') p.rope = 8
-      lines.push(`${cap(ITEMS[arg]?.name ?? arg)}. Done.`)
+    if (game.shop === 'loft') {
+      // It fills what is running low, and what is full already goes in the pack.
+      const die = FILLS[arg]
+      if (die !== undefined && p[die] < 8) {
+        p[die] = 8
+        lines.push(`${cap(ITEMS[arg]?.name ?? arg)}. Done.`)
+        return
+      }
+      p.pack.push({ kind: arg })
+      lines.push(`You have ${ITEMS[arg]?.name}. It goes in the pack.`)
       return
     }
     p.pack.push({ kind: arg })
@@ -1356,7 +1373,7 @@ function monstersAct(game: Game, rng: Rng, lines: string[]): void {
       drag(game, rng, m, lines)
       continue
     }
-    const moves = kind.hunts && (p.water === 0 || p.hp * 2 < p.maxHp) ? 2 : 1
+    const moves = kind.hunts && p.water === 0 ? 2 : 1
     for (let i = 0; i < moves && !game.over; i++) {
       if (adjacent(m, p)) {
         if (kind.tithes && !m.refused) {
@@ -1683,7 +1700,13 @@ function command(game: Game, rng: Rng, cmd: Command, lines: string[]): boolean {
       return use(game, rng, cmd.index, lines)
     case 'drop': {
       const item = p.pack[cmd.index]
-      if (!item || game.depth === 0) return false
+      if (!item) return false
+      if (game.depth === 0) {
+        lines.push(
+          'Not on the shingle. The tide would have it, or the Pickers.',
+        )
+        return false
+      }
       p.pack.splice(cmd.index, 1)
       game.level.items.push({ x: p.x, y: p.y, item })
       lines.push(`You put down ${itemName(game, item)}.`)

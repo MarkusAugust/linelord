@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { report, spread, weigh } from '../bot/balance'
 import { choose, playRun, wayTo } from '../bot/bot'
+import { MONSTERS } from '../core/content'
 import { act, newGame } from '../core/game'
 import type { Game } from '../core/types'
 import { gameOn, put } from './helpers'
@@ -28,13 +29,14 @@ describe('the bot', () => {
     expect(choose(g)).toEqual({ type: 'answer', yes: false })
   })
 
-  it('buys salt on the shingle before it goes down', () => {
+  it('buys salt and spare water on the shingle before it goes down', () => {
     const g = play(
       newGame({ name: 'Bot', bg: 'ashborn', seed: 1 }),
       (x) => x.depth === 1,
     )
     expect(g.depth).toBe(1)
     expect(g.player.pack.filter((i) => i.kind === 'salt').length).toBe(4)
+    expect(g.player.pack.filter((i) => i.kind === 'skin').length).toBe(2)
   })
 
   it('takes up better iron, fights what stands next to it, and washes when it bleeds', () => {
@@ -46,6 +48,16 @@ describe('the bot', () => {
     expect(choose(g)).toEqual({ type: 'move', dir: 'e' })
     g.player.hp = 2
     expect(choose(g)).toEqual({ type: 'use', index: 0 })
+  })
+
+  it('names what it is about to fight while it has the will', () => {
+    const g = gameOn(['#########', '#<.@...>#', '#########'], 1, {
+      bg: 'novice',
+    })
+    put(g, 'picker', 4, 1)
+    expect(choose(g)).toEqual({ type: 'name', dir: 'e' })
+    g.player.will = 0
+    expect(choose(g)).toEqual({ type: 'move', dir: 'e' })
   })
 
   it('hits what has hold of it, and rests when nothing is near', () => {
@@ -80,6 +92,9 @@ describe('the bot', () => {
     expect(playRun('wrecker', 3)).toEqual(one)
     expect(one.deepest).toBeGreaterThan(0)
     expect(one.cause).not.toMatch(/depth \d/)
+    // Killed by what it was, whether its name was known or not.
+    const names = Object.values(MONSTERS).map((k) => k.unknown)
+    expect(names.some((n) => one.cause.endsWith(`by ${n}`))).toBe(false)
   })
 
   it('says it is stuck when it runs out of turns', () => {

@@ -240,6 +240,15 @@ describe('the pack', () => {
     expect(run(g, { type: 'drop', index: 99 }).game.turn).toBe(0)
   })
 
+  it('says why nothing is put down on the shingle', () => {
+    const g = newGame({ name: 'Hild', bg: 'ashborn', seed: 1 })
+    const out = run(g, { type: 'drop', index: 0 })
+    expect(out.game.player.pack).toHaveLength(2)
+    expect(out.lines).toEqual([
+      'Not on the shingle. The tide would have it, or the Pickers.',
+    ])
+  })
+
   it('takes up weapons and armour, and puts the old ones in the pack', () => {
     const g = gameOn(ROOM, 1)
     g.player.pack = [{ kind: 'axe' }, { kind: 'mail' }]
@@ -351,6 +360,41 @@ describe('fighting', () => {
     const out = fight(g, wait, (x) => x.player.hp < x.player.maxHp, 40)
     const m = out.game.level.monsters[0]
     expect(m && Math.max(Math.abs(m.x - 1), Math.abs(m.y - 1))).toBe(1)
+  })
+
+  it('is hunted twice as fast by the Unasked when parched, and not for bleeding', () => {
+    const lane = ['############', '#<@.......>#', '############']
+    const after = (setup: (g: Game) => void) => {
+      const g = gameOn(lane, 4)
+      setup(g)
+      put(g, 'unasked', 9, 1).awake = true
+      return run(g, wait).game.level.monsters[0]?.x
+    }
+    expect(after(() => {})).toBe(8)
+    expect(
+      after((g) => {
+        g.player.hp = 2
+      }),
+    ).toBe(8)
+    expect(
+      after((g) => {
+        g.player.water = 0
+      }),
+    ).toBe(7)
+  })
+
+  it('is let go when what was on the rope is put down, and can move again', () => {
+    const g = gameOn(['#########', '#<.@...>#', '#########'], 7)
+    g.player.might = 40
+    const m = put(g, 'drawn', 4, 1)
+    g.player.held = m.id
+    const hit = fight(g, east, (x) => (x.level.monsters[0]?.hp ?? 0) <= 0)
+    expect(hit.game.level.monsters[0]?.hp).toBeLessThanOrEqual(0)
+    expect(hit.game.over).toBeNull()
+    expect(hit.game.player.held).toBeNull()
+    // The rope may have drawn you along before it went slack.
+    const from = hit.game.player.x
+    expect(run(hit.game, west).game.player.x).toBe(from - 1)
   })
 
   it('is drawn by the rope round a wall to the stair down', () => {
@@ -1343,6 +1387,25 @@ describe('Wrackhead', () => {
       2,
     )
     expect(out.game.player.marks).toBe(30 - 6 - 4 - 8 - 5)
+    expect(out.lines.some((l) => l.startsWith('Barr'))).toBe(false)
+  })
+
+  it('packs what the net-loft sells once the lamp, the skin or the rope is full, and only while there is room', () => {
+    const loft = atShop('2', (g) => {
+      g.player.rope = 8
+    })
+    const out = run(loft.game, { type: 'shop', key: 'buy:skin' })
+    expect(out.game.player.water).toBe(8)
+    expect(out.game.player.pack.at(-1)?.kind).toBe('skin')
+    expect(out.game.player.marks).toBe(30 - 4)
+    loft.game.player.pack = Array.from({ length: 12 }, () => ({ kind: 'salt' }))
+    const full = offers(loft.game).filter((o) => o.enabled)
+    expect(full).toHaveLength(0)
+    loft.game.player.water = 4
+    expect(offerFor(loft.game, '2')).toMatchObject({
+      key: 'buy:skin',
+      enabled: true,
+    })
   })
 
   it('has Ruun name what you carry and what you have killed', () => {

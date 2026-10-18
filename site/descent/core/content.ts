@@ -46,7 +46,7 @@ export interface MonsterKind {
   tiers: (1 | 2 | 3 | 4)[]
   /** Not met above this depth, though its tier begins higher up. */
   from?: number
-  /** Comes for you twice as fast when you are parched or bleeding. */
+  /** Comes for you twice as fast when you are parched: it smells the hunger. */
   hunts?: boolean
   /** Never leaves its door. */
   stays?: boolean
@@ -498,7 +498,7 @@ export const BACKGROUNDS: Record<Background, BackgroundKind> = {
     what: 'Born on the shingle. The flood drowns you slower, and your lamp keeps in the wet.',
     hp: 13,
     grit: 6,
-    might: 1,
+    might: 2,
     will: 1,
     rope: 8,
   },
@@ -506,7 +506,7 @@ export const BACKGROUNDS: Record<Background, BackgroundKind> = {
     name: 'Novice',
     what: 'Left Hookford without asking. Weak, but names come to you cheap.',
     hp: 11,
-    grit: 4,
+    grit: 6,
     might: 0,
     will: 4,
     rope: 6,

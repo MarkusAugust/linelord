@@ -101,6 +101,23 @@ because the earlier answer was wrong.
   1d6. A warrior of an earlier run who became one of them still waits on the
   first floor of the Lowstreets. Before this, four runs in five by a Wrecker or
   a Novice ended at depth 3.
+- The Unasked come for you twice as fast only when you are parched, as the
+  canon has it: they smell hunger. Being hurt no longer makes them faster, so
+  a wounded warrior can still get away from one and rest.
+- Putting down what was on the rope lets you go. A Drawn beaten to death,
+  rather than cut loose, used to leave you held by a rope with nothing on it:
+  you could neither move nor hit anything else, and died where you stood. It
+  was most of what ended runs at depth 6 and 7.
+- The net-loft packs what it cannot pour. Lamp oil, a skin of water or a coil
+  of rope bought while the lamp, the water or the rope is full goes into the
+  pack instead of costing marks for nothing, and the offer is closed only when
+  neither the die nor the pack has room. The net-loft no longer answers in
+  Barr's voice when it sells salt.
+- Putting something down on the shingle at Wrackhead says why it cannot be
+  done, instead of nothing.
+- The Wrecker hits harder (might 2, as the Ashborn) and the Novice gains more
+  blood at each level (a d6, as the Wrecker). The Ashborn is still the
+  strongest of the three, and the Novice the weakest.
 - `bun run descent-balance [runs]` lets a bot play the descent, 200 runs of
   each background by default, and prints how many reached each depth and what
   ended them. The bot sees the whole floor, so it measures how hard the rules
